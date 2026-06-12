@@ -728,7 +728,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v65 · 12/06";
+const APP_VERSION="v66 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -822,12 +822,9 @@ function renderDev(){
       <label>Email</label><input id="cfg_email" value="${esc(ci.email)}" placeholder="contact@entreprise.fr">
       <label>Adresse</label><input id="cfg_adr" value="${esc(ci.adresse)}" placeholder="12 rue des Artisans, 21000 Dijon">
       <label>Horaires</label><input id="cfg_hor" value="${esc(ci.horaires)}" placeholder="Lun–Ven : 8h–18h">
-      <label style="margin-top:10px">Couleur par défaut de l'app</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${THEMES.map(([id,lb,col])=>`<div onclick="devSetDefaultColor('${id}')" style="cursor:pointer"><div style="width:34px;height:34px;border-radius:10px;background:${col};border:3px solid ${id===(CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT)?'var(--txt)':'transparent'}"></div></div>`).join('')}</div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-        <input type="color" id="cfg_color" value="${(CONFIG_DB.couleurDefaut&&CONFIG_DB.couleurDefaut.charAt(0)==='#')?CONFIG_DB.couleurDefaut:'#3d8bff'}" onchange="devSetCustomColor(this.value)" style="width:52px;height:40px;padding:2px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--bg2)">
-        <span class="note" style="flex:1">…ou choisis <b>n'importe quelle couleur</b> (la pastille colorée s'applique partout dans l'app).</span>
-      </div>
+      <label style="margin-top:10px">Couleur par défaut de l'app (pour tout le monde)</label>
+      <p class="note" style="margin:2px 0 6px">Choisis parmi les couleurs de l'app. Touche Blanc ou Noir pour voir les variantes « + une couleur ».</p>
+      ${devColorPicker()}
       <div class="row" style="margin-top:12px"><div><label>Pointage horaire</label>
         <div class="row" style="gap:6px"><button class="btn ${pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(true)">Activé</button><button class="btn ${!pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(false)">Désactivé</button></div></div>
         <div><label>Taux horaire (€/h)</label><input id="cfg_taux" type="number" value="${tauxHoraire()}"></div></div>
@@ -879,7 +876,20 @@ function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
 function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } renderDev(); }
-function devSetCustomColor(hex){ if(!hex) return; CONFIG_DB.couleurDefaut=hex; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } renderDev(); }
+function devColorPicker(){
+  const cur=(CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT||'bleu'); const dot=cur.indexOf('.'); const base=dot>0?cur.slice(0,dot):cur; const acc=dot>0?cur.slice(dot+1):'';
+  let h=`<div style="display:flex;gap:9px;flex-wrap:wrap">`;
+  h+=THEMES.map(([id,lb,col])=>`<div onclick="devSetDefaultColor('${id}')" style="cursor:pointer;flex:none" title="${lb}"><div style="width:38px;height:38px;border-radius:11px;background:${col};border:3px solid ${id===base?'var(--txt)':'transparent'}"></div></div>`).join('');
+  h+=`</div>`;
+  if(base==='blanc'||base==='ardoise'){
+    const baseCol=base==='blanc'?'#ffffff':'#7b8cb0'; const baseLbl=base==='blanc'?'Blanc':'Noir';
+    const variants=[['','Uni',baseCol],['vert','Vert','#2fd17a'],['orange','Orange','#ff8a3d'],['rouge','Rouge','#ff4d62'],['violet','Violet','#9b6bff'],['bleu','Bleu','#3d8bff']];
+    h+=`<p class="tag" style="margin:10px 0 6px">${baseLbl} + une couleur</p><div style="display:flex;gap:9px;flex-wrap:wrap">`;
+    h+=variants.map(([aid,albl,acol])=>{ const v=aid?(base+'.'+aid):base; const on=aid?(acc===aid):(acc===''); const bg=aid?`linear-gradient(135deg, ${baseCol} 0 50%, ${acol} 50% 100%)`:baseCol; return `<div onclick="devSetDefaultColor('${v}')" style="cursor:pointer;flex:none" title="${baseLbl} ${albl}"><div style="width:38px;height:38px;border-radius:11px;background:${bg};border:3px solid ${on?'var(--txt)':'transparent'}"></div></div>`; }).join('');
+    h+=`</div>`;
+  }
+  return h;
+}
 function devSaveConfig(){
   if(!CONFIG_DB.contact) CONFIG_DB.contact={};
   CONFIG_DB.nom=val('cfg_nom')||CONFIG.NOM_ENTREPRISE; CONFIG_DB.slogan=val('cfg_slogan');
@@ -1100,9 +1110,16 @@ function devClearChantiers(){
 function devResetAll(){
   if(!confirm("⚠️ Tout réinitialiser ? Chantiers, équipe ET réglages seront supprimés. Action irréversible.")) return;
   if(!confirm("Dernière confirmation : on efface vraiment tout ?")) return;
-  if(useFB){ db().ref('batisuivi').remove(); }
-  else { CHANTIERS={};TEAM={};CONFIG_DB={};VEHICULES={}; lsSet('batisuivi_chantiers',{}); lsSet('batisuivi_team',{}); lsSet('batisuivi_config',{}); lsSet('batisuivi_vehicules',{}); ME=null; }
-  toast("App réinitialisée"); SCREEN='entry'; render();
+  if(useFB){
+    // On supprime CHAQUE branche (la suppression de la racine 'batisuivi' est refusée par les règles)
+    ['config','chantiers','team','vehicules','planning','notesfrais','chat','invites'].forEach(k=>{ db().ref('batisuivi/'+k).remove().catch(()=>{}); });
+  } else {
+    lsSet('batisuivi_chantiers',{}); lsSet('batisuivi_team',{}); lsSet('batisuivi_config',{}); lsSet('batisuivi_vehicules',{});
+  }
+  // Vider les caches locaux + la mémoire, sinon l'ancienne photo / équipe réapparaît
+  ['cache_me','cache_team','cache_chantiers','cache_vehicules','cache_planning','cache_notesfrais','cache_chat','cache_config','veh_seen','msg_seen','etape_seen','sign_seen','chat_seen'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(_){ } });
+  CHANTIERS={}; TEAM={}; CONFIG_DB={}; VEHICULES={}; PLANNING={}; NOTES_FRAIS={}; CHAT={}; CHAT_SEEN={}; ME=null;
+  toast("App réinitialisée ✅"); SCREEN='entry'; render(); toTop();
 }
 
 /* ====================== CONNEXION CLIENT (code + nom) ====================== */
