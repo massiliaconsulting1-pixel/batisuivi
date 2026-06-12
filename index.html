@@ -629,6 +629,7 @@ function boot(){
     firebase.auth().onAuthStateChanged(u=>{
       AUTH_USER=u||null; AUTH_READY=true;
       if(u){
+        const devIntent=lsGet('pending_dev_auth',false);
         // Données internes : chargées UNIQUEMENT pour un membre d'équipe connecté.
         // Un client n'a pas de compte : il ne télécharge donc jamais la base,
         // il passe par la Cloud Function accesClient. On n'attache qu'une fois.
@@ -641,7 +642,8 @@ function boot(){
           refNotesFrais().on('value',s=>{ NOTES_FRAIS=s.val()||{}; lsSet('cache_notesfrais',NOTES_FRAIS); if(BOOTED) render(); });
           db().ref('batisuivi/chat').on('value',s=>{ CHAT=s.val()||{}; lsSet('cache_chat',CHAT); if(BOOTED) render(); });
         }
-        firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user){ if(lsGet('pending_dev_auth',false)){ lsSet('pending_dev_auth',false); devAfterGoogle(r.user); } else { afterTeamAuth(r.user); } } }).catch(()=>{});
+        if(devIntent){ lsSet('pending_dev_auth',false); devAfterGoogle(u); }
+        else { firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user) afterTeamAuth(r.user); }).catch(()=>{}); }
         refTeam(u.uid).on('value',s=>{ const prof=s.val()||null; if(EMP_PREVIEW){ EMP_PREVIEW.me=prof||EMP_PREVIEW.me; lsSet('cache_me',prof); return; } ME=prof; lsSet('cache_me',ME); if(ME&&SCREEN==='entry'){ SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; } if(BOOTED) render(); });
       } else { ME=null; window._teamDataSubs=false; if(SCREEN==='team') SCREEN='entry'; if(BOOTED) render(); }
       if(!BOOTED){ BOOTED=true; render(); }
@@ -728,7 +730,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v63 · 12/06";
+const APP_VERSION="v64 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -770,6 +772,7 @@ function devGoogle(){
   });
 }
 function devAfterGoogle(user){
+  lsSet('pending_dev_auth',false);
   if(!user) return;
   if(!devAllowed(user)){ try{ firebase.auth().signOut(); }catch(_){} alert("Ce compte Google ("+(user.email||'?')+") n'est pas autorisé pour l'espace dev.\nReconnecte-toi avec "+(DEV_EMAIL||'le compte dev')+"."); SCREEN='entry'; render(); toTop(); return; }
   if(!DEV_EMAIL && !(CONFIG_DB&&CONFIG_DB.devUid)){ CONFIG_DB.devUid=user.uid; CONFIG_DB.devEmail=user.email||''; try{ refConfig().child('devUid').set(user.uid); refConfig().child('devEmail').set(user.email||''); }catch(_){} toast("Espace dev activé pour ton compte ✅"); }
