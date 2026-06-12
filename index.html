@@ -562,7 +562,7 @@ function _iconWithBg(src,size,cb){
       try{
         const cv=document.createElement('canvas'); cv.width=size; cv.height=size; const ctx=cv.getContext('2d');
         ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size);
-        const pad=Math.round(size*0.10), max=size-pad*2;
+        const pad=Math.round(size*0.06), max=size-pad*2;
         let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; if(!w||!h){ w=h=max; }
         const sc=Math.min(max/w,max/h), dw=Math.round(w*sc), dh=Math.round(h*sc);
         ctx.drawImage(img, Math.round((size-dw)/2), Math.round((size-dh)/2), dw, dh);
@@ -669,7 +669,7 @@ function boot(){
           db().ref('batisuivi/chat').on('value',s=>{ CHAT=s.val()||{}; lsSet('cache_chat',CHAT); if(BOOTED) render(); });
         }
         firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user) afterTeamAuth(r.user); }).catch(()=>{});
-        refTeam(u.uid).on('value',s=>{ const prof=s.val()||null; if(EMP_PREVIEW){ EMP_PREVIEW.me=prof||EMP_PREVIEW.me; lsSet('cache_me',prof); return; } ME=prof; lsSet('cache_me',ME); if(ME&&SCREEN==='entry'){ SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; } if(BOOTED) render(); });
+        refTeam(u.uid).on('value',s=>{ const prof=s.val()||null; if(EMP_PREVIEW){ EMP_PREVIEW.me=prof||EMP_PREVIEW.me; lsSet('cache_me',prof); return; } ME=prof; lsSet('cache_me',ME); loadSeenFromProfile(prof); if(ME&&SCREEN==='entry'){ SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; } if(BOOTED) render(); });
       } else { ME=null; window._teamDataSubs=false; if(SCREEN==='team') SCREEN='entry'; if(BOOTED) render(); }
       if(!BOOTED){ BOOTED=true; render(); }
     });
@@ -755,7 +755,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v69 · 12/06";
+const APP_VERSION="v70 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1605,18 +1605,25 @@ function toTop(){ try{ window.scrollTo(0,0); document.documentElement.scrollTop=
 /* ---- liste des chantiers ---- */
 function isLate(c){ return c.dateFin && c.dateFin<todayISO() && c.etape!==ETAPES[ETAPES.length-1]; }
 function devisSigne(c){ if(!c||!c.published) return false; return Object.values(c.published).some(d=>d&&d.type==='devis'&&d.signature); }
+function mergeSeen(local,remote,bool){ const out=Object.assign({},local||{}); if(remote) Object.keys(remote).forEach(k=>{ out[k]= bool ? (out[k]||remote[k]) : Math.max(out[k]||0, remote[k]||0); }); return out; }
+function seenRef(){ const u=myUid(); return (useFB && u && u!=='local-boss' && u!=='dev-admin') ? refTeam(u).child('seen') : null; }
+function pushSeen(type,obj){ try{ const r=seenRef(); if(r) r.child(type).set(obj); }catch(_){ } }
+function loadSeenFromProfile(prof){ if(!prof||!prof.seen) return; const s=prof.seen;
+  MSG_SEEN=mergeSeen(MSG_SEEN,s.msg); ETAPE_SEEN=mergeSeen(ETAPE_SEEN,s.etape); SIGN_SEEN=mergeSeen(SIGN_SEEN,s.sign,true); VEH_SEEN=mergeSeen(VEH_SEEN,s.veh); NOTES_SEEN=mergeSeen(NOTES_SEEN,s.notes); CHAT_SEEN=mergeSeen(CHAT_SEEN,s.chat);
+  lsSet('msg_seen',MSG_SEEN); lsSet('etape_seen',ETAPE_SEEN); lsSet('sign_seen',SIGN_SEEN); lsSet('veh_seen',VEH_SEEN); lsSet('notes_seen',NOTES_SEEN); lsSet('chat_seen',CHAT_SEEN);
+}
 function chUnread(c,id){ if(!c||!c.messages) return 0; const seen=MSG_SEEN[id]||0; return Object.values(c.messages).filter(m=>m&&m.from==='client'&&!m.deleted&&(m.ts||0)>seen).length; }
 function totalUnreadMsgs(){ return myChantiers().reduce((n,c)=>n+chUnread(c,c.id),0); }
-function markMsgSeen(id){ const c=CHANTIERS[id]; let latest=Date.now(); if(c&&c.messages){ Object.values(c.messages).forEach(m=>{ if(m&&(m.ts||0)>latest) latest=m.ts; }); } MSG_SEEN[id]=latest; lsSet('msg_seen',MSG_SEEN); }
+function markMsgSeen(id){ const c=CHANTIERS[id]; let latest=Date.now(); if(c&&c.messages){ Object.values(c.messages).forEach(m=>{ if(m&&(m.ts||0)>latest) latest=m.ts; }); } MSG_SEEN[id]=latest; lsSet('msg_seen',MSG_SEEN); pushSeen('msg',MSG_SEEN); }
 function chAdvanced(c,id){ const cur=ETAPES.indexOf(c.etape||ETAPES[0]); if(ETAPE_SEEN[id]===undefined){ return 0; } return Math.max(0,cur-ETAPE_SEEN[id]); }
 function totalAdvanced(){ return myChantiers().filter(c=>chAdvanced(c,c.id)>0).length; }
-function markEtapeSeen(id){ const c=CHANTIERS[id]; if(!c)return; ETAPE_SEEN[id]=ETAPES.indexOf(c.etape||ETAPES[0]); lsSet('etape_seen',ETAPE_SEEN); }
-function ensureEtapeBaseline(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ if(ETAPE_SEEN[id]===undefined){ ETAPE_SEEN[id]=ETAPES.indexOf(CHANTIERS[id].etape||ETAPES[0]); ch=true; } }); if(ch) lsSet('etape_seen',ETAPE_SEEN); }
+function markEtapeSeen(id){ const c=CHANTIERS[id]; if(!c)return; ETAPE_SEEN[id]=ETAPES.indexOf(c.etape||ETAPES[0]); lsSet('etape_seen',ETAPE_SEEN); pushSeen('etape',ETAPE_SEEN); }
+function ensureEtapeBaseline(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ if(ETAPE_SEEN[id]===undefined){ ETAPE_SEEN[id]=ETAPES.indexOf(CHANTIERS[id].etape||ETAPES[0]); ch=true; } }); if(ch){ lsSet('etape_seen',ETAPE_SEEN); pushSeen('etape',ETAPE_SEEN); } }
 function unseenSigned(){ let n=0; Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ const d=c.published[pid]; if(d.signature && !SIGN_SEEN[pid]) n++; }); }); return n; }
 function joursDepuis(ts){ if(!ts) return 0; return Math.floor((Date.now()-ts)/86400000); }
 function relanceDevis(d){ if(!d || d.type!=='devis' || d.signature) return 0; const j=joursDepuis(d.ts); return j>=5? j : 0; }
 function totalRelances(){ let n=0; Object.values(CHANTIERS).forEach(c=>{ if(c.published) Object.values(c.published).forEach(d=>{ if(relanceDevis(d)) n++; }); }); return n; }
-function markSignedSeen(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ if(c.published[pid].signature && !SIGN_SEEN[pid]){ SIGN_SEEN[pid]=true; ch=true; } }); }); if(ch) lsSet('sign_seen',SIGN_SEEN); }
+function markSignedSeen(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ if(c.published[pid].signature && !SIGN_SEEN[pid]){ SIGN_SEEN[pid]=true; ch=true; } }); }); if(ch){ lsSet('sign_seen',SIGN_SEEN); pushSeen('sign',SIGN_SEEN); } }
 function chCard(c){
   const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
   const done=c.etape===ETAPES[ETAPES.length-1]; const late=isLate(c);
@@ -2074,7 +2081,7 @@ function toggleVehAssigne(id,u,el){
 }
 /* photos d'incident sur un véhicule (tout le monde peut en ajouter) */
 function nbVehUnseen(id){ const v=VEHICULES[id]; if(!v||!v.photos) return 0; const seen=VEH_SEEN[id]||0; return Object.keys(v.photos).filter(k=>((v.photos[k].ts)||0)>seen).length; }
-function markVehSeen(id){ VEH_SEEN[id]=Date.now(); lsSet('veh_seen',VEH_SEEN); }
+function markVehSeen(id){ VEH_SEEN[id]=Date.now(); lsSet('veh_seen',VEH_SEEN); pushSeen('veh',VEH_SEEN); }
 function totalVehUnseen(){ let n=0; for(const id in VEHICULES){ n+=nbVehUnseen(id); } return n; }
 function openVehIncidents(id){
   const v=VEHICULES[id]; if(!v) return;
@@ -2291,7 +2298,7 @@ function chatConvObj(convKey){
 function chatMsgsSorted(convKey){ const o=chatConvObj(convKey); return Object.keys(o).map(k=>({k,...o[k]})).sort((a,b)=>(a.ts||0)-(b.ts||0)); }
 function chatLast(convKey){ const arr=chatMsgsSorted(convKey); return arr.length?arr[arr.length-1]:null; }
 function chatUnreadKey(convKey){ const o=chatConvObj(convKey); const seen=CHAT_SEEN[convKey]||0; const me=myUid(); return Object.values(o).filter(m=>m&&m.from!==me&&(m.ts||0)>seen).length; }
-function markChatSeen(convKey){ const o=chatConvObj(convKey); let latest=Date.now(); Object.values(o).forEach(m=>{ if(m&&(m.ts||0)>latest) latest=m.ts; }); CHAT_SEEN[convKey]=latest; lsSet('chat_seen',CHAT_SEEN); }
+function markChatSeen(convKey){ const o=chatConvObj(convKey); let latest=Date.now(); Object.values(o).forEach(m=>{ if(m&&(m.ts||0)>latest) latest=m.ts; }); CHAT_SEEN[convKey]=latest; lsSet('chat_seen',CHAT_SEEN); pushSeen('chat',CHAT_SEEN); }
 function totalChatUnread(){ let n=chatUnreadKey('group'); const me=myUid(); Object.keys(TEAM).forEach(u=>{ if(u!==me) n+=chatUnreadKey('dm:'+u); }); return n; }
 function saveChatMsg(convKey,id,msg){
   if(convKey==='group'){ if(!CHAT.group)CHAT.group={}; CHAT.group[id]=msg; if(useFB) db().ref('batisuivi/chat/group/'+id).set(msg); else lsSet('batisuivi_chat',CHAT); }
@@ -2640,7 +2647,7 @@ function eurFmt(n){ return (n||0).toLocaleString('fr-FR',{minimumFractionDigits:
 function sameMonth(ts){ const d=new Date(ts),n=new Date(); return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear(); }
 function nbNotes(u){ return NOTES_FRAIS[u]?Object.keys(NOTES_FRAIS[u]).length:0; }
 function nbNotesUnseen(u){ const seen=NOTES_SEEN[u]||0; const o=NOTES_FRAIS[u]||{}; return Object.keys(o).filter(k=>((o[k].ts)||0)>seen).length; }
-function markNotesSeen(u){ NOTES_SEEN[u]=Date.now(); lsSet('notes_seen',NOTES_SEEN); }
+function markNotesSeen(u){ NOTES_SEEN[u]=Date.now(); lsSet('notes_seen',NOTES_SEEN); pushSeen('notes',NOTES_SEEN); }
 function openMemberNotes(u){
   markNotesSeen(u); if(TAB==='equipe') render();
   const t=TEAM[u]||{}; const notes=NOTES_FRAIS[u]?Object.keys(NOTES_FRAIS[u]).map(k=>({k,...NOTES_FRAIS[u][k]})).sort((a,b)=>b.ts-a.ts):[];
