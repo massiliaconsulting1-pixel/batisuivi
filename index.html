@@ -74,6 +74,12 @@ body[data-theme="ardoise"]{ --acc:#7b8cb0; --acc2:#9aa9c8; --accText:#0a0f1a; --
   --bg:#0b0e13; --bg2:#10141b; --card:#161b24; --card2:#1d232e; --line:#2a323f; --muted:#8493a8; }
 body[data-theme="blanc"]{ --acc:#2563eb; --acc2:#3b82f6; --accText:#ffffff; --glow:37,99,235;
   --bg:#f4f6fb; --bg2:#ffffff; --card:#ffffff; --card2:#eef2f8; --line:#dde3ee; --txt:#1a2740; --muted:#6b7a90; --shadow:0 18px 40px -22px rgba(20,40,80,.25); }
+/* sous-variantes : blanc OU noir(ardoise) mélangés à une couleur d'accent (data-accent) — doit rester APRÈS les thèmes pour les surcharger */
+body[data-accent="vert"]{ --acc:#2fd17a; --acc2:#56e09a; --accText:#042113; --glow:47,209,122; }
+body[data-accent="orange"]{ --acc:#ff8a3d; --acc2:#ffa766; --accText:#231003; --glow:255,138,61; }
+body[data-accent="rouge"]{ --acc:#ff4d62; --acc2:#ff7585; --accText:#230309; --glow:255,77,98; }
+body[data-accent="violet"]{ --acc:#9b6bff; --acc2:#b48dff; --accText:#16042b; --glow:155,107,255; }
+body[data-accent="bleu"]{ --acc:#3d8bff; --acc2:#5fa3ff; --accText:#04101f; --glow:61,139,255; }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
@@ -121,7 +127,7 @@ textarea{resize:vertical;min-height:64px}
 .pill.ok{color:var(--ok);border-color:rgba(47,209,122,.4)}
 .pill.warn{color:var(--warn);border-color:rgba(255,176,32,.4)}
 .pill.acc{color:var(--acc2);border-color:rgba(var(--glow),.45)}
-body[data-theme="blanc"] .pill.acc{color:#64748b;border-color:#cbd5e1}
+body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color:#cbd5e1}
 .pen{background:none;border:none;cursor:pointer;color:var(--acc2);font-size:18px;line-height:1;padding:4px 8px;flex:none;transition:.15s}
 .pen:active{transform:scale(.9)}
 .chantier .ch-top>div:first-child{flex:1;min-width:0}
@@ -309,6 +315,11 @@ body.big-text{zoom:1.18}
 .cbub.them{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:5px}
 .chat-bar{position:sticky;bottom:0;display:flex;gap:8px;padding:10px 0;background:linear-gradient(to top,var(--bg) 72%,transparent)}
 .chat-bar input{flex:1}
+.chat-bar .iconbtn{width:42px;height:42px;font-size:18px;flex:none}
+.chat-bar .iconbtn.rec{background:var(--danger);color:#fff;border-color:var(--danger);font-weight:800;font-size:12px;width:auto;padding:0 10px}
+.cbub .cimg{display:block;width:100%;max-width:210px;border-radius:11px;margin:2px 0;cursor:pointer}
+.cbub .caud{display:block;width:220px;max-width:100%;margin:3px 0;height:38px}
+.cbub .adur{font-size:11px;opacity:.6;margin-top:1px}
 .lic{display:inline-block;vertical-align:-0.18em;flex:none}
 .cbub .cbub-act{display:flex;gap:8px;margin-top:5px;justify-content:flex-end}
 .cbub .cbub-act button{background:rgba(255,255,255,.18);border:none;color:inherit;border-radius:7px;padding:2px 8px;font-size:12px;cursor:pointer}
@@ -356,6 +367,7 @@ body.big-text{zoom:1.18}
 <div class="wrap" id="app"></div>
 <div class="nav hidden" id="nav"></div>
 <input type="file" id="photoFile" accept="image/*" style="display:none">
+<input type="file" id="chatPhotoFile" accept="image/*" style="display:none">
 
 <script>
 /* ==================================================================
@@ -513,7 +525,7 @@ function etPct(e){ const i=ETAPES.indexOf(e||ETAPES[0]); return Math.round(((i<0
 
 // ---- thème ----
 function myTheme(){ return lsGet(LS_THEME, CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT||'bleu'); }
-function applyTheme(){ const t=myTheme(); if(t&&t!=='bleu') document.body.setAttribute('data-theme',t); else document.body.removeAttribute('data-theme'); try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); }
+function applyTheme(){ const raw=myTheme()||''; const dot=raw.indexOf('.'); const base=dot>0?raw.slice(0,dot):raw; const acc=dot>0?raw.slice(dot+1):''; if(base&&base!=='bleu') document.body.setAttribute('data-theme',base); else document.body.removeAttribute('data-theme'); if(acc) document.body.setAttribute('data-accent',acc); else document.body.removeAttribute('data-accent'); try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); }
 function applyAppIcons(){
   try{
     const logo=coLogo(); if(!logo) return;
@@ -669,10 +681,7 @@ function renderEntry(){
     </div>
     <div style="margin-top:22px">
       <p class="tag" style="text-align:center;margin-bottom:10px">Choisis ta couleur</p>
-      <div style="display:flex;gap:9px;justify-content:center;flex-wrap:nowrap;overflow-x:auto;padding:2px 4px">
-      ${THEMES.map(([id,lb,col])=>`<div onclick="setTheme('${id}')" style="cursor:pointer;flex:none">
-        <div style="width:34px;height:34px;border-radius:11px;background:${col};border:3px solid ${id===myTheme()?'var(--txt)':'transparent'};transition:.15s"></div>
-      </div>`).join('')}</div>
+      <div style="display:flex;flex-direction:column;align-items:center">${themeSwatches(34)}</div>
     </div>
     <p class="note" style="text-align:center;margin-top:24px;font-size:11px;cursor:pointer" onclick="askDevCode()">Propulsé par BatiSuivi · ${APP_VERSION}</p>
   </div>`;
@@ -683,7 +692,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v56 · 11/06";
+const APP_VERSION="v57 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1100,13 +1109,11 @@ function clientLogout(){
   CLIENT=null; localStorage.removeItem(LS_CLIENT); SCREEN='entry'; render(); toTop();
 }
 function openClientMenu(){
-  openModal(`<div class="grabber"></div><span id="menuModalMark"></span>
+  openModal(`<div class="grabber"></div><span id="clientMenuMark"></span>
     <h2 style="margin-bottom:4px">Menu</h2>
     <p class="note" style="margin-bottom:14px">Espace client · ${esc(coName())}</p>
     <h3 style="font-size:14px;margin:6px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-    ${THEMES.map(([id,lb,col])=>`<div onclick="setTheme('${id}')" style="cursor:pointer"><div style="width:40px;height:40px;border-radius:12px;background:${col};border:3px solid ${id===myTheme()?'var(--txt)':'transparent'}"></div></div>`).join('')}
-    </div>
+    ${themeSwatches(40)}
     <button class="btn ghost" style="width:100%;margin-top:20px" onclick="clientContact()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2z"/></svg> Contacter ${esc(coName())}</button>
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="clientHelp()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/><path d="M12 17h.01"/></svg> Guide d'utilisation</button>
     <button id="bigTextBtn" class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h9v2M8.5 5v13M6.5 18h4"/><path d="M14 13v-1h6v1M17 12v6M15.5 18h3"/></svg> Gros texte : ${bigText()?'activé':'désactivé'}</button>
@@ -1480,6 +1487,7 @@ function toTop(){ try{ window.scrollTo(0,0); document.documentElement.scrollTop=
 
 /* ---- liste des chantiers ---- */
 function isLate(c){ return c.dateFin && c.dateFin<todayISO() && c.etape!==ETAPES[ETAPES.length-1]; }
+function devisSigne(c){ if(!c||!c.published) return false; return Object.values(c.published).some(d=>d&&d.type==='devis'&&d.signature); }
 function chUnread(c,id){ if(!c||!c.messages) return 0; const seen=MSG_SEEN[id]||0; return Object.values(c.messages).filter(m=>m&&m.from==='client'&&!m.deleted&&(m.ts||0)>seen).length; }
 function totalUnreadMsgs(){ return myChantiers().reduce((n,c)=>n+chUnread(c,c.id),0); }
 function markMsgSeen(id){ const c=CHANTIERS[id]; let latest=Date.now(); if(c&&c.messages){ Object.values(c.messages).forEach(m=>{ if(m&&(m.ts||0)>latest) latest=m.ts; }); } MSG_SEEN[id]=latest; lsSet('msg_seen',MSG_SEEN); }
@@ -1495,7 +1503,7 @@ function markSignedSeen(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ co
 function chCard(c){
   const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
   const done=c.etape===ETAPES[ETAPES.length-1]; const late=isLate(c);
-  const inner=`<div class="ch-top"><div><h3>${esc(c.nom)}${late?' <span class="pill late"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> en retard</span>':''}${chUnread(c,c.id)?` <span class="pill msg"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ${chUnread(c,c.id)}</span>`:''}${chAdvanced(c,c.id)?` <span class="pill adv"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> +${chAdvanced(c,c.id)*20}%</span>`:''}</h3><div class="ch-client"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))}${adresseFull(c)?' · '+esc(adresseFull(c)):''}</div></div>
+  const inner=`<div class="ch-top"><div><h3>${esc(c.nom)}${late?' <span class="pill late"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> en retard</span>':''}${chUnread(c,c.id)?` <span class="pill msg"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ${chUnread(c,c.id)}</span>`:''}${chAdvanced(c,c.id)?` <span class="pill adv"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> +${chAdvanced(c,c.id)*20}%</span>`:''}${devisSigne(c)?` <span class="pill ok"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> Devis validé</span>`:''}</h3><div class="ch-client"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))}${adresseFull(c)?' · '+esc(adresseFull(c)):''}</div></div>
       <span class="pill ${done?'ok':'acc'}">${done?'Terminé':c.etape||ETAPES[0]}</span></div>
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="ch-meta"><span class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> ${frDate(c.dateDebut)} → ${frDate(c.dateFin)}</span>
@@ -1639,6 +1647,7 @@ function viewChantier(id){
     <div class="steps" style="margin:14px 0 10px">${ETAPES.map((e,i)=>`<div class="step-dot ${i<=idx?'done':''}"></div>`).join('')}</div>
     ${!isChef()?`<p style="text-align:center;font-weight:700;margin:0">${esc(c.etape||ETAPES[0])}</p>`:''}
     ${isChef()?`<select onchange="setEtape('${id}',this.value)" style="text-align:center;text-align-last:center">${ETAPES.map(e=>`<option ${e===(c.etape||ETAPES[0])?'selected':''}>${e}</option>`).join('')}</select>`:''}
+    ${devisSigne(c)?`<p class="tag" style="color:var(--ok);text-align:center;margin:10px 0 0"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> Devis signé par le client</p>`:''}
   </div>
 
   <div class="card">
@@ -2183,6 +2192,35 @@ function chatSend(){
   if(e) e.value='';
   render(); chatScrollDown();
 }
+/* ----- Chat équipe : photos & vocaux (jamais côté client) ----- */
+function chatSendMedia(fields){
+  if(!CHAT_OPEN || CHAT_OPEN==='ai' || (CHAT_OPEN.indexOf&&CHAT_OPEN.indexOf('client:')===0)) return;
+  const id=uid(); const msg={from:myUid(), nom:(ME&&ME.nom)||'', txt:'', ts:Date.now()};
+  Object.keys(fields).forEach(k=>{ msg[k]=fields[k]; });
+  saveChatMsg(CHAT_OPEN,id,msg); markChatSeen(CHAT_OPEN);
+  render(); chatScrollDown();
+}
+function chatPickPhoto(){ const inp=document.getElementById('chatPhotoFile'); if(!inp) return; inp.value=''; inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=1000; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); chatSendMedia({img:cv.toDataURL('image/jpeg',0.7)}); }; img.src=e.target.result; }; r.readAsDataURL(f); }; inp.click(); }
+let CHAT_REC=null, CHAT_REC_CHUNKS=[], CHAT_REC_TIMER=null, CHAT_REC_T0=0;
+function chatToggleRec(){
+  if(CHAT_REC){ chatStopRec(); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){ toast("Les vocaux ne sont pas supportés sur cet appareil."); return; }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    CHAT_REC_CHUNKS=[]; let mr; try{ mr=new MediaRecorder(stream,{mimeType:'audio/webm'}); }catch(_){ try{ mr=new MediaRecorder(stream); }catch(__){ toast("Enregistrement impossible sur cet appareil."); stream.getTracks().forEach(t=>t.stop()); return; } }
+    CHAT_REC=mr;
+    mr.ondataavailable=e=>{ if(e.data&&e.data.size) CHAT_REC_CHUNKS.push(e.data); };
+    mr.onstop=()=>{ stream.getTracks().forEach(t=>t.stop()); const type=(CHAT_REC_CHUNKS[0]&&CHAT_REC_CHUNKS[0].type)||'audio/webm'; const blob=new Blob(CHAT_REC_CHUNKS,{type}); const dur=Math.max(1,Math.round((Date.now()-CHAT_REC_T0)/1000)); CHAT_REC=null;
+      if(blob.size>1600000){ toast("Vocal trop long. Reste sous ~1 min."); return; }
+      const r=new FileReader(); r.onload=e=>{ chatSendMedia({audio:e.target.result, dur}); }; r.readAsDataURL(blob); };
+    CHAT_REC_T0=Date.now(); mr.start();
+    const b=document.getElementById('chatRecBtn'); if(b){ b.classList.add('rec'); b.innerHTML='⏹ 0s'; }
+    CHAT_REC_TIMER=setInterval(()=>{ const s=Math.round((Date.now()-CHAT_REC_T0)/1000); const bb=document.getElementById('chatRecBtn'); if(bb) bb.innerHTML='⏹ '+s+'s'; if(s>=60) chatStopRec(); },300);
+  }).catch(_=>{ toast("Micro non autorisé. Autorise le micro pour envoyer un vocal."); });
+}
+function chatStopRec(){ if(CHAT_REC_TIMER){ clearInterval(CHAT_REC_TIMER); CHAT_REC_TIMER=null; } if(CHAT_REC && CHAT_REC.state!=='inactive'){ try{ CHAT_REC.stop(); }catch(_){} } }
+function chatBody(m){ let b=''; if(m.img) b+=`<img class="cimg" src="${m.img}" onclick="viewPhoto('${m.img}')">`; if(m.audio) b+=`<audio class="caud" controls preload="metadata" src="${m.audio}"></audio>${m.dur?`<div class="adur">🎤 ${m.dur}s</div>`:''}`; if(m.txt) b+=`<div>${esc(m.txt)}</div>`; return b||esc(m.txt||''); }
+function chatPreview(m){ if(!m) return ''; if(m.img) return '📷 Photo'; if(m.audio) return '🎤 Message vocal'; return m.txt||''; }
 function chatTime(ts){ const d=new Date(ts||0); const now=new Date(); const sameDay=d.toDateString()===now.toDateString();
   return sameDay ? d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function viewMessagerie(){
@@ -2198,11 +2236,11 @@ function viewMessagerie(){
   const aiLast=chatLast('ai');
   h+=`<div class="chat-conv" onclick="openConv('ai')"><div class="av" style="background:linear-gradient(135deg,#6a5cff,#9b6bff)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 4h6"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 17h6"/></svg></div><div class="meta"><b>Assistant IA</b><div class="last">${aiLast?esc((aiLast.from==='ai'?'':'Vous : ')+aiLast.txt):'Questions chantier, métier, organisation…'}</div></div></div>`;
   const gLast=chatLast('group'), gUn=chatUnreadKey('group');
-  h+=`<div class="chat-conv" onclick="openConv('group')"><div class="av" style="background:var(--acc);color:var(--accText)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="meta"><b>Toute l'équipe</b><div class="last">${gLast?esc((gLast.nom?gLast.nom.split(' ')[0]+' : ':'')+gLast.txt):'Démarre la conversation de groupe'}</div></div>${gUn?`<span class="cb">${gUn}</span>`:''}</div>`;
+  h+=`<div class="chat-conv" onclick="openConv('group')"><div class="av" style="background:var(--acc);color:var(--accText)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="meta"><b>Toute l'équipe</b><div class="last">${gLast?esc((gLast.nom?gLast.nom.split(' ')[0]+' : ':'')+chatPreview(gLast)):'Démarre la conversation de groupe'}</div></div>${gUn?`<span class="cb">${gUn}</span>`:''}</div>`;
   const others=Object.keys(TEAM).filter(u=>u!==me).map(u=>({u,...TEAM[u],last:chatLast('dm:'+u),un:chatUnreadKey('dm:'+u)}));
   others.sort((a,b)=>((b.last&&b.last.ts)||0)-((a.last&&a.last.ts)||0));
   if(!others.length){ h+=`<p class="note" style="margin-top:12px;text-align:center">Aucun autre membre dans l'équipe pour l'instant. Invite ton équipe depuis l'onglet 👥 Équipe.</p>`; }
-  others.forEach(m=>{ h+=`<div class="chat-conv" onclick="openConv('dm:${m.u}')">${avatarTag(m,'av')}<div class="meta"><b>${esc(m.nom||'?')}</b><div class="last">${m.last?esc((m.last.from===me?'Vous : ':'')+m.last.txt):'Aucun message'}</div></div>${m.un?`<span class="cb">${m.un}</span>`:''}</div>`; });
+  others.forEach(m=>{ h+=`<div class="chat-conv" onclick="openConv('dm:${m.u}')">${avatarTag(m,'av')}<div class="meta"><b>${esc(m.nom||'?')}</b><div class="last">${m.last?esc((m.last.from===me?'Vous : ':'')+chatPreview(m.last)):'Aucun message'}</div></div>${m.un?`<span class="cb">${m.un}</span>`:''}</div>`; });
   h+=`</div>`;
   return h;
 }
@@ -2239,9 +2277,9 @@ function chatThreadView(){
   const msgs=chatMsgsSorted(CHAT_OPEN); const isGroup=CHAT_OPEN==='group';
   h+=`<div class="chat-thread" id="chatScroll">`;
   if(!msgs.length){ h+=`<p class="note" style="text-align:center;margin:24px 0">Aucun message. Écris le premier ! 💬</p>`; }
-  msgs.forEach(m=>{ const mine=m.from===me; h+=`<div class="cbub ${mine?'me':'them'}">${(!mine&&isGroup)?`<div class="who">${esc((m.nom||'').split(' ')[0]||'?')}</div>`:''}${esc(m.txt)}<div class="tm">${chatTime(m.ts)}</div></div>`; });
+  msgs.forEach(m=>{ const mine=m.from===me; h+=`<div class="cbub ${mine?'me':'them'}">${(!mine&&isGroup)?`<div class="who">${esc((m.nom||'').split(' ')[0]||'?')}</div>`:''}${chatBody(m)}<div class="tm">${chatTime(m.ts)}</div></div>`; });
   h+=`</div>`;
-  h+=`<div class="chat-bar"><input id="chat_in" placeholder="Écris un message…" onkeydown="if(event.key==='Enter'){event.preventDefault();chatSend();}"><button class="btn primary" onclick="chatSend()">Envoyer</button></div>`;
+  h+=`<div class="chat-bar"><button class="iconbtn" title="Envoyer une photo" onclick="chatPickPhoto()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button><button id="chatRecBtn" class="iconbtn" title="Message vocal" onclick="chatToggleRec()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/></svg></button><input id="chat_in" placeholder="Écris un message…" onkeydown="if(event.key==='Enter'){event.preventDefault();chatSend();}"><button class="btn primary" onclick="chatSend()">Envoyer</button></div>`;
   return h;
 }
 
@@ -2373,9 +2411,7 @@ function openMenu(){
     ${(ME&&ME.photo)?`<button class="linkbtn" style="display:block;margin:8px auto 0" onclick="removeMyPhoto()">Retirer ma photo</button>`:''}
 
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-    ${THEMES.map(([id,lb,col])=>`<div onclick="setTheme('${id}')" style="cursor:pointer"><div style="width:40px;height:40px;border-radius:12px;background:${col};border:3px solid ${id===myTheme()?'var(--txt)':'transparent'}"></div></div>`).join('')}
-    </div>
+    ${themeSwatches(40)}
 
     ${perm('gerer_reglages')?`<h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4"/><circle cx="12" cy="14" r="8"/><path d="M12 14V10"/></svg> Pointage horaire des équipes</h3>
     <div class="row"><button class="btn ${pointageOn()?'primary':'ghost'}" onclick="setPointage(true)">Activé</button>
@@ -2577,7 +2613,23 @@ function saveCroppedLogo(){
 }
 function removeMyPhoto(){ const u=myUid(); if(TEAM[u]){ delete TEAM[u].photo; saveTeam(u); } if(ME) delete ME.photo; toast("Photo retirée"); render(); }
 
-function setTheme(t){ lsSet(LS_THEME,t); applyTheme(); const inMenu=menuOpen(); render(); if(inMenu) openMenu(); }
+function setTheme(t){ lsSet(LS_THEME,t); applyTheme(); const team=!!document.getElementById('menuModalMark'); const client=!!document.getElementById('clientMenuMark'); render(); if(team) openMenu(); else if(client) openClientMenu(); }
+/* sélecteur de couleur : ligne principale + sous-ligne blanc/noir mélangés à une couleur */
+function themeSwatches(sz){ sz=sz||40;
+  const cur=myTheme()||''; const dot=cur.indexOf('.'); const base=dot>0?cur.slice(0,dot):cur; const acc=dot>0?cur.slice(dot+1):'';
+  let h=`<div style="display:flex;gap:9px;flex-wrap:wrap">`;
+  h+=THEMES.map(([id,lb,col])=>`<div onclick="setTheme('${id}')" style="cursor:pointer;flex:none" title="${lb}"><div style="width:${sz}px;height:${sz}px;border-radius:12px;background:${col};border:3px solid ${id===base?'var(--txt)':'transparent'}"></div></div>`).join('');
+  h+=`</div>`;
+  if(base==='blanc'||base==='ardoise'){
+    const baseCol=base==='blanc'?'#ffffff':'#7b8cb0'; const baseLbl=base==='blanc'?'Blanc':'Noir';
+    const variants=[['','Uni',baseCol],['vert','Vert','#2fd17a'],['orange','Orange','#ff8a3d'],['rouge','Rouge','#ff4d62'],['violet','Violet','#9b6bff'],['bleu','Bleu','#3d8bff']];
+    h+=`<p class="tag" style="margin:12px 0 6px">${baseLbl} + une couleur</p><div style="display:flex;gap:9px;flex-wrap:wrap">`;
+    h+=variants.map(([aid,albl,acol])=>{ const val=aid?(base+'.'+aid):base; const on=aid?(acc===aid):(acc===''); const bg=aid?`linear-gradient(135deg, ${baseCol} 0 50%, ${acol} 50% 100%)`:baseCol;
+      return `<div onclick="setTheme('${val}')" style="cursor:pointer;flex:none" title="${baseLbl} ${albl}"><div style="width:${sz}px;height:${sz}px;border-radius:12px;background:${bg};border:3px solid ${on?'var(--txt)':'transparent'}"></div></div>`; }).join('');
+    h+=`</div>`;
+  }
+  return h;
+}
 function setDefaultColor(t){ CONFIG_DB.couleurDefaut=t; saveConfigDB(); toast("Couleur par défaut enregistrée"); }
 function pointageOn(){ return CONFIG_DB.pointage!==undefined ? !!CONFIG_DB.pointage : !!CONFIG.POINTAGE_ACTIF; }
 function tauxHoraire(){ return CONFIG_DB.tauxHoraire||45; }
