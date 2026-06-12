@@ -155,7 +155,7 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand .logo{width:36px;height:36px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:20px;
   background:linear-gradient(135deg,var(--acc2),var(--acc));color:var(--accText);overflow:hidden}
-.brand .logo img{width:100%;height:100%;object-fit:cover}
+.brand .logo img{width:100%;height:100%;object-fit:contain;background:#fff}
 .brand .bn{min-width:0}
 .brand .bn b{display:block;font-family:'Archivo';font-size:16px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand .bn small{font-size:10.5px;color:var(--muted)}
@@ -206,7 +206,7 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
   padding:calc(56px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));max-width:460px;margin:0 auto}
 .hero-logo{width:78px;height:78px;border-radius:20px;margin:0 auto 16px;display:grid;place-items:center;font-size:40px;
   background:linear-gradient(135deg,var(--acc2),var(--acc));color:var(--accText);box-shadow:var(--shadow);overflow:hidden}
-.hero-logo img{width:100%;height:100%;object-fit:cover}
+.hero-logo img{width:100%;height:100%;object-fit:contain;background:#fff}
 .role-choice{display:grid;gap:12px;margin-top:8px}
 .role-btn{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;cursor:pointer;display:flex;gap:14px;align-items:center;transition:.15s}
 .role-btn:active{transform:scale(.99)}
@@ -554,17 +554,44 @@ function applyTheme(){ const raw=myTheme()||''; clearCustomAccent();
   if(raw && raw.charAt(0)==='#'){ document.body.removeAttribute('data-theme'); document.body.removeAttribute('data-accent'); applyCustomAccent(raw); }
   else { const dot=raw.indexOf('.'); const base=dot>0?raw.slice(0,dot):raw; const acc=dot>0?raw.slice(dot+1):''; if(base&&base!=='bleu') document.body.setAttribute('data-theme',base); else document.body.removeAttribute('data-theme'); if(acc) document.body.setAttribute('data-accent',acc); else document.body.removeAttribute('data-accent'); }
   try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); }
+let _iconCache={src:null,icon:null};
+function _iconWithBg(src,size,cb){
+  try{
+    const img=new Image();
+    img.onload=function(){
+      try{
+        const cv=document.createElement('canvas'); cv.width=size; cv.height=size; const ctx=cv.getContext('2d');
+        ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,size,size);
+        const pad=Math.round(size*0.10), max=size-pad*2;
+        let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height; if(!w||!h){ w=h=max; }
+        const sc=Math.min(max/w,max/h), dw=Math.round(w*sc), dh=Math.round(h*sc);
+        ctx.drawImage(img, Math.round((size-dw)/2), Math.round((size-dh)/2), dw, dh);
+        cb(cv.toDataURL('image/png'));
+      }catch(_){ cb(src); }
+    };
+    img.onerror=function(){ cb(src); };
+    img.src=src;
+  }catch(_){ cb(src); }
+}
 function applyAppIcons(){
-  try{ document.title = coName()+' — Suivi de chantier'; }catch(_){ }
+  const nm=coName();
+  // Nom affiché sur l'écran d'accueil du téléphone (espaces conservés)
+  try{ document.title = nm+' — Suivi de chantier'; }catch(_){ }
+  try{ const m=document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(m) m.setAttribute('content',nm); }catch(_){ }
+  try{ const m=document.querySelector('meta[name="application-name"]'); if(m) m.setAttribute('content',nm); }catch(_){ }
   try{
     const logo=coLogo(); if(!logo) return;
-    document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(l=>l.href=logo);
-    document.querySelectorAll('link[rel="icon"]').forEach(l=>l.href=logo);
-    const man={ name:coName(), short_name:coName(), display:'standalone', background_color:'#0e1525', theme_color:'#0e1525', start_url:'.', icons:[{src:logo,sizes:'512x512',type:'image/png',purpose:'any'},{src:logo,sizes:'512x512',type:'image/png',purpose:'maskable'},{src:logo,sizes:'192x192',type:'image/png'}] };
-    const blob=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});
-    const url=URL.createObjectURL(blob);
-    let ml=document.querySelector('link[rel="manifest"]'); if(!ml){ ml=document.createElement('link'); ml.rel='manifest'; document.head.appendChild(ml); }
-    if(ml._u) try{ URL.revokeObjectURL(ml._u); }catch(_){ } ml.href=url; ml._u=url;
+    const apply=(icon)=>{
+      document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(l=>l.href=icon);
+      document.querySelectorAll('link[rel="icon"]').forEach(l=>l.href=icon);
+      const man={ name:nm, short_name:nm, display:'standalone', background_color:'#0e1525', theme_color:'#0e1525', start_url:'.', icons:[{src:icon,sizes:'512x512',type:'image/png',purpose:'any'},{src:icon,sizes:'512x512',type:'image/png',purpose:'maskable'},{src:icon,sizes:'192x192',type:'image/png'}] };
+      const blob=new Blob([JSON.stringify(man)],{type:'application/manifest+json'});
+      const url=URL.createObjectURL(blob);
+      let ml=document.querySelector('link[rel="manifest"]'); if(!ml){ ml=document.createElement('link'); ml.rel='manifest'; document.head.appendChild(ml); }
+      if(ml._u) try{ URL.revokeObjectURL(ml._u); }catch(_){ } ml.href=url; ml._u=url;
+    };
+    if(_iconCache.src===logo && _iconCache.icon){ apply(_iconCache.icon); return; }
+    _iconWithBg(logo,512,(icon)=>{ _iconCache={src:logo,icon:icon}; apply(icon); });
   }catch(e){}
 }
 function bigText(){ return lsGet('big_text',0)==1 || lsGet('big_text',0)===true; }
@@ -700,7 +727,7 @@ function renderEntry(){
   app.innerHTML=`<div class="center-wrap">
     <div style="text-align:center;margin-bottom:22px">
       <div class="hero-logo" style="width:148px;height:148px;border-radius:36px;font-size:76px;margin-bottom:18px">${logoHTML()}</div>
-      <h1 style="font-size:28px">${esc(coName())}</h1>
+      <h1 style="font-size:28px;line-height:1.15;word-break:break-word;padding:0 6px">${esc(coName())}</h1>
       <p class="note" style="margin-top:6px">${esc(coSlogan())}</p>
     </div>
     <div class="role-choice">
@@ -728,7 +755,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v66 · 12/06";
+const APP_VERSION="v69 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -827,7 +854,7 @@ function renderDev(){
       ${devColorPicker()}
       <div class="row" style="margin-top:12px"><div><label>Pointage horaire</label>
         <div class="row" style="gap:6px"><button class="btn ${pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(true)">Activé</button><button class="btn ${!pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(false)">Désactivé</button></div></div>
-        <div><label>Taux horaire (€/h)</label><input id="cfg_taux" type="number" value="${tauxHoraire()}"></div></div>
+      </div>
       <label style="margin-top:10px">Facturation dans l'app</label>
       <div class="row" style="gap:6px"><button class="btn ${factuOn()?'primary':'ghost'} mini" onclick="devSetFactu(true)">Activée</button><button class="btn ${!factuOn()?'primary':'ghost'} mini" onclick="devSetFactu(false)">Désactivée</button></div>
       <label style="margin-top:10px">Compte-rendu vocal (IA)</label>
@@ -867,9 +894,12 @@ function renderDev(){
       <button class="btn danger" style="width:100%;margin-top:8px" onclick="devResetAll()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Tout réinitialiser (chantiers + équipe + réglages)</button>
       <p class="note" style="margin-top:8px;font-size:11px">« Tout réinitialiser » supprime aussi les comptes équipe : le premier qui se reconnecte redevient patron.</p>
     </div>
+    <button class="btn ghost" style="width:100%" onclick="devSignOut()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Me déconnecter</button>
+    <p class="note" style="text-align:center;margin-top:8px;font-size:11px">Déconnecte-toi avant de créer le compte patron (sinon l'app te demande un code d'équipe).</p>
     <p class="note" style="text-align:center;margin-top:6px;font-size:11px">BatiSuivi · ${APP_VERSION} · espace privé</p>
   </div>`;
 }
+function devSignOut(){ closeModal(); ME=null; DEV_ACCESS=false; CUR_CHANTIER=null; TAB='chantiers'; SCREEN='entry'; if(useFB){ firebase.auth().signOut().catch(()=>{}); } AUTH_USER=null; render(); toTop(); toast("Déconnecté ✅"); }
 function devOpenAsBoss(){ if(!(ME&&ME.role==='boss')){ ME={nom:'Accès dev (Patron)',role:'boss'}; if(!AUTH_USER) AUTH_USER={uid:'dev-admin'}; } DEV_ACCESS=true; SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; render(); toTop(); }
 function devSetPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); renderDev(); }
 function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
@@ -894,7 +924,6 @@ function devSaveConfig(){
   if(!CONFIG_DB.contact) CONFIG_DB.contact={};
   CONFIG_DB.nom=val('cfg_nom')||CONFIG.NOM_ENTREPRISE; CONFIG_DB.slogan=val('cfg_slogan');
   CONFIG_DB.contact.tel=val('cfg_tel'); CONFIG_DB.contact.email=val('cfg_email'); CONFIG_DB.contact.adresse=val('cfg_adr'); CONFIG_DB.contact.horaires=val('cfg_hor');
-  const taux=parseFloat((document.getElementById('cfg_taux').value||'').replace(',','.')); if(taux&&!isNaN(taux)) CONFIG_DB.tauxHoraire=taux;
   const nextF=parseInt(document.getElementById('cfg_fact').value,10); if(!isNaN(nextF)&&nextF>0) CONFIG_DB.factCounter=nextF-1;
   const nextD=parseInt(document.getElementById('cfg_devnum').value,10); if(!isNaN(nextD)&&nextD>0) CONFIG_DB.devisCounter=nextD-1;
   const dp=(val('cfg_devpre')||'').trim().toUpperCase(); if(dp) CONFIG_DB.devisPrefix=dp;
@@ -2467,14 +2496,14 @@ function viewDashboard(){
 }
 function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi retiré de l'espace client.")) return; unpublishDoc(id,pid); }
 function laborCard(all,eur){
-  const rows=all.map(c=>({c,h:chantierHours(c)})).filter(x=>x.h>0.01).sort((a,b)=>b.h-a.h);
+  const rows=all.map(c=>({c,h:chantierHours(c),cost:chantierCost(c)})).filter(x=>x.h>0.01).sort((a,b)=>b.h-a.h);
   if(!rows.length) return '';
-  const taux=tauxHoraire(); const totH=rows.reduce((s,r)=>s+r.h,0);
+  const totH=rows.reduce((s,r)=>s+r.h,0); const totCost=rows.reduce((s,r)=>s+r.cost,0);
   const fmtH=h=>{ const hh=Math.floor(h); const mm=Math.round((h-hh)*60); return mm?`${hh}h${String(mm).padStart(2,'0')}`:`${hh}h`; };
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Main d'œuvre pointée</h2><span class="pill acc">${tauxHoraire()} €/h</span></div>`;
-  h+=`<div class="kpis" style="margin-bottom:10px"><div class="kpi"><div class="big" style="font-size:22px">${fmtH(totH)}</div><div class="lbl">Heures pointées</div></div><div class="kpi acc"><div class="big" style="font-size:22px">${eur(Math.round(totH*taux))}</div><div class="lbl">Coût estimé</div></div></div>`;
-  rows.forEach(r=>{ h+=`<div class="task-row"><span style="flex:1">${esc(r.c.nom)}</span><span class="tag">${fmtH(r.h)}</span><b class="tag" style="color:var(--acc2);margin-left:8px">${eur(Math.round(r.h*taux))}</b></div>`; });
-  h+=`<p class="note" style="margin-top:8px;font-size:11px">Estimation indicative (heures pointées × taux horaire). Modifiable dans le menu <svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>.</p></div>`;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Main d'œuvre pointée</h2></div>`;
+  h+=`<div class="kpis" style="margin-bottom:10px"><div class="kpi"><div class="big" style="font-size:22px">${fmtH(totH)}</div><div class="lbl">Heures pointées</div></div><div class="kpi acc"><div class="big" style="font-size:22px">${eur(Math.round(totCost))}</div><div class="lbl">Coût estimé</div></div></div>`;
+  rows.forEach(r=>{ h+=`<div class="task-row"><span style="flex:1">${esc(r.c.nom)}</span><span class="tag">${fmtH(r.h)}</span>${r.cost>0?`<b class="tag" style="color:var(--acc2);margin-left:8px">${eur(Math.round(r.cost))}</b>`:''}</div>`; });
+  h+=`<p class="note" style="margin-top:8px;font-size:11px">Coût calculé avec le taux horaire propre à chaque employé. Pour le définir : Équipe → un membre → « Coût horaire ».</p></div>`;
   return h;
 }
 function caChartCard(all,eur){
@@ -2509,7 +2538,7 @@ function openMenu(){
     ${perm('gerer_reglages')?`<h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4"/><circle cx="12" cy="14" r="8"/><path d="M12 14V10"/></svg> Pointage horaire des équipes</h3>
     <div class="row"><button class="btn ${pointageOn()?'primary':'ghost'}" onclick="setPointage(true)">Activé</button>
       <button class="btn ${!pointageOn()?'primary':'ghost'}" onclick="setPointage(false)">Désactivé</button></div>
-    ${pointageOn()?`<label style="margin-top:10px">Taux horaire main d'œuvre (€/h)</label><input id="tauxH" type="number" inputmode="decimal" value="${tauxHoraire()}" onchange="setTauxHoraire(this.value)" placeholder="45">`:''}`:''}
+    `:''}
 
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Note de frais</h3>
     <p class="note" style="margin-bottom:8px">Envoie une photo (ticket, péage, matériel…) visible uniquement par le patron.</p>
@@ -2562,7 +2591,7 @@ function openHelp(){
     steps+=step('truck','Véhicules',"Assigne plusieurs personnes à un véhicule. Le ⚠️ avec pastille = un incident signalé en photo à consulter.");
     steps+=step('chart','Tableau',"Ton chiffre d'affaires, le CA par mois, tous les devis/factures (supprimables) et le coût main d'œuvre pointée.");
     steps+=step('calendar','Planning',"Organise la semaine jour par jour. Copie une journée ou la semaine précédente. Export PDF.");
-    steps+=step('menu','Menu',"Couleurs de l'app, pointage, taux horaire, ta photo, notes de frais et ce guide — toujours ici.");
+    steps+=step('menu','Menu',"Couleurs de l'app, pointage, ta photo, notes de frais et ce guide — toujours ici.");
   } else if(role==='chef'){
     title="Bienvenue, chef 👷"; intro="Tu gères les chantiers et le planning de l'équipe.";
     steps+=step('building','Chantiers',"Crée et modifie les chantiers, assigne l'équipe, change l'étape, ajoute photos, tâches et devis. La pastille 💬 = nouveau message client.");
@@ -2725,8 +2754,7 @@ function themeSwatches(sz){ sz=sz||40;
 }
 function setDefaultColor(t){ CONFIG_DB.couleurDefaut=t; saveConfigDB(); toast("Couleur par défaut enregistrée"); }
 function pointageOn(){ return CONFIG_DB.pointage!==undefined ? !!CONFIG_DB.pointage : !!CONFIG.POINTAGE_ACTIF; }
-function tauxHoraire(){ return CONFIG_DB.tauxHoraire||45; }
-function setTauxHoraire(v){ const n=parseFloat((v||'').toString().replace(',','.')); CONFIG_DB.tauxHoraire=(n&&!isNaN(n))?n:45; saveConfigDB(); }
+function chantierCost(c){ if(!c.pointages) return 0; return Object.keys(c.pointages).reduce((s,u)=>s+(totalHeures(c.pointages[u])/3600000)*memberCout(u),0); }
 function chantierHours(c){ if(!c.pointages) return 0; return Object.values(c.pointages).reduce((s,arr)=>s+totalHeures(arr),0)/3600000; }
 function memberHoursMs(u){ let ms=0; Object.values(CHANTIERS).forEach(c=>{ if(c.pointages&&c.pointages[u]) ms+=totalHeures(c.pointages[u]); }); return ms; }
 function memberCout(u){ const t=TEAM[u]||{}; const v=parseFloat(t.coutHoraire); return (!isNaN(v)&&v>0)?v:0; }
