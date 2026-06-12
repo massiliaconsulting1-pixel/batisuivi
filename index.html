@@ -546,7 +546,14 @@ function etPct(e){ const i=ETAPES.indexOf(e||ETAPES[0]); return Math.round(((i<0
 
 // ---- thème ----
 function myTheme(){ return lsGet(LS_THEME, CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT||'bleu'); }
-function applyTheme(){ const raw=myTheme()||''; const dot=raw.indexOf('.'); const base=dot>0?raw.slice(0,dot):raw; const acc=dot>0?raw.slice(dot+1):''; if(base&&base!=='bleu') document.body.setAttribute('data-theme',base); else document.body.removeAttribute('data-theme'); if(acc) document.body.setAttribute('data-accent',acc); else document.body.removeAttribute('data-accent'); try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); }
+function _hexRgb(h){ h=(h||'').replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16)||0; return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+function _lighten(h,amt){ const {r,g,b}=_hexRgb(h); const L=v=>Math.round(v+(255-v)*amt); const x=v=>('0'+v.toString(16)).slice(-2); return '#'+x(L(r))+x(L(g))+x(L(b)); }
+function clearCustomAccent(){ const s=document.body.style; ['--acc','--acc2','--accText','--glow'].forEach(v=>s.removeProperty(v)); }
+function applyCustomAccent(hex){ try{ const {r,g,b}=_hexRgb(hex); const lum=(0.299*r+0.587*g+0.114*b)/255; const s=document.body.style; s.setProperty('--acc',hex); s.setProperty('--acc2',_lighten(hex,0.2)); s.setProperty('--accText', lum>0.6?'#0a0f1a':'#ffffff'); s.setProperty('--glow', r+','+g+','+b); }catch(_){ } }
+function applyTheme(){ const raw=myTheme()||''; clearCustomAccent();
+  if(raw && raw.charAt(0)==='#'){ document.body.removeAttribute('data-theme'); document.body.removeAttribute('data-accent'); applyCustomAccent(raw); }
+  else { const dot=raw.indexOf('.'); const base=dot>0?raw.slice(0,dot):raw; const acc=dot>0?raw.slice(dot+1):''; if(base&&base!=='bleu') document.body.setAttribute('data-theme',base); else document.body.removeAttribute('data-theme'); if(acc) document.body.setAttribute('data-accent',acc); else document.body.removeAttribute('data-accent'); }
+  try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); }
 function applyAppIcons(){
   try{ document.title = coName()+' — Suivi de chantier'; }catch(_){ }
   try{
@@ -721,7 +728,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v62 · 12/06";
+const APP_VERSION="v63 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -751,14 +758,20 @@ function devStart(){
 }
 function devGoogle(){
   const p=new firebase.auth.GoogleAuthProvider();
+  try{ p.setCustomParameters({prompt:'select_account'}); }catch(_){ }
   const mob=/iPhone|iPad|Android/i.test(navigator.userAgent||'');
   lsSet('pending_dev_auth',true);
-  if(mob) firebase.auth().signInWithRedirect(p).catch(e=>{ lsSet('pending_dev_auth',false); toast(authMsg(e.code)); });
-  else firebase.auth().signInWithPopup(p).then(c=>{ lsSet('pending_dev_auth',false); devAfterGoogle(c.user); }).catch(e=>{ lsSet('pending_dev_auth',false); toast(authMsg(e.code)); });
+  const fail=e=>{ lsSet('pending_dev_auth',false); const code=(e&&(e.code||e.message))||'inconnu'; try{console.error('devGoogle',e);}catch(_){ } alert("Connexion Google échouée : "+code+"\n\nÀ vérifier dans Firebase → Authentication :\n• Google doit être ACTIVÉ (Sign-in method)\n• Le domaine du site doit figurer dans 'Authorized domains'."); };
+  if(mob){ firebase.auth().signInWithRedirect(p).catch(fail); return; }
+  firebase.auth().signInWithPopup(p).then(c=>{ lsSet('pending_dev_auth',false); devAfterGoogle(c.user); }).catch(e=>{
+    const code=e&&e.code;
+    if(code==='auth/popup-blocked'||code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request'||code==='auth/operation-not-supported-in-this-environment'){ firebase.auth().signInWithRedirect(p).catch(fail); }
+    else fail(e);
+  });
 }
 function devAfterGoogle(user){
   if(!user) return;
-  if(!devAllowed(user)){ toast("Accès dev réservé. Ce compte n'est pas autorisé."); try{ firebase.auth().signOut(); }catch(_){} SCREEN='entry'; render(); toTop(); return; }
+  if(!devAllowed(user)){ try{ firebase.auth().signOut(); }catch(_){} alert("Ce compte Google ("+(user.email||'?')+") n'est pas autorisé pour l'espace dev.\nReconnecte-toi avec "+(DEV_EMAIL||'le compte dev')+"."); SCREEN='entry'; render(); toTop(); return; }
   if(!DEV_EMAIL && !(CONFIG_DB&&CONFIG_DB.devUid)){ CONFIG_DB.devUid=user.uid; CONFIG_DB.devEmail=user.email||''; try{ refConfig().child('devUid').set(user.uid); refConfig().child('devEmail').set(user.email||''); }catch(_){} toast("Espace dev activé pour ton compte ✅"); }
   SCREEN='dev'; DEV_ACCESS=false; CUR_CHANTIER=null; render(); toTop();
 }
@@ -815,6 +828,10 @@ function renderDev(){
       <label>Horaires</label><input id="cfg_hor" value="${esc(ci.horaires)}" placeholder="Lun–Ven : 8h–18h">
       <label style="margin-top:10px">Couleur par défaut de l'app</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">${THEMES.map(([id,lb,col])=>`<div onclick="devSetDefaultColor('${id}')" style="cursor:pointer"><div style="width:34px;height:34px;border-radius:10px;background:${col};border:3px solid ${id===(CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT)?'var(--txt)':'transparent'}"></div></div>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <input type="color" id="cfg_color" value="${(CONFIG_DB.couleurDefaut&&CONFIG_DB.couleurDefaut.charAt(0)==='#')?CONFIG_DB.couleurDefaut:'#3d8bff'}" onchange="devSetCustomColor(this.value)" style="width:52px;height:40px;padding:2px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--bg2)">
+        <span class="note" style="flex:1">…ou choisis <b>n'importe quelle couleur</b> (la pastille colorée s'applique partout dans l'app).</span>
+      </div>
       <div class="row" style="margin-top:12px"><div><label>Pointage horaire</label>
         <div class="row" style="gap:6px"><button class="btn ${pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(true)">Activé</button><button class="btn ${!pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(false)">Désactivé</button></div></div>
         <div><label>Taux horaire (€/h)</label><input id="cfg_taux" type="number" value="${tauxHoraire()}"></div></div>
@@ -866,6 +883,7 @@ function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
 function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } renderDev(); }
+function devSetCustomColor(hex){ if(!hex) return; CONFIG_DB.couleurDefaut=hex; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } renderDev(); }
 function devSaveConfig(){
   if(!CONFIG_DB.contact) CONFIG_DB.contact={};
   CONFIG_DB.nom=val('cfg_nom')||CONFIG.NOM_ENTREPRISE; CONFIG_DB.slogan=val('cfg_slogan');
