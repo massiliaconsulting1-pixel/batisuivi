@@ -629,7 +629,6 @@ function boot(){
     firebase.auth().onAuthStateChanged(u=>{
       AUTH_USER=u||null; AUTH_READY=true;
       if(u){
-        const devIntent=lsGet('pending_dev_auth',false);
         // Données internes : chargées UNIQUEMENT pour un membre d'équipe connecté.
         // Un client n'a pas de compte : il ne télécharge donc jamais la base,
         // il passe par la Cloud Function accesClient. On n'attache qu'une fois.
@@ -642,8 +641,7 @@ function boot(){
           refNotesFrais().on('value',s=>{ NOTES_FRAIS=s.val()||{}; lsSet('cache_notesfrais',NOTES_FRAIS); if(BOOTED) render(); });
           db().ref('batisuivi/chat').on('value',s=>{ CHAT=s.val()||{}; lsSet('cache_chat',CHAT); if(BOOTED) render(); });
         }
-        if(devIntent){ lsSet('pending_dev_auth',false); devAfterGoogle(u); }
-        else { firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user) afterTeamAuth(r.user); }).catch(()=>{}); }
+        firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user) afterTeamAuth(r.user); }).catch(()=>{});
         refTeam(u.uid).on('value',s=>{ const prof=s.val()||null; if(EMP_PREVIEW){ EMP_PREVIEW.me=prof||EMP_PREVIEW.me; lsSet('cache_me',prof); return; } ME=prof; lsSet('cache_me',ME); if(ME&&SCREEN==='entry'){ SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; } if(BOOTED) render(); });
       } else { ME=null; window._teamDataSubs=false; if(SCREEN==='team') SCREEN='entry'; if(BOOTED) render(); }
       if(!BOOTED){ BOOTED=true; render(); }
@@ -730,7 +728,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v64 · 12/06";
+const APP_VERSION="v65 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -744,39 +742,34 @@ function enterDev(){
   if(v!==DEV_CODE){ const e=document.getElementById('dev_err'); e.style.display='block'; e.textContent="Code incorrect."; return; }
   closeModal(); DEV_ACCESS=false; SCREEN='dev'; render(); toTop();
 }
-function devNeedsLogin(){ try{ return !!useFB && !firebase.auth().currentUser; }catch(_){ return false; } }
-const DEV_EMAIL="massiliaconsulting1@gmail.com"; // accès dev réservé à CET email Google uniquement
-function devAllowed(user){
-  if(!user) return false;
-  if(DEV_EMAIL) return (user.email||'').toLowerCase()===DEV_EMAIL.toLowerCase();
-  const claimed=CONFIG_DB&&CONFIG_DB.devUid;
-  return !claimed || claimed===user.uid;
-}
+const DEV_EMAIL="massiliaconsulting1@gmail.com"; // accès dev réservé à CET email uniquement
+function devAllowed(user){ if(!user) return false; if(DEV_EMAIL) return (user.email||'').toLowerCase()===DEV_EMAIL.toLowerCase(); return true; }
 function devStart(){
   if(!useFB){ SCREEN='dev'; DEV_ACCESS=false; render(); toTop(); return; } // mode local de test
   const u=firebase.auth().currentUser;
-  if(u){ if(devAllowed(u)) devAfterGoogle(u); else toast("Ce compte n'est pas autorisé pour l'espace dev."); return; }
-  devGoogle();
+  if(u && devAllowed(u)){ devAfterLogin(u); return; }   // déjà connecté avec le bon compte
+  openDevLogin();
 }
-function devGoogle(){
-  const p=new firebase.auth.GoogleAuthProvider();
-  try{ p.setCustomParameters({prompt:'select_account'}); }catch(_){ }
-  const mob=/iPhone|iPad|Android/i.test(navigator.userAgent||'');
-  lsSet('pending_dev_auth',true);
-  const fail=e=>{ lsSet('pending_dev_auth',false); const code=(e&&(e.code||e.message))||'inconnu'; try{console.error('devGoogle',e);}catch(_){ } alert("Connexion Google échouée : "+code+"\n\nÀ vérifier dans Firebase → Authentication :\n• Google doit être ACTIVÉ (Sign-in method)\n• Le domaine du site doit figurer dans 'Authorized domains'."); };
-  if(mob){ firebase.auth().signInWithRedirect(p).catch(fail); return; }
-  firebase.auth().signInWithPopup(p).then(c=>{ lsSet('pending_dev_auth',false); devAfterGoogle(c.user); }).catch(e=>{
-    const code=e&&e.code;
-    if(code==='auth/popup-blocked'||code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request'||code==='auth/operation-not-supported-in-this-environment'){ firebase.auth().signInWithRedirect(p).catch(fail); }
-    else fail(e);
-  });
+function openDevLogin(){
+  openModal(`<div class="grabber"></div>
+    <h2 style="text-align:center;margin-bottom:4px">Espace développeur</h2>
+    <p class="note" style="text-align:center;margin-bottom:14px">Accès réservé.</p>
+    <input id="dev_em" type="email" placeholder="Email" autocomplete="username">
+    <input id="dev_pw" type="password" placeholder="Mot de passe" autocomplete="current-password" style="margin-top:8px" onkeydown="if(event.key==='Enter')devLoginPw()">
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="devLoginPw()">Se connecter</button>
+    <div id="dev_em_err" class="err"></div>`);
 }
-function devAfterGoogle(user){
-  lsSet('pending_dev_auth',false);
+function devLoginPw(){
+  const em=(val('dev_em')||'').trim(); const pwEl=document.getElementById('dev_pw'); const pw=pwEl?pwEl.value:'';
+  const er=document.getElementById('dev_em_err');
+  if(!em||!pw){ if(er){ er.style.display='block'; er.textContent="Entre l'email et le mot de passe."; } return; }
+  if(er) er.style.display='none';
+  firebase.auth().signInWithEmailAndPassword(em,pw).then(c=>devAfterLogin(c.user)).catch(e=>{ if(er){ er.style.display='block'; er.textContent=authMsg(e.code); } });
+}
+function devAfterLogin(user){
   if(!user) return;
-  if(!devAllowed(user)){ try{ firebase.auth().signOut(); }catch(_){} alert("Ce compte Google ("+(user.email||'?')+") n'est pas autorisé pour l'espace dev.\nReconnecte-toi avec "+(DEV_EMAIL||'le compte dev')+"."); SCREEN='entry'; render(); toTop(); return; }
-  if(!DEV_EMAIL && !(CONFIG_DB&&CONFIG_DB.devUid)){ CONFIG_DB.devUid=user.uid; CONFIG_DB.devEmail=user.email||''; try{ refConfig().child('devUid').set(user.uid); refConfig().child('devEmail').set(user.email||''); }catch(_){} toast("Espace dev activé pour ton compte ✅"); }
-  SCREEN='dev'; DEV_ACCESS=false; CUR_CHANTIER=null; render(); toTop();
+  if(!devAllowed(user)){ try{ firebase.auth().signOut(); }catch(_){} const er=document.getElementById('dev_em_err'); if(er){ er.style.display='block'; er.textContent="Ce compte n'est pas autorisé pour l'espace dev."; } return; }
+  closeModal(); SCREEN='dev'; DEV_ACCESS=false; CUR_CHANTIER=null; render(); toTop();
 }
 function contactInfo(){ const o=(CONFIG_DB&&CONFIG_DB.contact)||{}; return { tel:(o.tel||CONFIG.TELEPHONE||''), email:(o.email||CONFIG.EMAIL||''), adresse:(o.adresse||CONFIG.ADRESSE_ENTREPRISE||''), horaires:(o.horaires||CONFIG.HORAIRES||'') }; }
 function renderDev(){
