@@ -580,7 +580,8 @@ function applyAppIcons(){
   try{ const m=document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(m) m.setAttribute('content',nm); }catch(_){ }
   try{ const m=document.querySelector('meta[name="application-name"]'); if(m) m.setAttribute('content',nm); }catch(_){ }
   try{
-    const logo=coLogo(); if(!logo) return;
+    const customIcon=(CONFIG_DB&&CONFIG_DB.appIcon)||'';
+    const logo=coLogo(); if(!customIcon && !logo) return;
     const apply=(icon)=>{
       document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(l=>l.href=icon);
       document.querySelectorAll('link[rel="icon"]').forEach(l=>l.href=icon);
@@ -590,6 +591,8 @@ function applyAppIcons(){
       let ml=document.querySelector('link[rel="manifest"]'); if(!ml){ ml=document.createElement('link'); ml.rel='manifest'; document.head.appendChild(ml); }
       if(ml._u) try{ URL.revokeObjectURL(ml._u); }catch(_){ } ml.href=url; ml._u=url;
     };
+    // Icône dédiée = utilisée telle quelle (pleine, sans bord ajouté). Sinon : logo centré sur fond blanc.
+    if(customIcon){ apply(customIcon); return; }
     if(_iconCache.src===logo && _iconCache.icon){ apply(_iconCache.icon); return; }
     _iconWithBg(logo,512,(icon)=>{ _iconCache={src:logo,icon:icon}; apply(icon); });
   }catch(e){}
@@ -755,7 +758,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v70 · 12/06";
+const APP_VERSION="v71 · 12/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -841,6 +844,13 @@ function renderDev(){
         <div style="flex:1"><input type="file" id="cfg_logo_file" accept="image/*" style="display:none" onchange="devUploadLogo(this)">
           <button class="btn ghost mini" onclick="document.getElementById('cfg_logo_file').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Changer le logo</button>
           ${coLogo()?`<button class="btn ghost mini" style="margin-top:6px" onclick="devRemoveLogo()">Retirer</button>`:''}</div>
+      </div>
+      <p class="note" style="margin:6px 0 8px">Icône de l'app sur l'écran d'accueil du téléphone (image <b>carrée</b>, pleine, sans bord blanc). Si vide, le logo ci-dessus est utilisé.</p>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+        <div class="hero-logo" style="width:64px;height:64px;font-size:30px;margin:0;border-radius:14px">${CONFIG_DB.appIcon?`<img src="${CONFIG_DB.appIcon}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`:'📱'}</div>
+        <div style="flex:1"><input type="file" id="cfg_icon_file" accept="image/*" style="display:none" onchange="devUploadIcon(this)">
+          <button class="btn ghost mini" onclick="document.getElementById('cfg_icon_file').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Choisir l'icône</button>
+          ${CONFIG_DB.appIcon?`<button class="btn ghost mini" style="margin-top:6px" onclick="devRemoveIcon()">Retirer</button>`:''}</div>
       </div>
       <label>Nom de l'entreprise</label><input id="cfg_nom" value="${esc(coName())}" placeholder="ex: Dupont Rénovation">
       <label>Slogan</label><input id="cfg_slogan" value="${esc(coSlogan())}" placeholder="ex: Votre chantier en toute confiance">
@@ -934,6 +944,9 @@ function devSaveConfig(){
 function devUploadLogo(input){ const f=input.files&&input.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=e=>startCrop(e.target.result,'logo'); r.readAsDataURL(f); }
 function devRemoveLogo(){ CONFIG_DB.logo=''; saveConfigDB(); toast("Logo retiré"); renderDev(); }
+function devUploadIcon(input){ const f=input.files&&input.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=e=>startCrop(e.target.result,'icon'); r.readAsDataURL(f); }
+function devRemoveIcon(){ CONFIG_DB.appIcon=''; saveConfigDB(); _iconCache={src:null,icon:null}; try{applyAppIcons();}catch(_){ } toast("Icône retirée"); renderDev(); }
 function demoImg(txt,bg){ return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="${bg}"/><text x="200" y="158" font-size="26" fill="#ffffff" font-family="Arial,sans-serif" text-anchor="middle">${txt}</text></svg>`); }
 const DEMO_TRADES={
   peintre:{label:"Peintre",emoji:"\ud83c\udfa8"},
@@ -2697,17 +2710,17 @@ function avatarTag(m,cls){ const c=cls||'avatar'; return m&&m.photo?`<div class=
 let _crop=null;
 function openPhotoPicker(){ const inp=document.getElementById('photoFile'); inp.value=''; inp.onchange=()=>{ const f=inp.files&&inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>startCrop(e.target.result); r.readAsDataURL(f); }; inp.click(); }
 function startCrop(dataURL,mode){
-  const isLogo=(mode==='logo');
+  const isLogo=(mode==='logo'); const isIcon=(mode==='icon'); const sq=isLogo||isIcon;
   const img=new Image();
   img.onload=()=>{
     const STAGE=240; const base=isLogo ? Math.min(STAGE/img.naturalWidth, STAGE/img.naturalHeight) : Math.max(STAGE/img.naturalWidth, STAGE/img.naturalHeight);
     _crop={img,scale:base,base,x:(STAGE-img.naturalWidth*base)/2,y:(STAGE-img.naturalHeight*base)/2,drag:null,mode:mode||'photo'};
-    openModal(`<div class="grabber"></div><h2 style="margin-bottom:4px;text-align:center">${isLogo?'Cadre ton logo':'Cadre ta photo'}</h2>
-      <p class="note" style="text-align:center">Glisse pour déplacer, le curseur pour zoomer.</p>
-      <div class="crop-stage${isLogo?' sq':''}" id="cropStage"><img id="cropImg" src="${dataURL}"><div class="crop-ring"></div></div>
+    openModal(`<div class="grabber"></div><h2 style="margin-bottom:4px;text-align:center">${isIcon?'Cadre l\'icône':(isLogo?'Cadre ton logo':'Cadre ta photo')}</h2>
+      <p class="note" style="text-align:center">${isIcon?'Remplis bien le carré (zoome/glisse) pour une icône pleine.':'Glisse pour déplacer, le curseur pour zoomer.'}</p>
+      <div class="crop-stage${sq?' sq':''}" id="cropStage"><img id="cropImg" src="${dataURL}"><div class="crop-ring"></div></div>
       <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1" style="width:100%;margin-top:6px">
       <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Annuler</button>
-        <button class="btn primary" onclick="${isLogo?'saveCroppedLogo()':'saveCroppedPhoto()'}">Enregistrer</button></div>`);
+        <button class="btn primary" onclick="${isIcon?'saveCroppedIcon()':(isLogo?'saveCroppedLogo()':'saveCroppedPhoto()')}">Enregistrer</button></div>`);
     setTimeout(bindCrop,60);
   };
   img.src=dataURL;
@@ -2739,6 +2752,14 @@ function saveCroppedLogo(){
   ctx.drawImage(_crop.img, _crop.x*R, _crop.y*R, _crop.img.naturalWidth*_crop.scale*R, _crop.img.naturalHeight*_crop.scale*R);
   CONFIG_DB.logo=cv.toDataURL('image/png'); saveConfigDB();
   _crop=null; closeModal(); toast("Logo mis à jour ✅"); if(SCREEN==='dev') renderDev(); else render();
+}
+function saveCroppedIcon(){
+  if(!_crop) return; const OUT=512, R=OUT/240;
+  const cv=document.createElement('canvas'); cv.width=OUT; cv.height=OUT; const ctx=cv.getContext('2d');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,OUT,OUT);
+  ctx.drawImage(_crop.img, _crop.x*R, _crop.y*R, _crop.img.naturalWidth*_crop.scale*R, _crop.img.naturalHeight*_crop.scale*R);
+  CONFIG_DB.appIcon=cv.toDataURL('image/png'); saveConfigDB(); _iconCache={src:null,icon:null}; try{applyAppIcons();}catch(_){ }
+  _crop=null; closeModal(); toast("Icône mise à jour ✅"); if(SCREEN==='dev') renderDev(); else render();
 }
 function removeMyPhoto(){ const u=myUid(); if(TEAM[u]){ delete TEAM[u].photo; saveTeam(u); } if(ME) delete ME.photo; toast("Photo retirée"); render(); }
 
