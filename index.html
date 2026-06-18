@@ -611,6 +611,14 @@ function exportData(){
   }catch(e){ toast("Export impossible sur cet appareil"); }
 }
 const THEMES=[['bleu','Bleu','#3d8bff'],['vert','Vert','#2fd17a'],['orange','Orange','#ff8a3d'],['rouge','Rouge','#ff4d62'],['violet','Violet','#9b6bff'],['ardoise','Ardoise','#7b8cb0'],['blanc','Blanc','#ffffff']];
+// Couleurs réellement proposées aux utilisateurs (choisies par le dev). Vide/absent = toutes.
+function defThemeBase(){ const def=(CONFIG_DB&&CONFIG_DB.couleurDefaut)||CONFIG.COULEUR_DEFAUT||'bleu'; const d=def.indexOf('.'); return d>0?def.slice(0,d):def; }
+function activeThemes(){
+  const sel=(CONFIG_DB&&Array.isArray(CONFIG_DB.couleursActives))?CONFIG_DB.couleursActives:null;
+  if(!sel||!sel.length) return THEMES;
+  const db=defThemeBase();
+  return THEMES.filter(([id])=> sel.indexOf(id)>=0 || id===db );
+}
 
 // ---- rôles & permissions ----
 function role(){ return ME? ME.role : null; }
@@ -633,7 +641,7 @@ const NIVEAU_PERMS={
 const BUILTIN_ROLES={ employe:{label:'Ouvrier',niveau:'employe',builtin:1}, chef:{label:"Chef d'équipe",niveau:'chef',builtin:1}, boss:{label:'Patron',niveau:'boss',builtin:1} };
 function allRoles(){ const m={}; Object.keys(BUILTIN_ROLES).forEach(k=>m[k]={...BUILTIN_ROLES[k]}); const cr=(CONFIG_DB&&CONFIG_DB.roles)||{}; Object.keys(cr).forEach(k=>{ m[k]={...(m[k]||{}),...cr[k]}; }); return m; }
 function roleDef(k){ return allRoles()[k] || {label:k,niveau:'employe'}; }
-function roleLabel(r){ if(r==='client') return 'Client'; return roleDef(r).label || r; }
+function roleLabel(r){ if(r==='client') return 'Client'; if(!r||r==='undefined') return '—'; return roleDef(r).label || r; }
 function niveauOf(k){ return roleDef(k).niveau || 'employe'; }
 function rolePerms(k){ const d=roleDef(k); const base=NIVEAU_PERMS[d.niveau||'employe']||{}; const ov=d.perms||{}; const out={}; PERMS.forEach(([p])=>{ out[p]=(p in ov)?!!ov[p]:!!base[p]; }); return out; }
 function perm(flag){ if(!ME||!ME.role) return false; return !!rolePerms(ME.role)[flag]; }
@@ -672,7 +680,7 @@ function boot(){
           db().ref('batisuivi/chat').on('value',s=>{ CHAT=s.val()||{}; lsSet('cache_chat',CHAT); if(BOOTED) render(); });
         }
         firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user) afterTeamAuth(r.user); }).catch(()=>{});
-        refTeam(u.uid).on('value',s=>{ const prof=s.val()||null; if(EMP_PREVIEW){ EMP_PREVIEW.me=prof||EMP_PREVIEW.me; lsSet('cache_me',prof); return; } ME=prof; lsSet('cache_me',ME); loadSeenFromProfile(prof); if(ME&&SCREEN==='entry'){ SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; } if(BOOTED) render(); });
+        refTeam(u.uid).on('value',s=>{ const prof=s.val()||null; if(EMP_PREVIEW){ EMP_PREVIEW.me=prof||EMP_PREVIEW.me; lsSet('cache_me',prof); return; } if(DEV_ACCESS && ME && ME._dev){ return; } ME=prof; lsSet('cache_me',ME); loadSeenFromProfile(prof); if(ME&&SCREEN==='entry'){ SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; } if(BOOTED) render(); });
       } else { ME=null; window._teamDataSubs=false; if(SCREEN==='team') SCREEN='entry'; if(BOOTED) render(); }
       if(!BOOTED){ BOOTED=true; render(); }
     });
@@ -758,7 +766,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v71 · 12/06";
+const APP_VERSION="v72 · 18/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -862,6 +870,9 @@ function renderDev(){
       <label style="margin-top:10px">Couleur par défaut de l'app (pour tout le monde)</label>
       <p class="note" style="margin:2px 0 6px">Choisis parmi les couleurs de l'app. Touche Blanc ou Noir pour voir les variantes « + une couleur ».</p>
       ${devColorPicker()}
+      <label style="margin-top:14px">Couleurs proposées aux utilisateurs</label>
+      <p class="note" style="margin:2px 0 6px">Coche les couleurs que les utilisateurs pourront choisir dans leur menu. Les autres seront masquées. La couleur par défaut reste toujours proposée.</p>
+      ${devColorAvailablePicker()}
       <div class="row" style="margin-top:12px"><div><label>Pointage horaire</label>
         <div class="row" style="gap:6px"><button class="btn ${pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(true)">Activé</button><button class="btn ${!pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(false)">Désactivé</button></div></div>
       </div>
@@ -892,7 +903,7 @@ function renderDev(){
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0">
         ${Object.keys(DEMO_TRADES).map(k=>`<button class="btn ${DEMO_SEL[k]?'primary':'ghost'} mini" onclick="devToggleTrade('${k}')">${icone(TRADEIC[k]||'tool')} ${DEMO_TRADES[k].label}</button>`).join('')}
       </div>
-      <p class="note" style="font-size:11px">Aucune sélection = tous les métiers. Chaque métier ajoute 2 chantiers à des étapes différentes (tâches, matériaux, photos, messages, comptes-rendus).</p>
+      <p class="note" style="font-size:11px">Aucune sélection = tous les métiers. Chaque métier ajoute 4 chantiers à des étapes différentes (tâches, matériaux, photos, messages, comptes-rendus).</p>
       <button class="btn primary" style="width:100%;margin-top:10px" onclick="devLoadDemo()">Charger la démo</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="exportData()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Exporter / sauvegarder les données</button>
     </div>
@@ -901,6 +912,7 @@ function renderDev(){
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21h13"/><path d="M3 17 12 8l5 5-6 6H6z"/></svg> Réinitialiser pour un nouveau client</h2></div>
       <p class="note">Avant de livrer l'app à un artisan, efface les données de test.</p>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="devClearChantiers()">Effacer tous les chantiers</button>
+      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="devClearChantiersTeam()">Effacer chantiers + équipe</button>
       <button class="btn danger" style="width:100%;margin-top:8px" onclick="devResetAll()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Tout réinitialiser (chantiers + équipe + réglages)</button>
       <p class="note" style="margin-top:8px;font-size:11px">« Tout réinitialiser » supprime aussi les comptes équipe : le premier qui se reconnecte redevient patron.</p>
     </div>
@@ -910,7 +922,7 @@ function renderDev(){
   </div>`;
 }
 function devSignOut(){ closeModal(); ME=null; DEV_ACCESS=false; CUR_CHANTIER=null; TAB='chantiers'; SCREEN='entry'; if(useFB){ firebase.auth().signOut().catch(()=>{}); } AUTH_USER=null; render(); toTop(); toast("Déconnecté ✅"); }
-function devOpenAsBoss(){ if(!(ME&&ME.role==='boss')){ ME={nom:'Accès dev (Patron)',role:'boss'}; if(!AUTH_USER) AUTH_USER={uid:'dev-admin'}; } DEV_ACCESS=true; SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; render(); toTop(); }
+function devOpenAsBoss(){ ME={nom:'Accès dev',role:'boss',_dev:true}; if(!AUTH_USER) AUTH_USER={uid:'dev-admin'}; DEV_ACCESS=true; SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; render(); toTop(); }
 function devSetPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); renderDev(); }
 function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
@@ -929,6 +941,26 @@ function devColorPicker(){
     h+=`</div>`;
   }
   return h;
+}
+// Grille de cases à cocher : le dev choisit les couleurs proposées aux utilisateurs
+function devColorAvailablePicker(){
+  const sel=(CONFIG_DB&&Array.isArray(CONFIG_DB.couleursActives)&&CONFIG_DB.couleursActives.length)?CONFIG_DB.couleursActives:THEMES.map(t=>t[0]);
+  const db=defThemeBase();
+  let h=`<div style="display:flex;gap:9px;flex-wrap:wrap">`;
+  h+=THEMES.map(([id,lb,col])=>{ const on=sel.indexOf(id)>=0; const isDef=(id===db);
+    return `<div onclick="devToggleColor('${id}')" style="cursor:pointer;flex:none;position:relative" title="${lb}${isDef?' (couleur par défaut)':''}"><div style="width:38px;height:38px;border-radius:11px;background:${col};border:3px solid ${on?'var(--txt)':'transparent'};opacity:${on?1:.3}"></div>${on?'<div style="position:absolute;top:-5px;right:-5px;background:var(--ok);color:#fff;border-radius:50%;width:17px;height:17px;font-size:11px;line-height:17px;text-align:center;font-weight:800;border:2px solid var(--card)">\u2713</div>':''}</div>`; }).join('');
+  h+=`</div>`;
+  return h;
+}
+function devToggleColor(id){
+  let sel=(CONFIG_DB&&Array.isArray(CONFIG_DB.couleursActives)&&CONFIG_DB.couleursActives.length)?CONFIG_DB.couleursActives.slice():THEMES.map(t=>t[0]);
+  const i=sel.indexOf(id);
+  if(i>=0){
+    if(id===defThemeBase()){ toast("Impossible de retirer la couleur par défaut"); return; }
+    if(sel.length<=1){ toast("Au moins une couleur doit rester disponible"); return; }
+    sel.splice(i,1);
+  } else { sel.push(id); }
+  CONFIG_DB.couleursActives=sel; saveConfigDB(); renderDev();
 }
 function devSaveConfig(){
   if(!CONFIG_DB.contact) CONFIG_DB.contact={};
@@ -980,7 +1012,23 @@ function demoTradeChantiers(key, ids, iso, et){
       taches:{a:{label:"Montage \u00e9chafaudage",done:false},b:{label:"Nettoyage haute pression",done:false},c:{label:"Traitement anti-mousse",done:false},d:{label:"Peinture fa\u00e7ade 2 couches",done:false}},
       materiel:{m1:{label:"\u00c9chafaudage (location)",ok:false},m2:{label:"Peinture fa\u00e7ade D3",ok:false},m3:{label:"Anti-mousse",ok:true}},
       devis:{items:[{desc:"Montage \u00e9chafaudage",qty:1,pu:900},{desc:"Nettoyage haute pression",qty:1,pu:600},{desc:"Traitement anti-mousse (90 m\u00b2)",qty:90,pu:8},{desc:"Peinture fa\u00e7ade 2 couches (90 m\u00b2)",qty:90,pu:22}]},
-      messages:{x:{from:"client",txt:"Bonjour, quand pouvez-vous commencer le ravalement ?",ts:Date.now()-1*864e5}} }
+      messages:{x:{from:"client",txt:"Bonjour, quand pouvez-vous commencer le ravalement ?",ts:Date.now()-1*864e5}} },
+    { nom:"Cage d'escalier immeuble", clientPrenom:"Syndic", client:"Résidence Les Lilas", adresse:"45 avenue Victor Hugo", cp:"21000", ville:"Dijon", etape:et(5), _age:25,
+      dateDebut:iso(-30), dateFin:iso(-2), description:"Peinture cage d'escalier 4 étages, parties communes. Travail en journée hors heures de pointe.",
+      dateRdv:iso(-1), heureRdv:"17:00", noteRdv:"Réception des travaux avec le syndic", rdvStatus:"accepte", assignes:{[chef]:true,[e1]:true},
+      taches:{a:{label:"Protection sols & rampes",done:true},b:{label:"Lessivage murs",done:true},c:{label:"Rebouchage fissures",done:true},d:{label:"Peinture 2 couches",done:true}},
+      materiel:{m1:{label:"Peinture acrylique lessivable",ok:true},m2:{label:"Bâches & adhésif",ok:true},m3:{label:"Échelle télescopique",ok:true}},
+      devis:{items:[{desc:"Protection et lessivage",qty:1,pu:800},{desc:"Rebouchage et préparation",qty:1,pu:600},{desc:"Peinture 2 couches (4 niveaux)",qty:1,pu:2400},{desc:"Main d'oeuvre",qty:20,pu:42}]},
+      photos:{p1:{url:demoImg("Avant","#4a4a4a"),ts:Date.now()-20*864e5,by:"Lucas Martin"},p2:{url:demoImg("Apres","#8a8a7a"),ts:Date.now()-2*864e5,by:"Lucas Martin"}},
+      messages:{x:{from:"client",txt:"Très propre, les résidents sont ravis. Merci.",ts:Date.now()-1*864e5}},
+      crs:{r1:{ts:Date.now()-2*864e5,by:"Lucas Martin",published:true,taches_realisees:"Lessivage, rebouchage et application des deux couches sur les quatre niveaux de la cage d'escalier.",materiaux_manquants:"",problemes:"Quelques fissures plus profondes que prévu au 2e étage, traitées à la bande.",notes:"Chantier terminé et réceptionné."}} },
+    { nom:"Décoration chambre enfant", clientPrenom:"Aurélie", client:"Bonnet", adresse:"23 rue de la Liberté", cp:"21000", ville:"Dijon", etape:et(0), _age:1,
+      dateDebut:iso(20), dateFin:iso(23), description:"Chambre 12 m², mur d'accent coloré + plafond. Devis en attente de signature.",
+      dateRdv:iso(6), heureRdv:"18:00", noteRdv:"Choix des teintes et présentation du devis", assignes:{[e1]:true},
+      taches:{a:{label:"Préparation des murs",done:false},b:{label:"Sous-couche",done:false},c:{label:"Mur d'accent (couleur)",done:false},d:{label:"Plafond et autres murs",done:false}},
+      materiel:{m1:{label:"Peinture couleur (à valider)",ok:false},m2:{label:"Peinture plafond blanche",ok:false},m3:{label:"Rouleaux & adhésif",ok:true}},
+      devis:{items:[{desc:"Préparation",qty:1,pu:250},{desc:"Sous-couche",qty:1,pu:150},{desc:"Mur d'accent",qty:1,pu:280},{desc:"Plafond + 3 murs",qty:1,pu:520}]},
+      messages:{x:{from:"client",txt:"On adore le bleu canard, on attend le devis pour valider.",ts:Date.now()-1*864e5}} }
   ];};
   T.macon=function(){ return [
     { nom:"Extension garage 20 m\u00b2", clientPrenom:"Jean", client:"Dupont", adresse:"12 rue des Lilas", cp:"21000", ville:"Dijon", etape:et(2), _age:4,
@@ -999,7 +1047,23 @@ function demoTradeChantiers(key, ids, iso, et){
       materiel:{m1:{label:"Parpaings (18 ml)",ok:true},m2:{label:"Ciment",ok:true},m3:{label:"Chaperon b\u00e9ton",ok:false}},
       devis:{items:[{desc:"Fouilles et semelle",qty:1,pu:1400},{desc:"Montage mur parpaings",qty:18,pu:95},{desc:"Enduit deux faces",qty:1,pu:900},{desc:"Chaperon",qty:18,pu:35}]},
       photos:{p1:{url:demoImg("Semelle coulee","#5a5a5a"),ts:Date.now()-5*864e5,by:"Lucas Martin"},p2:{url:demoImg("Mur en cours","#7a6a4a"),ts:Date.now()-1*864e5,by:"Lucas Martin"}},
-      crs:{r1:{ts:Date.now()-1*864e5,by:"Lucas Martin",published:false,taches_realisees:"Semelle b\u00e9ton coul\u00e9e sur les 18 m\u00e8tres. Montage des parpaings jusqu'\u00e0 mi-hauteur.",materiaux_manquants:"Chaperons b\u00e9ton \u00e0 livrer la semaine prochaine.",problemes:"",notes:"Bon avancement, m\u00e9t\u00e9o favorable."}} }
+      crs:{r1:{ts:Date.now()-1*864e5,by:"Lucas Martin",published:false,taches_realisees:"Semelle b\u00e9ton coul\u00e9e sur les 18 m\u00e8tres. Montage des parpaings jusqu'\u00e0 mi-hauteur.",materiaux_manquants:"Chaperons b\u00e9ton \u00e0 livrer la semaine prochaine.",problemes:"",notes:"Bon avancement, m\u00e9t\u00e9o favorable."}} },
+    { nom:"Terrasse béton désactivé 30 m²", clientPrenom:"Olivier", client:"Faure", adresse:"8 rue des Vergers", cp:"21240", ville:"Talant", etape:et(5), _age:22,
+      dateDebut:iso(-28), dateFin:iso(-3), description:"Terrasse 30 m² en béton désactivé, accès jardin. Coffrage et joints de dilatation.",
+      dateRdv:iso(-2), heureRdv:"16:00", noteRdv:"Réception de la terrasse", rdvStatus:"accepte", assignes:{[chef]:true,[e1]:true},
+      taches:{a:{label:"Décaissement",done:true},b:{label:"Coffrage & ferraillage",done:true},c:{label:"Coulage béton",done:true},d:{label:"Désactivation & lavage",done:true}},
+      materiel:{m1:{label:"Béton désactivé (toupie)",ok:true},m2:{label:"Treillis soudé",ok:true},m3:{label:"Désactivant de surface",ok:true}},
+      devis:{items:[{desc:"Décaissement et forme",qty:1,pu:1200},{desc:"Coffrage et ferraillage",qty:1,pu:900},{desc:"Béton désactivé 30 m²",qty:30,pu:75},{desc:"Finition et lavage",qty:1,pu:600}]},
+      photos:{p1:{url:demoImg("Coffrage","#6a6a5a"),ts:Date.now()-18*864e5,by:"Karim Benali"},p2:{url:demoImg("Terrasse finie","#8a8070"),ts:Date.now()-3*864e5,by:"Karim Benali"}},
+      messages:{x:{from:"client",txt:"Superbe rendu, on en profite déjà. Merci !",ts:Date.now()-2*864e5}},
+      crs:{r1:{ts:Date.now()-3*864e5,by:"Karim Benali",published:true,taches_realisees:"Coulage et désactivation de la terrasse de 30 m². Joints de dilatation réalisés.",materiaux_manquants:"",problemes:"Météo chaude, lavage anticipé pour ne pas trop creuser le désactivé.",notes:"Chantier terminé, client satisfait."}} },
+    { nom:"Ouverture mur porteur + IPN", clientPrenom:"Camille", client:"Renaud", adresse:"17 rue Berbisey", cp:"21000", ville:"Dijon", etape:et(2), _age:3,
+      dateDebut:iso(8), dateFin:iso(18), description:"Ouverture de 2,40 m dans un mur porteur avec pose d'IPN. Étaiement obligatoire. Étude béton fournie.",
+      dateRdv:iso(2), heureRdv:"09:00", noteRdv:"Validation de l'étaiement avant ouverture", assignes:{[chef]:true,[e2]:true},
+      taches:{a:{label:"Étaiement",done:false},b:{label:"Création des appuis",done:false},c:{label:"Pose IPN",done:false},d:{label:"Ouverture et dépose",done:false},e:{label:"Rebouchage et finitions",done:false}},
+      materiel:{m1:{label:"IPN 240 (2,80 m)",ok:true},m2:{label:"Étais (location)",ok:true},m3:{label:"Mortier de scellement",ok:false}},
+      devis:{items:[{desc:"Étaiement et sécurité",qty:1,pu:700},{desc:"Création des appuis",qty:2,pu:450},{desc:"Fourniture et pose IPN",qty:1,pu:1600},{desc:"Ouverture et évacuation gravats",qty:1,pu:1100}]},
+      messages:{x:{from:"client",txt:"Faut-il quitter la maison pendant les travaux ?",ts:Date.now()-2*864e5},y:{from:"team",txt:"Non, mais la pièce sera inaccessible 2 jours pour l'étaiement.",ts:Date.now()-1*864e5}} }
   ];};
   T.plombier=function(){ return [
     { nom:"R\u00e9novation salle de bain", clientPrenom:"Nadia", client:"Benamar", adresse:"5 all\u00e9e des Tilleuls", cp:"21300", ville:"Chen\u00f4ve", etape:et(3), _age:8,
@@ -1017,7 +1081,23 @@ function demoTradeChantiers(key, ids, iso, et){
       taches:{a:{label:"D\u00e9pose ancien cumulus",done:false},b:{label:"Pose cumulus 200L",done:false},c:{label:"Raccordements",done:false},d:{label:"Mise en service",done:false}},
       materiel:{m1:{label:"Cumulus 200L",ok:false},m2:{label:"Groupe de s\u00e9curit\u00e9",ok:true},m3:{label:"Flexibles",ok:true}},
       devis:{items:[{desc:"D\u00e9pose ancien chauffe-eau",qty:1,pu:180},{desc:"Fourniture cumulus 200L",qty:1,pu:620},{desc:"Pose et raccordements",qty:1,pu:340}]},
-      messages:{x:{from:"client",txt:"C'est urgent, plus d'eau chaude !",ts:Date.now()-43200000},y:{from:"team",txt:"On intervient cette semaine, le cumulus est command\u00e9.",ts:Date.now()-21600000}} }
+      messages:{x:{from:"client",txt:"C'est urgent, plus d'eau chaude !",ts:Date.now()-43200000},y:{from:"team",txt:"On intervient cette semaine, le cumulus est command\u00e9.",ts:Date.now()-21600000}} },
+    { nom:"Création WC suspendu + lave-mains", clientPrenom:"Denis", client:"Marchand", adresse:"2 rue Audra", cp:"21000", ville:"Dijon", etape:et(4), _age:8,
+      dateDebut:iso(-7), dateFin:iso(2), description:"Création d'un WC sous escalier : bâti-support, WC suspendu et petit lave-mains.",
+      dateRdv:iso(2), heureRdv:"10:00", noteRdv:"Réglage de la chasse et réception", assignes:{[e1]:true},
+      taches:{a:{label:"Alimentation et évacuation",done:true},b:{label:"Pose bâti-support",done:true},c:{label:"Habillage et carrelage",done:true},d:{label:"Pose WC et lave-mains",done:false}},
+      materiel:{m1:{label:"Bâti-support",ok:true},m2:{label:"WC suspendu",ok:true},m3:{label:"Lave-mains 40 cm",ok:true},m4:{label:"Robinetterie",ok:true}},
+      devis:{items:[{desc:"Alimentation et évacuation",qty:1,pu:580},{desc:"Bâti-support et WC suspendu",qty:1,pu:720},{desc:"Lave-mains et robinetterie",qty:1,pu:320},{desc:"Main d'oeuvre",qty:10,pu:45}]},
+      photos:{p1:{url:demoImg("Bati-support","#4a5a6a"),ts:Date.now()-5*864e5,by:"Lucas Martin"}},
+      messages:{x:{from:"client",txt:"Parfait, on a hâte que ce soit fini !",ts:Date.now()-1*864e5}},
+      crs:{r1:{ts:Date.now()-2*864e5,by:"Lucas Martin",published:true,taches_realisees:"Pose du bâti-support et raccordements eau/évacuation. Habillage terminé.",materiaux_manquants:"",problemes:"Évacuation un peu juste en pente, reprise pour garantir l'écoulement.",notes:"Pose du WC et du lave-mains à la prochaine intervention."}} },
+    { nom:"Adoucisseur d'eau", clientPrenom:"Martine", client:"Colin", adresse:"14 rue de Longvic", cp:"21000", ville:"Dijon", etape:et(0), _age:1,
+      dateDebut:iso(15), dateFin:iso(16), description:"Installation d'un adoucisseur au garage. Eau très calcaire. Devis à valider.",
+      dateRdv:iso(5), heureRdv:"14:00", noteRdv:"Visite technique et présentation du devis", assignes:{[chef]:true},
+      taches:{a:{label:"Pose de l'adoucisseur",done:false},b:{label:"Raccordement arrivée d'eau",done:false},c:{label:"By-pass et mise en service",done:false}},
+      materiel:{m1:{label:"Adoucisseur 22 L (à valider)",ok:false},m2:{label:"Kit by-pass",ok:false},m3:{label:"Sel de régénération",ok:false}},
+      devis:{items:[{desc:"Fourniture adoucisseur 22 L",qty:1,pu:980},{desc:"Pose et raccordement",qty:1,pu:420},{desc:"Mise en service et réglage",qty:1,pu:160}]},
+      messages:{x:{from:"client",txt:"Le calcaire abîme tout, je voudrais un devis rapidement.",ts:Date.now()-1*864e5}} }
   ];};
   T.electricien=function(){ return [
     { nom:"Mise aux normes tableau \u00e9lectrique", clientPrenom:"Claire", client:"Fontaine", adresse:"7 rue Monge", cp:"21000", ville:"Dijon", etape:et(3), _age:5,
@@ -1034,7 +1114,23 @@ function demoTradeChantiers(key, ids, iso, et){
       taches:{a:{label:"Saign\u00e9es",done:false},b:{label:"Pose gaines",done:false},c:{label:"C\u00e2blage",done:false},d:{label:"Appareillage",done:false},e:{label:"Tableau & mise en service",done:false}},
       materiel:{m1:{label:"Gaines ICTA",ok:true},m2:{label:"C\u00e2bles",ok:false},m3:{label:"Appareillage (prises/inter)",ok:false},m4:{label:"Tableau",ok:false}},
       devis:{items:[{desc:"Saign\u00e9es et gaines",qty:1,pu:1600},{desc:"C\u00e2blage complet",qty:1,pu:2800},{desc:"Appareillage",qty:1,pu:1400},{desc:"Tableau et mise en service",qty:1,pu:1200}]},
-      messages:{x:{from:"client",txt:"Le plan de l'architecte vous convient ?",ts:Date.now()-1*864e5}} }
+      messages:{x:{from:"client",txt:"Le plan de l'architecte vous convient ?",ts:Date.now()-1*864e5}} },
+    { nom:"Pose de 8 spots + va-et-vient", clientPrenom:"Yann", client:"Perrot", adresse:"5 rue Charles Dumont", cp:"21000", ville:"Dijon", etape:et(4), _age:6,
+      dateDebut:iso(-5), dateFin:iso(2), description:"Ajout de 8 spots encastrés au séjour et création d'un va-et-vient pour le couloir.",
+      dateRdv:iso(2), heureRdv:"09:30", noteRdv:"Test de l'éclairage et réception", assignes:{[e2]:true},
+      taches:{a:{label:"Repérage et perçage",done:true},b:{label:"Tirage des câbles",done:true},c:{label:"Raccordement spots",done:true},d:{label:"Va-et-vient couloir",done:false}},
+      materiel:{m1:{label:"8 spots LED encastrés",ok:true},m2:{label:"Transformateur",ok:true},m3:{label:"Câble et interrupteurs",ok:true}},
+      devis:{items:[{desc:"Pose 8 spots LED",qty:8,pu:45},{desc:"Création va-et-vient",qty:1,pu:240},{desc:"Main d'oeuvre",qty:8,pu:42}]},
+      photos:{p1:{url:demoImg("Spots poses","#3a4a5a"),ts:Date.now()-2*864e5,by:"Thomas Petit"}},
+      messages:{x:{from:"client",txt:"L'ambiance est top, merci !",ts:Date.now()-43200000}},
+      crs:{r1:{ts:Date.now()-2*864e5,by:"Thomas Petit",published:true,taches_realisees:"Pose et raccordement des 8 spots du séjour. Tirage du câble pour le va-et-vient.",materiaux_manquants:"",problemes:"",notes:"Va-et-vient à finaliser, reste le raccordement du 2e interrupteur."}} },
+    { nom:"Borne de recharge voiture 7 kW", clientPrenom:"Sébastien", client:"Marchal", adresse:"30 rue d'Auxonne", cp:"21000", ville:"Dijon", etape:et(1), _age:2,
+      dateDebut:iso(9), dateFin:iso(10), description:"Pose d'une borne de recharge 7 kW au garage, ligne dédiée depuis le tableau. Prime Advenir.",
+      dateRdv:iso(4), heureRdv:"11:00", noteRdv:"Repérage du passage de câble jusqu'au garage", assignes:{[chef]:true},
+      taches:{a:{label:"Ligne dédiée depuis le tableau",done:false},b:{label:"Pose de la borne",done:false},c:{label:"Protection différentielle",done:false},d:{label:"Mise en service & test",done:false}},
+      materiel:{m1:{label:"Borne 7 kW",ok:true},m2:{label:"Câble 3G6",ok:true},m3:{label:"Disjoncteur + différentiel type A",ok:false}},
+      devis:{items:[{desc:"Ligne dédiée",qty:1,pu:480},{desc:"Fourniture borne 7 kW",qty:1,pu:700},{desc:"Protection et pose",qty:1,pu:520},{desc:"Mise en service",qty:1,pu:180}]},
+      messages:{x:{from:"client",txt:"La prime Advenir est-elle déduite du devis ?",ts:Date.now()-2*864e5},y:{from:"team",txt:"Oui, on s'occupe du dossier, la prime est déduite.",ts:Date.now()-1*864e5}} }
   ];};
   T.platrier=function(){ return [
     { nom:"Am\u00e9nagement combles (cloisons placo)", clientPrenom:"L\u00e9a", client:"Barbier", adresse:"14 rue du Tire-Pesseau", cp:"21000", ville:"Dijon", etape:et(3), _age:7,
@@ -1052,7 +1148,23 @@ function demoTradeChantiers(key, ids, iso, et){
       materiel:{m1:{label:"Plaques BA13",ok:true},m2:{label:"Suspentes & fourrures",ok:true},m3:{label:"Spots LED",ok:true}},
       devis:{items:[{desc:"Ossature suspendue",qty:1,pu:900},{desc:"Pose plaques",qty:28,pu:24},{desc:"Int\u00e9gration 6 spots",qty:1,pu:420},{desc:"Bandes et enduit",qty:1,pu:600}]},
       photos:{p1:{url:demoImg("Faux plafond","#5a5a6a"),ts:Date.now()-2*864e5,by:"Karim Benali"}},
-      messages:{x:{from:"client",txt:"Le rendu est superbe, merci !",ts:Date.now()-1*864e5}} }
+      messages:{x:{from:"client",txt:"Le rendu est superbe, merci !",ts:Date.now()-1*864e5}} },
+    { nom:"Doublage isolant garage", clientPrenom:"Damien", client:"Gauthier", adresse:"3 rue de Mulhouse", cp:"21000", ville:"Dijon", etape:et(2), _age:3,
+      dateDebut:iso(7), dateFin:iso(14), description:"Doublage isolant des murs du garage (transformé en bureau), 28 m² de murs.",
+      dateRdv:iso(3), heureRdv:"08:30", noteRdv:"Validation de l'épaisseur d'isolant", assignes:{[chef]:true,[e1]:true},
+      taches:{a:{label:"Ossature murs",done:false},b:{label:"Isolant laine de roche",done:false},c:{label:"Plaques BA13",done:false},d:{label:"Bandes et enduit",done:false}},
+      materiel:{m1:{label:"Laine de roche 100 mm",ok:true},m2:{label:"Plaques BA13 (28)",ok:true},m3:{label:"Rails & montants",ok:true},m4:{label:"Enduit & bandes",ok:false}},
+      devis:{items:[{desc:"Ossature métallique",qty:1,pu:900},{desc:"Isolation laine de roche",qty:28,pu:22},{desc:"Pose BA13",qty:28,pu:24},{desc:"Bandes et enduit",qty:1,pu:700}]},
+      messages:{x:{from:"client",txt:"On vise un bureau bien isolé, merci de soigner ça.",ts:Date.now()-1*864e5}} },
+    { nom:"Cloison séparative chambre", clientPrenom:"Inès", client:"Da Silva", adresse:"19 rue Jeannin", cp:"21000", ville:"Dijon", etape:et(5), _age:18,
+      dateDebut:iso(-22), dateFin:iso(-4), description:"Séparation d'une grande chambre en deux avec porte. Cloison phonique 98 mm.",
+      dateRdv:iso(-3), heureRdv:"15:00", noteRdv:"Réception de la cloison", rdvStatus:"accepte", assignes:{[e1]:true},
+      taches:{a:{label:"Ossature et porte",done:true},b:{label:"Isolant phonique",done:true},c:{label:"Plaques BA13",done:true},d:{label:"Bandes, enduit, ponçage",done:true}},
+      materiel:{m1:{label:"Bloc-porte",ok:true},m2:{label:"Laine phonique",ok:true},m3:{label:"Plaques BA13",ok:true}},
+      devis:{items:[{desc:"Ossature et bloc-porte",qty:1,pu:650},{desc:"Isolation phonique",qty:1,pu:280},{desc:"Plaques et finitions",qty:1,pu:900}]},
+      photos:{p1:{url:demoImg("Cloison finie","#6a6a6a"),ts:Date.now()-4*864e5,by:"Lucas Martin"}},
+      messages:{x:{from:"client",txt:"Les deux chambres sont parfaites, merci !",ts:Date.now()-3*864e5}},
+      crs:{r1:{ts:Date.now()-4*864e5,by:"Lucas Martin",published:true,taches_realisees:"Montage de la cloison phonique avec bloc-porte, plaques et finitions complètes.",materiaux_manquants:"",problemes:"",notes:"Chantier terminé et réceptionné."}} }
   ];};
   T.carreleur=function(){ return [
     { nom:"Carrelage s\u00e9jour 42 m\u00b2", clientPrenom:"Julie", client:"Lemoine", adresse:"6 rue Vannerie", cp:"21000", ville:"Dijon", etape:et(3), _age:6,
@@ -1069,7 +1181,23 @@ function demoTradeChantiers(key, ids, iso, et){
       taches:{a:{label:"Pr\u00e9paration support",done:false},b:{label:"Pose fa\u00efence murale",done:false},c:{label:"Cr\u00e9dence",done:false},d:{label:"Joints",done:false}},
       materiel:{m1:{label:"Fa\u00efence 18 m\u00b2",ok:false},m2:{label:"Colle",ok:true},m3:{label:"Croisillons",ok:true},m4:{label:"Joint blanc",ok:true}},
       devis:{items:[{desc:"Pr\u00e9paration support",qty:1,pu:280},{desc:"Fourniture & pose fa\u00efence",qty:18,pu:46},{desc:"Cr\u00e9dence cuisine",qty:1,pu:420},{desc:"Joints",qty:1,pu:180}]},
-      messages:{x:{from:"client",txt:"On h\u00e9site entre deux fa\u00efences, vous pouvez conseiller ?",ts:Date.now()-1*864e5},y:{from:"team",txt:"Avec plaisir, on en parle au rendez-vous de jeudi.",ts:Date.now()-43200000}} }
+      messages:{x:{from:"client",txt:"On h\u00e9site entre deux fa\u00efences, vous pouvez conseiller ?",ts:Date.now()-1*864e5},y:{from:"team",txt:"Avec plaisir, on en parle au rendez-vous de jeudi.",ts:Date.now()-43200000}} },
+    { nom:"Carrelage terrasse extérieure 25 m²", clientPrenom:"Régis", client:"Henry", adresse:"7 rue de Gray", cp:"21000", ville:"Dijon", etape:et(3), _age:4,
+      dateDebut:iso(-3), dateFin:iso(6), description:"Pose de carrelage extérieur antidérapant sur colle, 25 m². Pente d'écoulement à respecter.",
+      dateRdv:iso(2), heureRdv:"09:00", noteRdv:"Validation du calepinage et de la pente", assignes:{[chef]:true,[e2]:true},
+      taches:{a:{label:"Préparation support",done:true},b:{label:"Calepinage",done:true},c:{label:"Pose collée",done:false},d:{label:"Coupes et joints",done:false}},
+      materiel:{m1:{label:"Carrelage extérieur 20 mm",ok:true},m2:{label:"Colle extérieure",ok:true},m3:{label:"Joint hydrofuge",ok:false}},
+      devis:{items:[{desc:"Préparation et pente",qty:1,pu:600},{desc:"Fourniture carrelage 25 m²",qty:25,pu:42},{desc:"Pose collée",qty:25,pu:48},{desc:"Joints",qty:25,pu:9}]},
+      photos:{p1:{url:demoImg("Preparation","#6a6050"),ts:Date.now()-2*864e5,by:"Thomas Petit"}},
+      messages:{x:{from:"client",txt:"Attention à bien gérer la pente vers le jardin.",ts:Date.now()-1*864e5},y:{from:"team",txt:"C'est noté, 1,5 % côté pelouse comme prévu.",ts:Date.now()-43200000}},
+      crs:{r1:{ts:Date.now()-1*864e5,by:"Thomas Petit",published:false,taches_realisees:"Préparation du support et calepinage. Pose démarrée depuis la baie.",materiaux_manquants:"Commander le joint hydrofuge gris.",problemes:"",notes:"Pente respectée, pose à 40%."}} },
+    { nom:"Rénovation sol cuisine", clientPrenom:"Patricia", client:"Lopez", adresse:"11 rue Monge", cp:"21000", ville:"Dijon", etape:et(1), _age:2,
+      dateDebut:iso(10), dateFin:iso(14), description:"Dépose ancien carrelage cuisine 15 m² et pose d'un nouveau format 30×60.",
+      dateRdv:iso(5), heureRdv:"10:30", noteRdv:"Choix du carrelage et du sens de pose", assignes:{[e1]:true},
+      taches:{a:{label:"Dépose ancien carrelage",done:false},b:{label:"Ragréage",done:false},c:{label:"Pose 30×60",done:false},d:{label:"Joints",done:false}},
+      materiel:{m1:{label:"Carrelage 30×60 (16 m²)",ok:false},m2:{label:"Colle C2",ok:true},m3:{label:"Joint gris",ok:true}},
+      devis:{items:[{desc:"Dépose et évacuation",qty:15,pu:18},{desc:"Ragréage",qty:15,pu:20},{desc:"Fourniture et pose 30×60",qty:15,pu:55},{desc:"Joints",qty:15,pu:8}]},
+      messages:{x:{from:"client",txt:"On part sur l'imitation parquet clair, c'est validé.",ts:Date.now()-1*864e5}} }
   ];};
   T.menuisier=function(){ return [
     { nom:"Pose de 5 fen\u00eatres PVC", clientPrenom:"Sandrine", client:"Petit", adresse:"4 rue Devosge", cp:"21000", ville:"Dijon", etape:et(3), _age:5,
@@ -1087,7 +1215,23 @@ function demoTradeChantiers(key, ids, iso, et){
       materiel:{m1:{label:"Caissons m\u00e9lamin\u00e9",ok:true},m2:{label:"Portes coulissantes",ok:true},m3:{label:"Rails & roulettes",ok:true},m4:{label:"Accessoires (penderie)",ok:true}},
       devis:{items:[{desc:"Conception & fabrication",qty:1,pu:1800},{desc:"Fourniture caissons & portes",qty:1,pu:1600},{desc:"Pose et r\u00e9glages",qty:1,pu:700}]},
       photos:{p1:{url:demoImg("Caissons poses","#5a5040"),ts:Date.now()-2*864e5,by:"Karim Benali"}},
-      messages:{x:{from:"client",txt:"H\u00e2te de voir le r\u00e9sultat fini !",ts:Date.now()-1*864e5}} }
+      messages:{x:{from:"client",txt:"H\u00e2te de voir le r\u00e9sultat fini !",ts:Date.now()-1*864e5}} },
+    { nom:"Pose porte d'entrée alu", clientPrenom:"Gérard", client:"Vincent", adresse:"6 rue Berlier", cp:"21000", ville:"Dijon", etape:et(2), _age:3,
+      dateDebut:iso(8), dateFin:iso(9), description:"Remplacement de la porte d'entrée par un modèle aluminium isolant avec serrure 5 points.",
+      dateRdv:iso(3), heureRdv:"08:30", noteRdv:"Prise de cotes définitive et choix du coloris", assignes:{[chef]:true},
+      taches:{a:{label:"Dépose ancienne porte",done:false},b:{label:"Pose du dormant",done:false},c:{label:"Réglages et étanchéité",done:false},d:{label:"Pose serrure et cylindre",done:false}},
+      materiel:{m1:{label:"Porte alu sur mesure",ok:false},m2:{label:"Serrure 5 points",ok:true},m3:{label:"Mousse PU & joints",ok:true}},
+      devis:{items:[{desc:"Dépose ancienne porte",qty:1,pu:180},{desc:"Fourniture porte alu",qty:1,pu:2200},{desc:"Pose et réglages",qty:1,pu:480}]},
+      messages:{x:{from:"client",txt:"Le gris anthracite sera dispo sous quel délai ?",ts:Date.now()-2*864e5},y:{from:"team",txt:"Environ 3 semaines de fabrication, on vous tient au courant.",ts:Date.now()-1*864e5}} },
+    { nom:"Parquet flottant 40 m²", clientPrenom:"Hélène", client:"Roy", adresse:"22 rue de Tivoli", cp:"21000", ville:"Dijon", etape:et(5), _age:16,
+      dateDebut:iso(-20), dateFin:iso(-3), description:"Pose de parquet flottant chêne dans le séjour et deux chambres, 40 m². Sous-couche acoustique.",
+      dateRdv:iso(-2), heureRdv:"16:00", noteRdv:"Réception et pose des plinthes", rdvStatus:"accepte", assignes:{[chef]:true,[e2]:true},
+      taches:{a:{label:"Préparation du sol",done:true},b:{label:"Sous-couche acoustique",done:true},c:{label:"Pose parquet",done:true},d:{label:"Plinthes et seuils",done:true}},
+      materiel:{m1:{label:"Parquet chêne (42 m²)",ok:true},m2:{label:"Sous-couche",ok:true},m3:{label:"Plinthes",ok:true}},
+      devis:{items:[{desc:"Préparation et sous-couche",qty:40,pu:12},{desc:"Fourniture parquet chêne",qty:42,pu:35},{desc:"Pose flottante",qty:40,pu:22},{desc:"Plinthes et finitions",qty:1,pu:480}]},
+      photos:{p1:{url:demoImg("Parquet pose","#7a6a4a"),ts:Date.now()-4*864e5,by:"Karim Benali"}},
+      messages:{x:{from:"client",txt:"Le rendu est magnifique, merci à toute l'équipe !",ts:Date.now()-3*864e5}},
+      crs:{r1:{ts:Date.now()-4*864e5,by:"Karim Benali",published:true,taches_realisees:"Pose de la sous-couche acoustique et du parquet sur les trois pièces. Plinthes posées.",materiaux_manquants:"",problemes:"Léger défaut de planéité dans une chambre, repris avant pose.",notes:"Chantier terminé et réceptionné."}} }
   ];};
   T.couvreur=function(){ return [
     { nom:"R\u00e9fection toiture (tuiles)", clientPrenom:"Patrick", client:"No\u00ebl", adresse:"30 route de Beaune", cp:"21160", ville:"Marsannay-la-C\u00f4te", etape:et(3), _age:9,
@@ -1104,7 +1248,23 @@ function demoTradeChantiers(key, ids, iso, et){
       taches:{a:{label:"Ouverture toiture",done:false},b:{label:"Pose 2 Velux",done:false},c:{label:"Raccords \u00e9tanch\u00e9it\u00e9",done:false},d:{label:"D\u00e9pose anciennes goutti\u00e8res",done:false},e:{label:"Pose goutti\u00e8res zinc",done:false}},
       materiel:{m1:{label:"2 fen\u00eatres de toit",ok:false},m2:{label:"Kit raccordement",ok:true},m3:{label:"Goutti\u00e8res zinc",ok:false}},
       devis:{items:[{desc:"Ouverture et pose 2 Velux",qty:2,pu:680},{desc:"Raccords et \u00e9tanch\u00e9it\u00e9",qty:1,pu:420},{desc:"Goutti\u00e8res zinc (12 ml)",qty:12,pu:45}]},
-      messages:{x:{from:"client",txt:"Les Velux seront-ils pos\u00e9s avant l'hiver ?",ts:Date.now()-1*864e5},y:{from:"team",txt:"Oui, intervention planifi\u00e9e dans deux semaines.",ts:Date.now()-43200000}} }
+      messages:{x:{from:"client",txt:"Les Velux seront-ils pos\u00e9s avant l'hiver ?",ts:Date.now()-1*864e5},y:{from:"team",txt:"Oui, intervention planifi\u00e9e dans deux semaines.",ts:Date.now()-43200000}} },
+    { nom:"Nettoyage et démoussage toiture", clientPrenom:"Bernard", client:"Lambert", adresse:"40 route de Dijon", cp:"21370", ville:"Plombières-lès-Dijon", etape:et(3), _age:4,
+      dateDebut:iso(-2), dateFin:iso(3), description:"Démoussage 110 m² + traitement hydrofuge + nettoyage des gouttières.",
+      dateRdv:iso(2), heureRdv:"08:00", noteRdv:"Point météo avant traitement hydrofuge", assignes:{[e1]:true,[e2]:true},
+      taches:{a:{label:"Nettoyage haute pression",done:true},b:{label:"Démoussage",done:false},c:{label:"Traitement hydrofuge",done:false},d:{label:"Nettoyage gouttières",done:false}},
+      materiel:{m1:{label:"Produit anti-mousse",ok:true},m2:{label:"Hydrofuge",ok:true},m3:{label:"Nettoyeur haute pression",ok:true}},
+      devis:{items:[{desc:"Nettoyage haute pression",qty:110,pu:6},{desc:"Démoussage",qty:110,pu:5},{desc:"Traitement hydrofuge",qty:110,pu:9},{desc:"Nettoyage gouttières",qty:1,pu:180}]},
+      photos:{p1:{url:demoImg("Avant nettoyage","#5a6a5a"),ts:Date.now()-1*864e5,by:"Lucas Martin"}},
+      messages:{x:{from:"client",txt:"La toiture était bien verte, hâte de voir le résultat.",ts:Date.now()-1*864e5}},
+      crs:{r1:{ts:Date.now()-1*864e5,by:"Lucas Martin",published:false,taches_realisees:"Nettoyage haute pression de l'ensemble de la toiture.",materiaux_manquants:"",problemes:"Une tuile fêlée repérée au faîtage, à remplacer.",notes:"Démoussage et hydrofuge dès que la météo est sèche 48h."}} },
+    { nom:"Isolation combles perdus", clientPrenom:"Monique", client:"Schmitt", adresse:"9 rue de Talant", cp:"21000", ville:"Dijon", etape:et(0), _age:1,
+      dateDebut:iso(18), dateFin:iso(19), description:"Soufflage de laine de verre dans les combles perdus, 70 m². Éligible MaPrimeRénov'. Devis en attente.",
+      dateRdv:iso(6), heureRdv:"10:00", noteRdv:"Visite technique et estimation de l'épaisseur", assignes:{[chef]:true},
+      taches:{a:{label:"Protection des spots et trappe",done:false},b:{label:"Pose de repères d'épaisseur",done:false},c:{label:"Soufflage laine de verre",done:false}},
+      materiel:{m1:{label:"Laine de verre à souffler",ok:false},m2:{label:"Machine à souffler (location)",ok:false},m3:{label:"Pare-vapeur trappe",ok:false}},
+      devis:{items:[{desc:"Protection et préparation",qty:1,pu:250},{desc:"Soufflage laine 70 m² (R=7)",qty:70,pu:22},{desc:"Repères et trappe isolée",qty:1,pu:180}]},
+      messages:{x:{from:"client",txt:"On perd beaucoup de chaleur l'hiver, c'est urgent. La prime est-elle possible ?",ts:Date.now()-1*864e5}} }
   ];};
   return (T[key]?T[key]():[]);
 }
@@ -1140,7 +1300,7 @@ function devLoadDemo(){
   }
   var _n=Object.keys(CHANTIERS).length; toast("Démo chargée ✅ "+_n+" chantier"+(_n>1?"s":""));
   SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; CH_SEARCH=''; CH_FILTER=''; PLAN_DAY=null;
-  if(!(ME&&ME.role==='boss')){ ME={nom:'Démo Patron',role:'boss'}; if(!AUTH_USER) AUTH_USER={uid:'dev-admin'}; }
+  ME={nom:'Accès dev',role:'boss',_dev:true}; if(!AUTH_USER) AUTH_USER={uid:'dev-admin'};
   DEV_ACCESS=true;   // permet de revenir à l'espace dev sans recode
   render(); toTop();
 }
@@ -1148,6 +1308,17 @@ function devClearChantiers(){
   if(!confirm("Effacer TOUS les chantiers ? (l'équipe et les réglages sont conservés)")) return;
   if(useFB) refChantiers().remove(); else { CHANTIERS={}; lsSet('batisuivi_chantiers',{}); }
   toast("Chantiers effacés"); render();
+}
+function devClearChantiersTeam(){
+  if(!confirm("Effacer les chantiers ET l'équipe ? (véhicules, planning, notes de frais et messagerie sont aussi effacés. Le logo, les couleurs et les réglages sont conservés.)")) return;
+  if(useFB){
+    ['chantiers','team','vehicules','planning','notesfrais','chat'].forEach(k=>{ db().ref('batisuivi/'+k).remove().catch(()=>{}); });
+  } else {
+    ['batisuivi_chantiers','batisuivi_team','batisuivi_vehicules','batisuivi_planning','batisuivi_notesfrais','batisuivi_chat'].forEach(k=>lsSet(k,{}));
+  }
+  ['cache_team','cache_chantiers','cache_vehicules','cache_planning','cache_notesfrais','cache_chat','veh_seen','msg_seen','etape_seen','sign_seen','chat_seen'].forEach(k=>{ try{ localStorage.removeItem(k); }catch(_){ } });
+  CHANTIERS={}; TEAM={}; VEHICULES={}; PLANNING={}; NOTES_FRAIS={}; CHAT={}; CHAT_SEEN={};
+  toast("Chantiers et équipe effacés ✅"); renderDev();
 }
 function devResetAll(){
   if(!confirm("⚠️ Tout réinitialiser ? Chantiers, équipe ET réglages seront supprimés. Action irréversible.")) return;
@@ -1588,7 +1759,7 @@ function renderTeamApp(){
   <div class="top"><div class="brand"><div class="logo">${logoHTML()}</div>
     <div class="bn"><b>${esc(coName())}</b><small>${esc(ME.nom)}</small></div></div>
     <div style="display:flex;align-items:center;gap:8px">
-      <span class="role-chip">${roleLabel(ME.role)}</span>
+      <span class="role-chip">${(ME&&ME._dev)?'Accès dev':roleLabel(ME.role)}</span>
       <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button>
     </div></div>
   ${EMP_PREVIEW?`<div onclick="exitEmployeePreview()" style="background:var(--acc);color:var(--accText);text-align:center;padding:9px;border-radius:10px;margin:10px 14px 0;font-weight:700;font-size:13px;cursor:pointer"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Aperçu du compte de ${esc(ME.nom||'')} — touche pour revenir</div>`:''}
@@ -2768,9 +2939,9 @@ function setTheme(t){ lsSet(LS_THEME,t); applyTheme(); const team=!!document.get
 function themeSwatches(sz){ sz=sz||40;
   const cur=myTheme()||''; const dot=cur.indexOf('.'); const base=dot>0?cur.slice(0,dot):cur; const acc=dot>0?cur.slice(dot+1):'';
   let h=`<div style="display:flex;gap:9px;flex-wrap:wrap">`;
-  h+=THEMES.map(([id,lb,col])=>`<div onclick="setTheme('${id}')" style="cursor:pointer;flex:none" title="${lb}"><div style="width:${sz}px;height:${sz}px;border-radius:12px;background:${col};border:3px solid ${id===base?'var(--txt)':'transparent'}"></div></div>`).join('');
+  h+=activeThemes().map(([id,lb,col])=>`<div onclick="setTheme('${id}')" style="cursor:pointer;flex:none" title="${lb}"><div style="width:${sz}px;height:${sz}px;border-radius:12px;background:${col};border:3px solid ${id===base?'var(--txt)':'transparent'}"></div></div>`).join('');
   h+=`</div>`;
-  if(base==='blanc'||base==='ardoise'){
+  if((base==='blanc'||base==='ardoise') && activeThemes().some(([id])=>id===base)){
     const baseCol=base==='blanc'?'#ffffff':'#7b8cb0'; const baseLbl=base==='blanc'?'Blanc':'Noir';
     const variants=[['','Uni',baseCol],['vert','Vert','#2fd17a'],['orange','Orange','#ff8a3d'],['rouge','Rouge','#ff4d62'],['violet','Violet','#9b6bff'],['bleu','Bleu','#3d8bff']];
     h+=`<p class="tag" style="margin:12px 0 6px">${baseLbl} + une couleur</p><div style="display:flex;gap:9px;flex-wrap:wrap">`;
