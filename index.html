@@ -766,7 +766,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v73 · 18/06";
+const APP_VERSION="v75 · 19/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2675,6 +2675,7 @@ function viewDashboard(){
       <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾 Facture':'📋 Devis'} · ${esc(d.num||'')}</b>
         <div class="tag">${esc(d.nom||'')} · ${esc(d.client||'')} · ${eur(tot)} HT${d.signature?' · <span style="color:var(--ok)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> signé</span>':relance?` · <span class="pill relance"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> non signé depuis ${relance} j</span>`:''}</div></div>
       <button class="linkbtn" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">Voir</button>
+      ${d.type==='facture'?`<button class="linkbtn" onclick="facturXPdf('${d.id}','${d.pid}')" title="Télécharger la facture électronique Factur-X (PDF avec XML intégré)">Factur-X</button>`:''}
       <button class="iconbtn danger" onclick="delDashDoc('${d.id}','${d.pid}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`; };
   const devisList=allDocs.filter(d=>d.type!=='facture');
   const factList=allDocs.filter(d=>d.type==='facture');
@@ -2768,6 +2769,105 @@ function copyEreporting(){
   else fallbackCopy(txt,done);
 }
 function fallbackCopy(txt,done){ try{ const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); done&&done(); }catch(e){ toast("Copie impossible sur cet appareil"); } }
+/* ---- Factur-X : facture électronique structurée (format CII, profil BASIC) ---- */
+function fxAmt(n){ return (Math.round((n||0)*100)/100).toFixed(2); }
+function fxSafe(s){ return String(s||'').replace(/[^A-Za-z0-9_-]/g,''); }
+function facturXXml(snap){
+  const X=esc;
+  const num=snap.num||'';
+  const dt=new Date(snap.ts||Date.now());
+  const ymd=dt.getFullYear()+String(dt.getMonth()+1).padStart(2,'0')+String(dt.getDate()).padStart(2,'0');
+  const ht=(snap.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); const tva=ht*0.2, ttc=ht*1.2;
+  const siren=(CONFIG_DB.siren||'').replace(/\s/g,'');
+  const tvaId=(CONFIG_DB.tvaIntra||'').replace(/\s/g,'');
+  const adr=CONFIG_DB.adr||'', cp=CONFIG_DB.cp||'', ville=CONFIG_DB.ville||'';
+  let lines='';
+  (snap.items||[]).forEach((it,i)=>{ const lt=it.qty*it.pu;
+    lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc||('Ligne '+(i+1)))}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>S</ram:CategoryCode><ram:RateApplicablePercent>20.00</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
+  });
+  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
+  xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
+  xml+=`  <rsm:ExchangedDocument><ram:ID>${X(num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${ymd}</udt:DateTimeString></ram:IssueDateTime></rsm:ExchangedDocument>\n`;
+  xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      <ram:SellerTradeParty><ram:Name>${X(coName())}</ram:Name>`;
+  if(siren) xml+=`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${X(siren)}</ram:ID></ram:SpecifiedLegalOrganization>`;
+  xml+=`<ram:PostalTradeAddress>`;
+  if(cp) xml+=`<ram:PostcodeCode>${X(cp)}</ram:PostcodeCode>`;
+  if(adr) xml+=`<ram:LineOne>${X(adr)}</ram:LineOne>`;
+  if(ville) xml+=`<ram:CityName>${X(ville)}</ram:CityName>`;
+  xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
+  if(tvaId) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${X(tvaId)}</ram:ID></ram:SpecifiedTaxRegistration>`;
+  xml+=`</ram:SellerTradeParty>\n      <ram:BuyerTradeParty><ram:Name>${X(snap.client||'Client')}</ram:Name><ram:PostalTradeAddress>`;
+  if(snap.adresse) xml+=`<ram:LineOne>${X(snap.adresse)}</ram:LineOne>`;
+  xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress></ram:BuyerTradeParty>\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery/>\n`;
+  xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
+  xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode><ram:BasisAmount>${fxAmt(ht)}</ram:BasisAmount><ram:CategoryCode>S</ram:CategoryCode><ram:RateApplicablePercent>20.00</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
+  xml+=`</ram:ApplicableHeaderTradeSettlement>\n  </rsm:SupplyChainTradeTransaction>\n</rsm:CrossIndustryInvoice>\n`;
+  return xml;
+}
+function facturXXmp(num){
+  return `<?xpacket begin="\ufeff" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:xmpmeta xmlns:x="adobe:ns:meta/">\n <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description>\n  <rdf:Description rdf:about="" xmlns:fx="urn:factur-x.eu:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:DocumentType>INVOICE</fx:DocumentType><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:Version>1.0</fx:Version><fx:ConformanceLevel>BASIC</fx:ConformanceLevel></rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n<?xpacket end="w"?>`;
+}
+let _pdfLibLoading=null;
+function loadPdfLib(){
+  if(window.PDFLib) return Promise.resolve(window.PDFLib);
+  if(_pdfLibLoading) return _pdfLibLoading;
+  _pdfLibLoading=new Promise((res,rej)=>{ const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+    s.onload=()=>window.PDFLib?res(window.PDFLib):rej(new Error('pdf-lib indisponible'));
+    s.onerror=()=>rej(new Error('réseau')); document.head.appendChild(s); });
+  return _pdfLibLoading;
+}
+function fxGetFacture(id,pid){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return null; }
+  const c=CHANTIERS[id]; const snap=c&&c.published&&c.published[pid];
+  if(!snap||snap.type!=='facture'){ toast("Factur-X : factures uniquement"); return null; }
+  if(!(CONFIG_DB.siren||'').trim()){ toast("Ajoute ton SIREN dans Paramètres de facturation"); openFacturationSettings(); return null; }
+  return snap;
+}
+function facturXDownload(id,pid){ // repli : XML seul
+  const snap=fxGetFacture(id,pid); if(!snap) return;
+  const blob=new Blob([facturXXml(snap)],{type:'application/xml'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='factur-x_'+fxSafe(snap.num||'facture')+'.xml';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  toast("Factur-X (XML) téléchargé ✅");
+}
+async function facturXPdf(id,pid){
+  const snap=fxGetFacture(id,pid); if(!snap) return;
+  let PL; try{ toast("Génération de la facture Factur-X…"); PL=await loadPdfLib(); }
+  catch(e){ toast("PDF indisponible hors ligne — export du XML à la place"); return facturXDownload(id,pid); }
+  try{
+    const {PDFDocument,StandardFonts,rgb,AFRelationship,PDFName}=PL;
+    const ht=(snap.items||[]).reduce((s,it)=>s+it.qty*it.pu,0), tva=ht*0.2, ttc=ht*1.2;
+    const doc=await PDFDocument.create();
+    const page=doc.addPage([595.28,841.89]);
+    const font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
+    let y=800; const M=50;
+    const dark=rgb(0.1,0.1,0.1), grey=rgb(0.4,0.4,0.4);
+    const t=(s,x,yy,f,sz,col)=>page.drawText(String(s==null?'':s),{x,y:yy,size:sz||10,font:f||font,color:col||dark});
+    t(coName(),M,y,bold,16); y-=18;
+    if(CONFIG_DB.adr){ t(CONFIG_DB.adr,M,y,font,9); y-=12; }
+    const cpv=[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).join(' '); if(cpv){ t(cpv,M,y,font,9); y-=12; }
+    t('SIREN '+(CONFIG_DB.siren||'')+(CONFIG_DB.tvaIntra?(' · TVA '+CONFIG_DB.tvaIntra):''),M,y,font,9); y-=22;
+    t('FACTURE '+(snap.num||''),M,y,bold,14); y-=16;
+    t('Date : '+new Date(snap.ts||Date.now()).toLocaleDateString('fr-FR'),M,y,font,10); y-=14;
+    t('Client : '+(snap.client||''),M,y,font,10); y-=12;
+    if(snap.adresse){ t(snap.adresse,M,y,font,9); y-=12; }
+    y-=14; t('Désignation',M,y,bold,10); t('Qté',360,y,bold,10); t('PU HT',420,y,bold,10); t('Total HT',500,y,bold,10); y-=14;
+    (snap.items||[]).forEach(it=>{ t(String(it.desc||'').slice(0,60),M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); y-=13; if(y<120){ y=800; doc.addPage([595.28,841.89]); } });
+    y-=10; t('Total HT : '+fxAmt(ht)+' EUR',380,y,font,10); y-=13; t('TVA 20% : '+fxAmt(tva)+' EUR',380,y,font,10); y-=13; t('Total TTC : '+fxAmt(ttc)+' EUR',380,y,bold,11); y-=26;
+    t('Facture électronique — Factur-X (profil BASIC). Données structurées XML intégrées dans ce PDF.',M,y,font,8,grey);
+    const enc=new TextEncoder();
+    await doc.attach(enc.encode(facturXXml(snap)),'factur-x.xml',{mimeType:'application/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
+    try{ const stream=doc.context.stream(facturXXmp(snap.num||''),{Type:'Metadata',Subtype:'XML'}); doc.catalog.set(PDFName.of('Metadata'),doc.context.register(stream)); }catch(_){}
+    doc.setProducer('BatiSuivi'); doc.setCreator('BatiSuivi'); doc.setTitle('Facture '+(snap.num||''));
+    const bytes=await doc.save();
+    const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='factur-x_'+fxSafe(snap.num||'facture')+'.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("Facture Factur-X (PDF) téléchargée ✅");
+  }catch(e){ toast("Souci à la génération du PDF — export du XML à la place"); facturXDownload(id,pid); }
+}
 
 /* ====================== MENU / RÉGLAGES ====================== */
 function openMenu(){
@@ -2819,6 +2919,13 @@ function openFacturationSettings(){
     <div class="row" style="margin-top:8px"><div><label>Préfixe facture</label><input id="fs_factpre" type="text" value="${factPrefix()}" maxlength="6"></div>
       <div><label>Prochain n° de facture</label><input id="fs_fact" type="number" min="1" value="${(CONFIG_DB.factCounter||0)+1}"></div></div>
     <p class="note" style="font-size:11px;margin-top:8px">Aperçu — prochain devis : <b>${esc(apDev)}</b> · prochaine facture : <b>${esc(apFact)}</b></p>
+    <label style="margin-top:14px;display:block">Identité légale (pour la facture électronique)</label>
+    <div class="row" style="margin-top:4px"><div><label>SIREN</label><input id="fs_siren" type="text" inputmode="numeric" value="${esc(CONFIG_DB.siren||'')}" placeholder="9 chiffres" maxlength="11"></div>
+      <div><label>N° TVA intracom.</label><input id="fs_tva" type="text" value="${esc(CONFIG_DB.tvaIntra||'')}" placeholder="FR…" maxlength="15"></div></div>
+    <div style="margin-top:8px"><label>Adresse de l'entreprise</label><input id="fs_adr" type="text" value="${esc(CONFIG_DB.adr||'')}" placeholder="N° et rue"></div>
+    <div class="row" style="margin-top:8px"><div><label>Code postal</label><input id="fs_cp" type="text" inputmode="numeric" value="${esc(CONFIG_DB.cp||'')}" maxlength="5"></div>
+      <div><label>Ville</label><input id="fs_ville" type="text" value="${esc(CONFIG_DB.ville||'')}"></div></div>
+    <p class="note" style="font-size:11px;margin-top:4px">Obligatoires pour générer une facture électronique conforme (format Factur-X) à destination des professionnels.</p>
     <button class="btn ghost" style="width:100%;margin-top:12px" onclick="openEreportingExport()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Récap & export e-reporting (HT + TVA par mois)</button>
     <div class="row" style="margin-top:14px"><button class="btn ghost" style="flex:1" onclick="closeModal()">Annuler</button><button class="btn primary" style="flex:2" onclick="saveFacturationSettings()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button></div>`);
 }
@@ -2828,6 +2935,11 @@ function saveFacturationSettings(){
   const nextD=parseInt(val('fs_devnum'),10); if(!isNaN(nextD)&&nextD>0) CONFIG_DB.devisCounter=nextD-1;
   const dp=(val('fs_devpre')||'').trim().toUpperCase(); if(dp) CONFIG_DB.devisPrefix=dp;
   const fp=(val('fs_factpre')||'').trim().toUpperCase(); if(fp) CONFIG_DB.factPrefix=fp;
+  CONFIG_DB.siren=(val('fs_siren')||'').trim();
+  CONFIG_DB.tvaIntra=(val('fs_tva')||'').trim().toUpperCase();
+  CONFIG_DB.adr=(val('fs_adr')||'').trim();
+  CONFIG_DB.cp=(val('fs_cp')||'').trim();
+  CONFIG_DB.ville=(val('fs_ville')||'').trim();
   saveConfigDB(); closeModal(); toast("Facturation enregistrée ✅");
 }
 function openHelp(){
