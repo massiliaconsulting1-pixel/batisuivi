@@ -766,7 +766,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v77 · 26/06";
+const APP_VERSION="v78 · 26/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2878,6 +2878,81 @@ async function facturXPdf(id,pid){
   }catch(e){ toast("Souci à la génération du PDF — export du XML à la place"); facturXDownload(id,pid); }
 }
 
+/* ---- Factur-X de TEST plateforme agreee (emetteur/destinataire Sandbox) ----
+   N'utilise PAS tes reglages reels : tout est en dur, juste pour l'essai d'envoi. */
+const PA_TEST_EMETTEUR = { name:'MONTPELLIER DEPANNAGE', siren:'382482404', cp:'34000', ville:'MONTPELLIER', adr:'' };
+const PA_TEST_DESTINATAIRES = {
+  imaginer: { name:"IMAGINE'R", siren:'432429819', cp:'34090', ville:'MONTPELLIER', adr:'ESPACE CLUB 7 448 RUE DE LA ROQUETURIERE' },
+  urbat:    { name:'URBAT PROMOTION', siren:'352588727', cp:'34090', ville:'MONTPELLIER', adr:'ESPACE CLUB 7 448 RUE DE LA ROQUETURIERE' }
+};
+function _fxTestParty(role, p){
+  const X=esc; let s=`<ram:${role}><ram:Name>${X(p.name)}</ram:Name>`;
+  if(p.siren) s+=`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${X(p.siren)}</ram:ID></ram:SpecifiedLegalOrganization>`;
+  s+=`<ram:PostalTradeAddress>`;
+  if(p.cp) s+=`<ram:PostcodeCode>${X(p.cp)}</ram:PostcodeCode>`;
+  if(p.adr) s+=`<ram:LineOne>${X(p.adr)}</ram:LineOne>`;
+  if(p.ville) s+=`<ram:CityName>${X(p.ville)}</ram:CityName>`;
+  s+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
+  if(p.siren) s+=`<ram:URIUniversalCommunication><ram:URIID schemeID="0225">${X(p.siren)}</ram:URIID></ram:URIUniversalCommunication>`;
+  s+=`</ram:${role}>`;
+  return s;
+}
+function facturXTestXml(em, dest, inv){
+  const X=esc; let lines='';
+  inv.items.forEach((it,i)=>{ const lt=it.qty*it.pu;
+    lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc)}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
+  });
+  let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
+  xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
+  xml+=`  <rsm:ExchangedDocument><ram:ID>${X(inv.num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:IssueDateTime></rsm:ExchangedDocument>\n`;
+  xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      ${_fxTestParty('SellerTradeParty', em)}\n      ${_fxTestParty('BuyerTradeParty', dest)}\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery/>\n`;
+  xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
+  xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(inv.tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode><ram:BasisAmount>${fxAmt(inv.ht)}</ram:BasisAmount><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(inv.ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(inv.ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(inv.tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(inv.ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(inv.ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
+  xml+=`</ram:ApplicableHeaderTradeSettlement>\n  </rsm:SupplyChainTradeTransaction>\n</rsm:CrossIndustryInvoice>\n`;
+  return xml;
+}
+async function facturXTestPdf(){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const destKey=(val('pa_dest')||'imaginer');
+  const dest=PA_TEST_DESTINATAIRES[destKey]||PA_TEST_DESTINATAIRES.imaginer;
+  const em=PA_TEST_EMETTEUR;
+  const d=new Date();
+  const ymd=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  const hhmm=String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+  const inv={ num:'TEST-'+ymd+'-'+hhmm, ymd, cat:'S', rate:'20',
+    items:[{desc:'Prestation de test BatiSuivi',qty:1,pu:100}], ht:100, tva:20, ttc:120 };
+  let PL; try{ toast("Génération du Factur-X de test…"); PL=await loadPdfLib(); }
+  catch(e){ toast("PDF indisponible (réseau). Réessaie en ligne."); return; }
+  try{
+    const {PDFDocument,StandardFonts,rgb,AFRelationship,PDFName}=PL;
+    const doc=await PDFDocument.create();
+    const page=doc.addPage([595.28,841.89]);
+    const font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
+    let y=800; const M=50; const dark=rgb(0.1,0.1,0.1), grey=rgb(0.4,0.4,0.4);
+    const t=(s,x,yy,ff,sz,col)=>page.drawText(String(s==null?'':s),{x,y:yy,size:sz||10,font:ff||font,color:col||dark});
+    t(em.name,M,y,bold,16); y-=16;
+    t('SIREN '+em.siren+' · '+(em.cp||'')+' '+(em.ville||''),M,y,font,9); y-=22;
+    t('FACTURE '+inv.num+'  (TEST plateforme agreee)',M,y,bold,13); y-=16;
+    t('Date : '+d.toLocaleDateString('fr-FR'),M,y,font,10); y-=14;
+    t('Client : '+dest.name+' - SIREN '+dest.siren+' (routage 0225:'+dest.siren+')',M,y,font,10); y-=12;
+    if(dest.adr){ t(dest.adr+', '+(dest.cp||'')+' '+(dest.ville||''),M,y,font,9); y-=12; }
+    y-=14; t('Designation',M,y,bold,10); t('Qte',360,y,bold,10); t('PU HT',420,y,bold,10); t('Total HT',500,y,bold,10); y-=14;
+    inv.items.forEach(it=>{ t(it.desc,M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); y-=13; });
+    y-=10; t('Total HT : '+fxAmt(inv.ht)+' EUR',380,y,font,10); y-=13; t('TVA 20% : '+fxAmt(inv.tva)+' EUR',380,y,font,10); y-=13; t('Total TTC : '+fxAmt(inv.ttc)+' EUR',380,y,bold,11); y-=18;
+    t('Facture electronique de TEST - Factur-X (profil BASIC). Emetteur et destinataire de la Sandbox.',M,y,font,8,grey);
+    const enc=new TextEncoder();
+    await doc.attach(enc.encode(facturXTestXml(em,dest,inv)),'factur-x.xml',{mimeType:'application/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
+    try{ const stream=doc.context.stream(facturXXmp(inv.num),{Type:'Metadata',Subtype:'XML'}); doc.catalog.set(PDFName.of('Metadata'),doc.context.register(stream)); }catch(_){}
+    doc.setProducer('BatiSuivi'); doc.setCreator('BatiSuivi'); doc.setTitle('Facture TEST '+inv.num);
+    const bytes=await doc.save();
+    const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='factur-x_test_'+destKey+'_'+inv.num+'.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("Factur-X de test telecharge ✅ — depose-le dans le portail");
+  }catch(e){ toast("Souci a la generation : "+((e&&e.message)||'')); }
+}
+
 /* ====================== MENU / RÉGLAGES ====================== */
 function openMenu(){
   const myPhoto=(ME&&ME.photo)?`<img src="${ME.photo}" alt="">`:esc(initials(ME&&ME.nom));
@@ -2972,7 +3047,16 @@ function openPaTest(){
     <h2 style="margin:0 0 4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3M6 16a4 4 0 0 1-2-4 4 4 0 0 1 4-4h8a4 4 0 0 1 4 4 4 4 0 0 1-2 4"/></svg> Facturation électronique — test</h2>
     <p class="note" style="margin:0 0 10px">Bac à sable (Sandbox). Pour <b>créer</b> un artisan de test, son SIREN doit être dans l'<b>Hérault (34)</b>. Destinataires de test fournis : IMAGINE'R (routage 0225:432429819) et URBAT PROMOTION (routage 0225:352588727).</p>
 
-    <h3 style="font-size:14px;margin:14px 0 6px">1 · Inscrire l'artisan de test</h3>
+    <h3 style="font-size:14px;margin:14px 0 6px">① Générer un Factur-X de test (à déposer dans le portail)</h3>
+    <p class="note" style="font-size:11px;margin:0 0 6px">Crée une facture d'essai <b>MONTPELLIER DEPANNAGE → destinataire</b>, avec le routage 0225 à l'intérieur. <b>Ne touche pas</b> à tes réglages réels. Télécharge le PDF, puis dépose-le dans le portail BCSolutions.</p>
+    <label>Destinataire</label>
+    <select id="pa_dest">
+      <option value="imaginer">IMAGINE'R — 0225:432429819</option>
+      <option value="urbat">URBAT PROMOTION — 0225:352588727</option>
+    </select>
+    <button class="btn primary" style="width:100%;margin-top:8px" onclick="facturXTestPdf()">Télécharger le Factur-X de test</button>
+
+    <h3 style="font-size:14px;margin:18px 0 6px">② Inscrire l'artisan de test (par API)</h3>
     <div class="row"><div><label>SIREN (Hérault)</label><input id="pa_siren" type="text" inputmode="numeric" maxlength="11" placeholder="9 chiffres, dépt 34"></div>
       <div><label>E-mail responsable</label><input id="pa_email" type="email" placeholder="test@exemple.fr"></div></div>
     <div style="margin-top:8px"><label>Raison sociale</label><input id="pa_rs" type="text" placeholder="ex : ARTISAN TEST SARL"></div>
@@ -2982,7 +3066,7 @@ function openPaTest(){
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="paEnroll()">Inscrire l'artisan de test</button>
     <p class="note" style="font-size:11px;margin-top:6px">L'inscription enchaîne plusieurs étapes (dont le provisionnement, qui se fait en arrière-plan). Le résultat détaillé s'affiche en bas.</p>
 
-    <h3 style="font-size:14px;margin:18px 0 6px">2 · Vérifier / suivre</h3>
+    <h3 style="font-size:14px;margin:18px 0 6px">③ Vérifier / suivre</h3>
     <button class="btn ghost" style="width:100%" onclick="paInfo()">Voir l'état d'inscription</button>
     <div style="margin-top:8px"><label>flowId d'une facture envoyée</label><input id="pa_flowid" type="text" placeholder="colle un flowId ici"></div>
     <button class="btn ghost" style="width:100%;margin-top:8px" onclick="paStatus()">Suivre ce flux</button>
