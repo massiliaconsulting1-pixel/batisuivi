@@ -766,7 +766,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v76 · 25/06";
+const APP_VERSION="v77 · 26/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2938,6 +2938,7 @@ function openFacturationSettings(){
       <div><label>Ville</label><input id="fs_ville" type="text" value="${esc(CONFIG_DB.ville||'')}"></div></div>
     <p class="note" style="font-size:11px;margin-top:4px">Obligatoires pour générer une facture électronique conforme (format Factur-X) à destination des professionnels.</p>
     <button class="btn ghost" style="width:100%;margin-top:12px" onclick="openEreportingExport()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Récap & export e-reporting (HT + TVA par mois)</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3M6 16a4 4 0 0 1-2-4 4 4 0 0 1 4-4h8a4 4 0 0 1 4 4 4 4 0 0 1-2 4"/></svg> Facturation électronique — test plateforme agréée</button>
     <div class="row" style="margin-top:14px"><button class="btn ghost" style="flex:1" onclick="closeModal()">Annuler</button><button class="btn primary" style="flex:2" onclick="saveFacturationSettings()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button></div>`);
 }
 function saveFacturationSettings(){
@@ -2954,6 +2955,79 @@ function saveFacturationSettings(){
   CONFIG_DB.ville=(val('fs_ville')||'').trim();
   saveConfigDB(); closeModal(); toast("Facturation enregistrée ✅");
 }
+
+/* ===== Passerelle facturation électronique (plateforme agréée) — panneau de TEST patron =====
+   Appelle la Cloud Function 'passerellePA' (même région que les autres fonctions).
+   Le secret d'envoi de l'artisan reste côté serveur : il n'apparaît jamais ici. */
+function paFn(){ return firebase.app().functions('europe-west1').httpsCallable('passerellePA'); }
+function paCall(action, payload){ return paFn()(Object.assign({action:action}, payload||{})).then(function(r){ return r.data; }); }
+function _paShow(html){ var el=document.getElementById('pa_result'); if(el) el.innerHTML=html; }
+function _paBusy(msg){ _paShow('<p class="note" style="margin:0">⏳ '+esc(msg)+'</p>'); }
+function _paErr(e){ _paShow('<p class="note" style="margin:0;color:#c0392b">❌ '+esc((e&&e.message)||'Erreur inconnue')+'</p>'); }
+function _paJson(obj){ return '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0;max-height:240px;overflow:auto">'+esc(JSON.stringify(obj,null,2))+'</pre>'; }
+
+function openPaTest(){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3M6 16a4 4 0 0 1-2-4 4 4 0 0 1 4-4h8a4 4 0 0 1 4 4 4 4 0 0 1-2 4"/></svg> Facturation électronique — test</h2>
+    <p class="note" style="margin:0 0 10px">Bac à sable (Sandbox). Pour <b>créer</b> un artisan de test, son SIREN doit être dans l'<b>Hérault (34)</b>. Destinataires de test fournis : IMAGINE'R (routage 0225:432429819) et URBAT PROMOTION (routage 0225:352588727).</p>
+
+    <h3 style="font-size:14px;margin:14px 0 6px">1 · Inscrire l'artisan de test</h3>
+    <div class="row"><div><label>SIREN (Hérault)</label><input id="pa_siren" type="text" inputmode="numeric" maxlength="11" placeholder="9 chiffres, dépt 34"></div>
+      <div><label>E-mail responsable</label><input id="pa_email" type="email" placeholder="test@exemple.fr"></div></div>
+    <div style="margin-top:8px"><label>Raison sociale</label><input id="pa_rs" type="text" placeholder="ex : ARTISAN TEST SARL"></div>
+    <div style="margin-top:8px"><label>Nom commercial <span class="tag">(facultatif)</span></label><input id="pa_nc" type="text" placeholder="vide = même que raison sociale"></div>
+    <div class="row" style="margin-top:8px"><div><label>Prénom responsable</label><input id="pa_prenom" type="text" placeholder="ex : Jean"></div>
+      <div><label>Nom responsable</label><input id="pa_nom" type="text" placeholder="ex : Dupont"></div></div>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="paEnroll()">Inscrire l'artisan de test</button>
+    <p class="note" style="font-size:11px;margin-top:6px">L'inscription enchaîne plusieurs étapes (dont le provisionnement, qui se fait en arrière-plan). Le résultat détaillé s'affiche en bas.</p>
+
+    <h3 style="font-size:14px;margin:18px 0 6px">2 · Vérifier / suivre</h3>
+    <button class="btn ghost" style="width:100%" onclick="paInfo()">Voir l'état d'inscription</button>
+    <div style="margin-top:8px"><label>flowId d'une facture envoyée</label><input id="pa_flowid" type="text" placeholder="colle un flowId ici"></div>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="paStatus()">Suivre ce flux</button>
+
+    <div id="pa_result" style="margin-top:12px"></div>
+    <div class="row" style="margin-top:14px"><button class="btn ghost" style="width:100%" onclick="closeModal()">Fermer</button></div>`);
+}
+
+function paInfo(){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  _paBusy("Lecture de l'état d'inscription…");
+  paCall('info').then(function(res){
+    if(!res || !res.inscrit){ _paShow('<p class="note" style="margin:0">Aucun artisan inscrit pour le moment.</p>'); return; }
+    _paShow('<p class="note" style="margin:0">✅ Inscrit — tenant <b>'+esc(res.tenantSlug||'')+'</b>'+(res.siren?(' · SIREN '+esc(res.siren)):'')+'</p>'+_paJson(res));
+  }).catch(_paErr);
+}
+
+function paEnroll(){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  var siren=(val('pa_siren')||'').replace(/\s+/g,'');
+  var rs=(val('pa_rs')||'').trim();
+  var nc=(val('pa_nc')||'').trim();
+  var em=(val('pa_email')||'').trim();
+  var pr=(val('pa_prenom')||'').trim();
+  var no=(val('pa_nom')||'').trim();
+  if(!/^\d{9}$/.test(siren)){ toast("SIREN invalide (9 chiffres)"); return; }
+  if(!rs){ toast("Raison sociale manquante"); return; }
+  if(!em){ toast("E-mail du responsable manquant"); return; }
+  _paBusy("Inscription en cours (tenant, provisionnement, entité légale…). Quelques secondes.");
+  paCall('enroll',{siren:siren, raisonSociale:rs, nomCommercial:(nc||rs), email:em, prenom:pr, nom:no}).then(function(res){
+    toast("Artisan inscrit ✅");
+    _paShow('<p class="note" style="margin:0">✅ '+esc((res&&res.message)||'Inscrit')+'</p>'+_paJson(res));
+  }).catch(_paErr);
+}
+
+function paStatus(){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  var fid=(val('pa_flowid')||'').trim();
+  if(!fid){ toast("Indique un flowId"); return; }
+  _paBusy("Lecture du statut du flux…");
+  paCall('status',{flowId:fid}).then(function(res){
+    _paShow('<p class="note" style="margin:0">Flux <b>'+esc((res&&res.flowId)||fid)+'</b> — accusé technique : <b>'+esc((res&&res.acknowledgement)||'—')+'</b></p>'+_paJson(res));
+  }).catch(_paErr);
+}
+
 function openHelp(){
   const role=(ME&&ME.role)||'employe';
   const step=(ic,t,d)=>`<div class="help-step"><div class="help-ic">${icone(ic,'30px')}</div><div><b>${t}</b><div class="note" style="margin-top:2px">${d}</div></div></div>`;
