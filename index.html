@@ -728,7 +728,12 @@ function render(){
     if(useFB && !AUTH_USER){ navEl.classList.add('hidden'); return renderTeamAuth(); }
     if(useFB && AUTH_USER && !ME){ navEl.classList.add('hidden'); return renderJoinTeam(); }
     if(!ME){ navEl.classList.add('hidden'); return renderTeamAuth(); } // mode local : pas encore connecté
-    if(FACTU_OPEN && perm('gerer_reglages')) return renderFactuApp();
+    if(isBoss() && !EMP_PREVIEW){
+      if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]){ if(!HUB) HUB='chantiers'; return renderBossChantier(); }
+      if(HUB==='facturation') return renderFactuApp();
+      if(HUB) return renderHub();
+      return renderAccueil();
+    }
     return renderTeamApp();
   }
 }
@@ -767,7 +772,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v79 · 27/06";
+const APP_VERSION="v80 · 27/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2688,8 +2693,139 @@ function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi 
 
 /* ====================== ESPACE FACTURATION (mini-app plein écran) ====================== */
 let FACTU_OPEN=false, FTAB='resume';
-function openFactu(){ if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; } closeModal(); FACTU_OPEN=true; FTAB='resume'; render(); toTop(); }
-function closeFactu(){ FACTU_OPEN=false; render(); toTop(); }
+let HUB=null, HTAB='';
+const HUBS={
+  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['planning','calendar','Planning'],['modeles','layers','Modèles'],['carte','map-pin','Carte']]},
+  equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['vehicules','truck','Véhicules'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
+  clients:{title:'Clients',icon:'user',tabs:[['annuaire','users','Annuaire'],['acces','key','Accès'],['messages','message','Messages'],['docs','file','Documents'],['avis','bookmark','Avis']]},
+  planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
+  ia:{title:'IA',icon:'robot',tabs:[['assistant','robot','Assistant'],['projection','eye','Projection'],['cr','mic','C.-rendus'],['devisia','file','Devis IA'],['redaction','edit','Rédaction']]},
+  params:{title:'Paramètres',icon:'settings',tabs:[['entreprise','id','Entreprise'],['factu','receipt','Facturation'],['roles','shield','Rôles'],['apparence','palette','Apparence'],['systeme','settings','Système']]}
+};
+function openFactu(){ if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; } HUB='facturation'; closeModal(); render(); toTop(); }
+function closeFactu(){ goHome(); }
+
+/* ---- Accueil patron + coquille des hubs ---- */
+function goHub(h){ if(!isBoss()){ toast("Réservé au patron."); return; } HUB=h; HTAB=(HUBS[h]&&HUBS[h].tabs[0][0])||''; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; closeModal(); render(); toTop(); }
+function goHome(){ HUB=null; FACTU_OPEN=false; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; closeModal(); render(); toTop(); }
+function setHTab(t){ HTAB=t; CUR_CHANTIER=null; render(); toTop(); }
+
+function renderAccueil(){
+  navEl.classList.add('hidden');
+  const all=Object.values(CHANTIERS).filter(c=>!c.archived);
+  const actifs=all.filter(c=>c.etape&&c.etape!==ETAPES[ETAPES.length-1]).length;
+  const docs=factuAllDocs(); const devAtt=docs.filter(d=>d.type!=='facture'&&!d.signature).length;
+  const prenom=((ME&&ME.nom)||'').split(' ')[0]||'';
+  const tiles=[
+    ['chantiers','building','Chantiers', actifs?(actifs+' en cours'):'—'],
+    ['equipe','users','Équipe', Object.keys(TEAM).length+' membres'],
+    ['clients','user','Clients',''],
+    ['planning','calendar','Planning',''],
+    ['facturation','receipt','Facturation', devAtt?(devAtt+' devis en attente'):''],
+    ['ia','robot','IA',''],
+    ['params','settings','Paramètres','']
+  ];
+  app.innerHTML=`
+  <div class="top"><div class="brand"><div class="logo">${logoHTML()}</div>
+    <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
+    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
+  <div class="page-head"><h2>Accueil</h2></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px 100px">
+    ${tiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 10px;cursor:pointer;color:var(--txt);font:inherit;min-height:118px">
+      <span style="width:52px;height:52px;border-radius:15px;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'26px')}</span>
+      <b style="font-size:15px">${lb}</b>${bdg?`<small class="note" style="font-size:11px">${esc(bdg)}</small>`:''}</button>`).join('')}
+  </div>`;
+}
+
+function renderHub(){
+  const cfg=HUBS[HUB]; if(!cfg){ HUB=null; return renderAccueil(); }
+  if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]) return renderBossChantier();
+  navEl.classList.remove('hidden'); navEl.classList.add('compact');
+  navEl.innerHTML=cfg.tabs.map(([t,ic,lb])=>`<button class="${HTAB===t?'on':''}" onclick="setHTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join('');
+  const lbl=(cfg.tabs.find(t=>t[0]===HTAB)||[])[2]||cfg.title;
+  app.innerHTML=`
+  <div class="top"><div class="brand" style="min-width:0">
+    <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <div class="logo">${icone(cfg.icon,'22px')}</div>
+    <div class="bn"><b>${esc(cfg.title)}</b><small>${esc(coName())}</small></div></div>
+    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
+  <div class="page-head"><h2>${esc(lbl)}</h2></div>
+  ${hubBody(HUB,HTAB)}
+  ${hubFab()}`;
+}
+function renderBossChantier(){
+  navEl.classList.add('hidden');
+  app.innerHTML=`
+  <div class="top"><div class="brand" style="min-width:0">
+    <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <div class="logo">${logoHTML()}</div><div class="bn"><b>Chantier</b><small>${esc(coName())}</small></div></div>
+    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
+  ${viewChantier(CUR_CHANTIER)}`;
+}
+function hubFab(){
+  const plus=`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+  if(HUB==='chantiers' && HTAB==='liste') return `<button class="fab" onclick="newChantier()" aria-label="Nouveau chantier">${plus}</button>`;
+  if(HUB==='equipe' && HTAB==='vehicules') return `<button class="fab" onclick="newVehicule()" aria-label="Nouveau véhicule">${plus}</button>`;
+  return '';
+}
+function hubPlaceholder(title,desc,extra){ return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(title)}</h2></div><p class="note" style="margin:0">${esc(desc)}</p>${extra||''}<p class="tag" style="margin-top:10px">🚧 En construction — bientôt disponible</p></div>`; }
+function hubBody(hub,tab){
+  if(hub==='chantiers'){
+    if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
+    if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
+    if(tab==='planning') return viewPlanning();
+    if(tab==='modeles') return hubPlaceholder('Modèles de chantier','Crée des modèles réutilisables (étapes + lignes de devis pré-remplies) pour démarrer un chantier en un clic.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Gérer les modèles</button>`);
+    if(tab==='carte') return hubPlaceholder('Carte des chantiers','Tous tes chantiers situés sur une carte, pour organiser les tournées.');
+  }
+  if(hub==='equipe'){
+    if(tab==='membres'||tab==='vehicules') return viewEquipeVeh();
+    if(tab==='pointage') return hubPlaceholder('Pointage des heures','Heures pointées par chantier et par personne, validation et export pour la paie.');
+    if(tab==='frais') return hubPlaceholder('Notes de frais','Les tickets et notes de frais envoyés par l’équipe, classés et exportables.');
+    if(tab==='stats') return hubPlaceholder('Statistiques équipe','Heures travaillées, coût de main d’œuvre et performance par membre.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openTeamStats()">${icone('chart')} Voir les statistiques</button>`);
+  }
+  if(hub==='clients'){
+    if(tab==='annuaire') return factuClients();
+    if(tab==='messages') return viewMessagerie();
+    if(tab==='acces') return hubPlaceholder('Accès clients','Les codes d’accès de chaque chantier, à partager avec tes clients pour qu’ils suivent l’avancement en direct.');
+    if(tab==='docs') return hubPlaceholder('Documents clients','Devis et factures partagés au client, avec leur statut (vu, signé).');
+    if(tab==='avis') return hubPlaceholder('Avis & satisfaction','Demande un avis en fin de chantier et suis la satisfaction de tes clients.');
+  }
+  if(hub==='planning'){
+    if(tab==='cal') return viewPlanning();
+    if(tab==='jour') return hubPlaceholder('Aujourd’hui','Les interventions et rendez-vous du jour, en un coup d’œil.');
+    if(tab==='rdv') return hubPlaceholder('Rendez-vous clients','Propositions et confirmations de créneaux avec tes clients.');
+    if(tab==='echeances') return hubPlaceholder('Échéances & retards','Les chantiers dont la date de fin approche ou est dépassée.');
+    if(tab==='charge') return hubPlaceholder('Charge de l’équipe','Qui est affecté à quoi, et les disponibilités de chacun.');
+  }
+  if(hub==='ia'){
+    if(tab==='assistant') return hubPlaceholder('Assistant IA','Pose tes questions (chiffrage, organisation, rédaction). Déjà disponible dans la messagerie ; il sera intégré ici.');
+    if(tab==='projection') return hubPlaceholder('Projection / Rendu','Le client envoie une photo de l’existant + une inspiration, l’IA génère un rendu projeté pour l’aider à se décider. Nécessite un moteur d’images dédié — à brancher.');
+    if(tab==='cr') return hubPlaceholder('Comptes-rendus vocaux','L’équipe dicte, l’IA structure le compte-rendu. Déjà actif sur les chantiers.');
+    if(tab==='devisia') return hubPlaceholder('Devis assisté','Décris le chantier en une phrase, l’IA propose des lignes de devis chiffrées que tu ajustes.');
+    if(tab==='redaction') return hubPlaceholder('Rédaction','Génère messages clients, descriptions de chantier et relances de devis.');
+  }
+  if(hub==='params'){
+    if(tab==='entreprise') return hubPlaceholder('Identité de l’entreprise','Nom, logo, slogan, coordonnées et SIREN — utilisés sur tes devis et factures.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFacturationSettings()">${icone('receipt')} Paramètres de facturation</button>`);
+    if(tab==='factu') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
+      <button class="btn ghost" style="width:100%" onclick="openFacturationSettings()">${icone('settings')} Préfixes, numéros, TVA</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()">${icone('send')} Test plateforme agréée</button></div>`;
+    if(tab==='roles') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('shield')} Équipe & rôles</h2></div>
+      <button class="btn ghost" style="width:100%" onclick="openRolesManager()">${icone('shield')} Gérer les rôles & permissions</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Modèles de chantier</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEtapesManager()">${icone('flag')} Étapes de chantier</button></div>`;
+    if(tab==='apparence') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Apparence</h2></div>
+      <p class="tag" style="margin-bottom:8px">Couleur de l’app</p>${themeSwatches(40)}
+      <button class="btn ghost" style="width:100%;margin-top:12px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
+    if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
+      <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
+      <div class="row" style="margin-top:10px"><button class="btn ${pointageOn()?'primary':'ghost'}" onclick="setPointage(true)">Pointage activé</button><button class="btn ${!pointageOn()?'primary':'ghost'}" onclick="setPointage(false)">Désactivé</button></div>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openHelp()">${icone('help')} Guide d’utilisation</button>
+      <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
+  }
+  return hubPlaceholder('Bientôt','Cette section arrive prochainement.');
+}
+
 function setFTab(t){ FTAB=t; render(); toTop(); }
 function eurF(n){ return (n||0).toLocaleString('fr-FR',{maximumFractionDigits:0})+' €'; }
 function eurF2(n){ return (n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
