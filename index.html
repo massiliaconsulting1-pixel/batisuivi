@@ -459,7 +459,7 @@ function uid(){ return Math.random().toString(36).slice(2,9); }
 function code6(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)]; return s; }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function frDate(iso){ if(!iso) return '—'; const d=new Date(iso); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}); }
-function clientFull(c){ const n=[(c.clientPrenom||'').trim(),(c.client||'').trim()].filter(Boolean).join(' '); return n||'—'; }
+function clientFull(c){ if(c&&c.clientType==='pro'&&(c.clientSociete||'').trim()) return c.clientSociete.trim(); const n=[(c.clientPrenom||'').trim(),(c.client||'').trim()].filter(Boolean).join(' '); return n||'—'; }
 function adresseFull(c){ const cpVille=[(c.cp||'').trim(),(c.ville||'').trim()].filter(Boolean).join(' '); return [(c.adresse||'').trim(),cpVille].filter(Boolean).join(', '); }
 function copyAddr(btn){ const a=btn&&btn.getAttribute?btn.getAttribute('data-adr'):''; if(!a) return;
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(a).then(()=>toast('Adresse copiée 📋')).catch(()=>toast(a)); }
@@ -728,6 +728,7 @@ function render(){
     if(useFB && !AUTH_USER){ navEl.classList.add('hidden'); return renderTeamAuth(); }
     if(useFB && AUTH_USER && !ME){ navEl.classList.add('hidden'); return renderJoinTeam(); }
     if(!ME){ navEl.classList.add('hidden'); return renderTeamAuth(); } // mode local : pas encore connecté
+    if(FACTU_OPEN && perm('gerer_reglages')) return renderFactuApp();
     return renderTeamApp();
   }
 }
@@ -766,7 +767,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v78 · 26/06";
+const APP_VERSION="v79 · 27/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2090,8 +2091,20 @@ function chantierForm(id){
   const c=id?CHANTIERS[id]:{nom:'',clientPrenom:'',client:'',adresse:'',cp:'',ville:'',dateDebut:todayISO(),dateFin:'',etape:ETAPES[0]};
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:6px">${id?'Modifier':'Nouveau'} chantier</h2>
     <label>Nom du chantier</label><input id="f_nom" value="${esc(c.nom)}" placeholder="ex: Rénovation salle de bain">
-    <div class="row"><div><label>Prénom du client</label><input id="f_prenom" value="${esc(c.clientPrenom||'')}" placeholder="ex: Jean"></div>
-      <div><label>Nom du client</label><input id="f_client" value="${esc(c.client||'')}" placeholder="ex: Dupont"></div></div>
+    <input type="hidden" id="f_ctype" value="${c.clientType==='pro'?'pro':'particulier'}">
+    <label>Type de client</label>
+    <div class="row" style="gap:6px">
+      <button type="button" class="btn ${c.clientType==='pro'?'ghost':'primary'}" id="ctype_part" onclick="chSetCtype('particulier')">Particulier</button>
+      <button type="button" class="btn ${c.clientType==='pro'?'primary':'ghost'}" id="ctype_pro" onclick="chSetCtype('pro')">Professionnel</button>
+    </div>
+    <p class="note" style="font-size:11px;margin:4px 0 0">Pro = facture électronique (Factur-X) avec SIREN. Particulier = facture simple.</p>
+    <div id="grp_pro" style="${c.clientType==='pro'?'':'display:none'};margin-top:8px">
+      <label>Raison sociale</label><input id="f_societe" value="${esc(c.clientSociete||'')}" placeholder="ex: DUPONT BTP SARL">
+      <div class="row"><div><label>SIREN (9 chiffres)</label><input id="f_siren" value="${esc(c.clientSiren||'')}" inputmode="numeric" maxlength="11" placeholder="123456789"></div>
+        <div><label>N° TVA (option)</label><input id="f_ctva" value="${esc(c.clientTvaIntra||'')}" placeholder="FR..."></div></div>
+    </div>
+    <div class="row" style="margin-top:8px"><div><label id="lbl_prenom">Prénom ${c.clientType==='pro'?'du contact':'du client'}</label><input id="f_prenom" value="${esc(c.clientPrenom||'')}" placeholder="ex: Jean"></div>
+      <div><label id="lbl_nom">Nom ${c.clientType==='pro'?'du contact':'du client'}</label><input id="f_client" value="${esc(c.client||'')}" placeholder="ex: Dupont"></div></div>
     <label>Adresse</label><input id="f_adr" value="${esc(c.adresse||'')}" placeholder="ex: 12 rue des Lilas">
     <div class="row"><div style="flex:0 0 38%"><label>Code postal</label><input id="f_cp" value="${esc(c.cp||'')}" inputmode="numeric" maxlength="5" placeholder="21000"></div>
       <div><label>Ville</label><input id="f_ville" value="${esc(c.ville||'')}" placeholder="ex: Dijon"></div></div>
@@ -2103,9 +2116,19 @@ function chantierForm(id){
       <select id="f_modele"><option value="">— Aucun (vierge) —</option>${Object.keys(modeles()).map(k=>`<option value="${k}">${esc(modeles()[k].nom||'Modèle')}</option>`).join('')}</select>`:''}
     <button class="btn primary" style="width:100%;margin-top:16px" onclick="saveChantierForm('${id||''}')">${id?'Enregistrer':'Créer le chantier'}</button>`);
 }
+function chSetCtype(t){
+  const hid=document.getElementById('f_ctype'); if(hid) hid.value=t;
+  const pro=t==='pro';
+  const g=document.getElementById('grp_pro'); if(g) g.style.display=pro?'':'none';
+  const bp=document.getElementById('ctype_part'), bpr=document.getElementById('ctype_pro');
+  if(bp) bp.className='btn '+(pro?'ghost':'primary'); if(bpr) bpr.className='btn '+(pro?'primary':'ghost');
+  const lp=document.getElementById('lbl_prenom'), ln=document.getElementById('lbl_nom');
+  if(lp) lp.textContent='Prénom '+(pro?'du contact':'du client'); if(ln) ln.textContent='Nom '+(pro?'du contact':'du client');
+}
 function saveChantierForm(id){
   const nom=val('f_nom'); if(!nom){ toast("Donne un nom au chantier"); return; }
-  const fields={nom, clientPrenom:val('f_prenom'), client:val('f_client'), adresse:val('f_adr'), cp:val('f_cp'), ville:val('f_ville'), clientTel:val('f_ctel'), clientEmail:val('f_cemail'), dateDebut:val('f_d1'), dateFin:val('f_d2')};
+  const ctype=((document.getElementById('f_ctype')||{}).value)||'particulier';
+  const fields={nom, clientType:ctype, clientPrenom:val('f_prenom'), client:val('f_client'), clientSociete:val('f_societe'), clientSiren:(val('f_siren')||'').replace(/\s/g,''), clientTvaIntra:val('f_ctva'), adresse:val('f_adr'), cp:val('f_cp'), ville:val('f_ville'), clientTel:val('f_ctel'), clientEmail:val('f_cemail'), dateDebut:val('f_d1'), dateFin:val('f_d2')};
   if(id){ Object.assign(CHANTIERS[id],fields); saveChantier(id); }
   else { const nid=uid(); CHANTIERS[nid]={...fields,etape:ETAPES[0],clientCode:code6(),assignes:{},createdAt:Date.now()}; saveChantier(nid);
     const mk=(document.getElementById('f_modele')||{}).value; if(mk) applyModele(nid,mk);
@@ -2642,17 +2665,10 @@ function viewDashboard(){
     <div class="kpi ok"><div class="big">${termines}</div><div class="lbl">Terminés</div></div>
     <div class="kpi warn"><div class="big">${retard}</div><div class="lbl">En retard</div></div>
   </div>
-  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">💰 Chiffre d'affaires prévisionnel</h2></div>
-    <div class="big" style="font-family:'Archivo';font-size:34px;font-weight:800;color:var(--acc2)">${eur(caPrev)}</div>
-    <p class="note" style="margin-top:2px">Total HT de tous les devis enregistrés.</p>
-    <div class="kpis" style="margin-top:12px;margin-bottom:0">
-      <div class="kpi"><div class="big" style="font-size:20px">${eur(caEnCours)}</div><div class="lbl">CA chantiers en cours</div></div>
-      <div class="kpi ok"><div class="big" style="font-size:20px">${eur(caFacture)}</div><div class="lbl">CA facturé (publié)</div></div>
-    </div>
-    <p class="note" style="margin-top:8px;font-size:11px">Estimation indicative basée sur les devis. Ce n'est pas un montant comptable officiel.</p>
+  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
+    <p class="note" style="margin-top:0">Le chiffre d'affaires, les devis, les factures, les clients et les paramètres sont désormais réunis dans l'Espace Facturation.</p>
+    <button class="btn primary" style="width:100%;margin-top:8px" onclick="openFactu()">${icone('receipt')} Ouvrir l'Espace Facturation</button>
   </div>
-  ${caChartCard(all,eur)}
-  ${ereportingCard(all)}
   ${laborCard(all,eur)}
   <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Vue d'ensemble</h2></div>`;
   if(!all.length){ h+=`<p class="note">Aucun chantier pour l'instant.</p>`; }
@@ -2666,28 +2682,153 @@ function viewDashboard(){
     });
   }
   h+=`</div>`;
-  // devis & factures publiés — séparés pour s'y retrouver
-  const allDocs=[];
-  Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ allDocs.push({id,pid,nom:c.nom,...c.published[pid]}); }); });
-  allDocs.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  const docRow=d=>{ const tot=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); const relance=relanceDevis(d);
-    return `<div class="member-row">
-      <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾 Facture':'📋 Devis'} · ${esc(d.num||'')}</b>
-        <div class="tag">${esc(d.nom||'')} · ${esc(d.client||'')} · ${eur(tot)} HT${d.signature?' · <span style="color:var(--ok)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> signé</span>':relance?` · <span class="pill relance"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> non signé depuis ${relance} j</span>`:''}</div></div>
-      <button class="linkbtn" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">Voir</button>
-      ${d.type==='facture'?`<button class="linkbtn" onclick="facturXPdf('${d.id}','${d.pid}')" title="Télécharger la facture électronique Factur-X (PDF avec XML intégré)">Factur-X</button>`:''}
-      <button class="iconbtn danger" onclick="delDashDoc('${d.id}','${d.pid}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`; };
-  const devisList=allDocs.filter(d=>d.type!=='facture');
-  const factList=allDocs.filter(d=>d.type==='facture');
-  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Devis (${devisList.length})</h2></div>`;
-  h+= devisList.length ? devisList.map(docRow).join('') : `<p class="note">Aucun devis publié. Crée un devis depuis un chantier puis publie-le.</p>`;
-  h+=`</div>`;
-  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Factures (${factList.length})</h2></div>`;
-  h+= factList.length ? factList.map(docRow).join('') : `<p class="note">Aucune facture publiée. Crée une facture depuis un chantier puis publie-la.</p>`;
-  h+=`</div>`;
   return h;
 }
 function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi retiré de l'espace client.")) return; unpublishDoc(id,pid); }
+
+/* ====================== ESPACE FACTURATION (mini-app plein écran) ====================== */
+let FACTU_OPEN=false, FTAB='resume';
+function openFactu(){ if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; } closeModal(); FACTU_OPEN=true; FTAB='resume'; render(); toTop(); }
+function closeFactu(){ FACTU_OPEN=false; render(); toTop(); }
+function setFTab(t){ FTAB=t; render(); toTop(); }
+function eurF(n){ return (n||0).toLocaleString('fr-FR',{maximumFractionDigits:0})+' €'; }
+function eurF2(n){ return (n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function factuAllDocs(){ const out=[]; Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ out.push({id,pid,nom:c.nom,...c.published[pid]}); }); }); return out.sort((a,b)=>(b.ts||0)-(a.ts||0)); }
+function docTotal(d){ return (d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); }
+
+function renderFactuApp(){
+  const tabs=[['resume','chart','Résumé'],['devis','file','Devis'],['factures','receipt','Factures'],['clients','users','Clients'],['params','settings','Paramètres']];
+  navEl.classList.remove('hidden'); navEl.classList.add('compact');
+  navEl.innerHTML=tabs.map(([t,ic,lb])=>`<button class="${FTAB===t?'on':''}" onclick="setFTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join('');
+  let body='';
+  if(FTAB==='devis') body=factuDevis();
+  else if(FTAB==='factures') body=factuFactures();
+  else if(FTAB==='clients') body=factuClients();
+  else if(FTAB==='params') body=factuParams();
+  else body=factuResume();
+  const titles={resume:'Résumé',devis:'Devis',factures:'Factures',clients:'Clients',params:'Paramètres'};
+  app.innerHTML=`
+  <div class="top"><div class="brand" style="min-width:0">
+    <button class="burger" onclick="closeFactu()" aria-label="Retour" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <div class="logo">${icone('receipt','22px')}</div>
+    <div class="bn"><b>Facturation</b><small>${esc(coName())}</small></div></div>
+    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
+  <div class="page-head"><h2>${titles[FTAB]||'Facturation'}</h2></div>
+  ${body}`;
+}
+
+function factuResume(){
+  const all=Object.values(CHANTIERS).filter(c=>!c.archived);
+  const docs=factuAllDocs();
+  const facts=docs.filter(d=>d.type==='facture');
+  const devs=docs.filter(d=>d.type!=='facture');
+  const totFact=facts.reduce((s,d)=>s+docTotal(d),0);
+  const devEnAttente=devs.filter(d=>!d.signature).length;
+  const devSignes=devs.filter(d=>d.signature).length;
+  const caPrev=Object.values(CHANTIERS).reduce((s,c)=>s+(((c.devis&&c.devis.items)||[]).reduce((x,it)=>x+it.qty*it.pu,0)),0);
+  let h=`<div class="kpis">
+    <div class="kpi ok"><div class="big">${eurF(totFact)}</div><div class="lbl">CA facturé (HT)</div></div>
+    <div class="kpi acc"><div class="big">${facts.length}</div><div class="lbl">Factures émises</div></div>
+    <div class="kpi"><div class="big">${devEnAttente}</div><div class="lbl">Devis en attente</div></div>
+    <div class="kpi"><div class="big">${devSignes}</div><div class="lbl">Devis signés</div></div>
+  </div>
+  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('euro')} Chiffre d'affaires prévisionnel</h2></div>
+    <div class="big" style="font-family:'Archivo';font-size:32px;font-weight:800;color:var(--acc2)">${eurF(caPrev)}</div>
+    <p class="note" style="margin-top:2px;font-size:11px">Total HT de tous les devis enregistrés. Estimation indicative, pas un montant comptable.</p>
+  </div>`;
+  h+=caChartCard(all,eurF);
+  h+=ereportingCard(all);
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Accès rapide</h2></div>
+    <div class="row"><button class="btn ghost" onclick="setFTab('devis')">${icone('file')} Devis</button><button class="btn ghost" onclick="setFTab('factures')">${icone('receipt')} Factures</button></div>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="setFTab('params')">${icone('settings')} Paramètres de facturation</button>
+    <p class="note" style="margin-top:8px;font-size:11px">Pour créer un devis ou une facture : ouvre un chantier, puis la carte « Devis / Facture ».</p>
+  </div>`;
+  return h;
+}
+
+function factuDocRow(d){
+  const tot=docTotal(d);
+  const key=((d.num||'')+' '+(d.client||'')+' '+(d.nom||'')).toLowerCase();
+  let status='';
+  if(d.type==='facture'){ status = d.acompte?`<span class="pill">Acompte ${d.acompte===true?30:d.acompte}%</span>`:(d.solde?`<span class="pill">Solde</span>`:`<span class="pill">Émise</span>`); }
+  else { status = d.signature?`<span class="pill" style="color:var(--ok)">${icone('check-circle')} Signé</span>`:(relanceDevis(d)?`<span class="pill relance">${icone('clock')} ${relanceDevis(d)} j</span>`:`<span class="pill">En attente</span>`); }
+  return `<div class="member-row" data-q="${esc(key)}">
+    <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾':'📄'} ${esc(d.num||'')}</b>
+      <div class="tag">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''} · ${eurF(tot)} HT ${status}</div></div>
+    <button class="iconbtn" title="Voir / imprimer" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">${icone('eye')}</button>
+    ${d.type==='facture'?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
+    <button class="iconbtn danger" title="Supprimer" onclick="delFactuDoc('${d.id}','${d.pid}')">${icone('trash')}</button>
+  </div>`;
+}
+function factuFilter(kind){ const inp=document.getElementById('fq_'+kind); const ql=((inp&&inp.value)||'').toLowerCase().trim(); const list=document.getElementById('list_'+kind); if(!list) return; Array.from(list.children).forEach(el=>{ const k=el.getAttribute('data-q')||''; el.style.display=(!ql||k.indexOf(ql)>=0)?'':'none'; }); }
+function delFactuDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi retiré de l'espace client.")) return; unpublishDoc(id,pid); }
+
+function factuDevis(){
+  const devs=factuAllDocs().filter(d=>d.type!=='facture');
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Devis (${devs.length})</h2></div>`;
+  if(!devs.length){ h+=`<p class="note">Aucun devis publié. Ouvre un chantier, ajoute des lignes, puis « Publier le devis ».</p>`; }
+  else {
+    h+=`<input id="fq_devis" placeholder="Rechercher (n°, client, chantier)…" oninput="factuFilter('devis')" style="width:100%;margin:2px 0 10px">`;
+    h+=`<div id="list_devis">`+devs.map(factuDocRow).join('')+`</div>`;
+  }
+  h+=`</div>`;
+  return h;
+}
+function factuFactures(){
+  const facts=factuAllDocs().filter(d=>d.type==='facture');
+  const tot=facts.reduce((s,d)=>s+docTotal(d),0);
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Factures (${facts.length})</h2></div>`;
+  if(facts.length) h+=`<p class="note" style="margin-top:0">Total facturé : <b style="color:var(--acc2)">${eurF2(tot)} HT</b></p>`;
+  if(!facts.length){ h+=`<p class="note">Aucune facture publiée. Ouvre un chantier, puis « Facturer ».</p>`; }
+  else {
+    h+=`<input id="fq_factures" placeholder="Rechercher (n°, client, chantier)…" oninput="factuFilter('factures')" style="width:100%;margin:2px 0 10px">`;
+    h+=`<div id="list_factures">`+facts.map(factuDocRow).join('')+`</div>`;
+    h+=`<p class="note" style="margin-top:10px;font-size:11px">${icone('download')} = télécharger la facture électronique Factur-X (PDF avec XML intégré).</p>`;
+  }
+  h+=`</div>`;
+  return h;
+}
+function factuClients(){
+  const map={};
+  Object.values(CHANTIERS).forEach(c=>{
+    const pro=c.clientType==='pro';
+    const name=pro?((c.clientSociete||'').trim()||clientFull(c)):clientFull(c);
+    if(!name||name==='—') return;
+    const key=(pro?'pro:':'part:')+name.toLowerCase();
+    if(!map[key]) map[key]={name,pro,siren:c.clientSiren||'',tel:c.clientTel||'',email:c.clientEmail||'',adresse:adresseFull(c),nb:0,fact:0};
+    map[key].nb++;
+    if(!map[key].tel&&c.clientTel)map[key].tel=c.clientTel;
+    if(!map[key].email&&c.clientEmail)map[key].email=c.clientEmail;
+    if(!map[key].siren&&c.clientSiren)map[key].siren=c.clientSiren;
+    if(c.published) Object.values(c.published).forEach(d=>{ if(d.type==='facture') map[key].fact+=docTotal(d); });
+  });
+  const clients=Object.values(map).sort((a,b)=>b.fact-a.fact);
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('users')} Clients (${clients.length})</h2></div>`;
+  if(!clients.length){ h+=`<p class="note">Aucun client pour l'instant. Les clients apparaissent ici dès que tu crées des chantiers.</p>`; }
+  else clients.forEach(cl=>{ h+=`<div class="member-row">
+    <div style="flex:1;min-width:0"><b>${esc(cl.name)} <span class="pill">${cl.pro?'Pro':'Particulier'}</span></b>
+      <div class="tag">${cl.pro&&cl.siren?('SIREN '+esc(cl.siren)+' · '):''}${cl.nb} chantier${cl.nb>1?'s':''} · ${eurF(cl.fact)} facturé${cl.adresse?(' · '+esc(cl.adresse)):''}</div>
+      ${(cl.tel||cl.email)?`<div class="tag">${cl.tel?esc(cl.tel):''}${cl.tel&&cl.email?' · ':''}${cl.email?esc(cl.email):''}</div>`:''}</div>
+  </div>`; });
+  h+=`</div>`;
+  return h;
+}
+function factuParams(){
+  const cfg=(typeof CONFIG_DB!=='undefined')?CONFIG_DB:{};
+  const tvaTxt=isFranchiseTva()?'Franchise en base (pas de TVA)':('TVA '+tvaPct()+'%');
+  return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('id')} Identité de facturation</h2></div>
+    <div class="task-row"><span style="flex:1">Entreprise</span><b>${esc(coName())}</b></div>
+    <div class="task-row"><span style="flex:1">SIREN</span><b>${esc(cfg.siren||'—')}</b></div>
+    <div class="task-row"><span style="flex:1">TVA</span><b>${esc(tvaTxt)}</b></div>
+    <div class="task-row"><span style="flex:1">Préfixe devis / facture</span><b>${esc(devisPrefix())} / ${esc(factPrefix())}</b></div>
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="openFacturationSettings()">${icone('settings')} Modifier les paramètres de facturation</button>
+  </div>
+  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>
+    <button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()">${icone('send')} Facturation électronique — test plateforme agréée</button>
+    <p class="note" style="margin-top:8px;font-size:11px">La transmission officielle des factures se fait via ta plateforme agréée (en cours de raccordement).</p>
+  </div>`;
+}
 function laborCard(all,eur){
   const rows=all.map(c=>({c,h:chantierHours(c),cost:chantierCost(c)})).filter(x=>x.h>0.01).sort((a,b)=>b.h-a.h);
   if(!rows.length) return '';
@@ -2805,9 +2946,14 @@ function facturXXml(snap){
   if(ville) xml+=`<ram:CityName>${X(ville)}</ram:CityName>`;
   xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
   if(tvaId) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${X(tvaId)}</ram:ID></ram:SpecifiedTaxRegistration>`;
-  xml+=`</ram:SellerTradeParty>\n      <ram:BuyerTradeParty><ram:Name>${X(snap.client||'Client')}</ram:Name><ram:PostalTradeAddress>`;
+  xml+=`</ram:SellerTradeParty>\n      <ram:BuyerTradeParty><ram:Name>${X(snap.clientSociete||snap.client||'Client')}</ram:Name>`;
+  const bSiren=(snap.clientType==='pro')?((snap.clientSiren||'').replace(/\s/g,'')):'';
+  if(bSiren) xml+=`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${X(bSiren)}</ram:ID></ram:SpecifiedLegalOrganization>`;
+  xml+=`<ram:PostalTradeAddress>`;
   if(snap.adresse) xml+=`<ram:LineOne>${X(snap.adresse)}</ram:LineOne>`;
-  xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress></ram:BuyerTradeParty>\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery/>\n`;
+  xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
+  if(bSiren) xml+=`<ram:URIUniversalCommunication><ram:URIID schemeID="0225">${X(bSiren)}</ram:URIID></ram:URIUniversalCommunication>`;
+  xml+=`</ram:BuyerTradeParty>\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery/>\n`;
   xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
   xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode><ram:BasisAmount>${fxAmt(ht)}</ram:BasisAmount><ram:CategoryCode>${fxCat()}</ram:CategoryCode>${isFranchiseTva()?'<ram:ExemptionReason>'+X(tvaMention())+'</ram:ExemptionReason>':''}<ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
   xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
@@ -2978,6 +3124,7 @@ function openMenu(){
     <button class="btn ghost" style="width:100%" onclick="addNoteFrais()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Envoyer une note de frais</button>
 
     <button id="bigTextBtn" class="btn ghost" style="width:100%;margin-top:20px" onclick="toggleBigText()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h9v2M8.5 5v13M6.5 18h4"/><path d="M14 13v-1h6v1M17 12v6M15.5 18h3"/></svg> Gros texte : ${bigText()?'activé':'désactivé'}</button>
+    ${perm('gerer_reglages')?`<button class="btn primary" style="width:100%;margin-top:20px" onclick="openFactu()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Espace Facturation</button>`:''}
     ${perm('gerer_reglages')?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFacturationSettings()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Paramètres de facturation</button>`:''}
     ${perm('gerer_reglages')?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="exportData()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Exporter / sauvegarder les données</button>`:''}
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openHelp()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/><path d="M12 17h.01"/></svg> Guide d'utilisation</button>
@@ -2995,6 +3142,7 @@ function openFacturationSettings(){
   openModal(`<div class="grabber"></div>
     <h2 style="margin:0 0 4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Paramètres de facturation</h2>
     <p class="note" style="margin:0 0 12px">Règle ici tes préfixes et tes numéros de devis et factures. Ils s'appliquent à tous tes chantiers.</p>
+    <button class="btn ghost" style="width:100%;margin:0 0 12px" onclick="openFactu()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Ouvrir l'Espace Facturation</button>
     <label>Facturation dans l'app</label>
     <div class="row" style="gap:6px"><button class="btn ${factuOn()?'primary':'ghost'} mini" onclick="setFactuOn(true)">Activée</button><button class="btn ${!factuOn()?'primary':'ghost'} mini" onclick="setFactuOn(false)">Désactivée</button></div>
     <p class="note" style="font-size:11px;margin-top:4px">Désactive si ton client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
@@ -3358,7 +3506,8 @@ function docSnapshot(id,type){
     type, items:dv.items.slice(),
     num:(type==='facture'?'FACT':'DEVIS')+'-'+new Date().getFullYear()+'-'+id.slice(0,4).toUpperCase(),
     date:new Date().toLocaleDateString('fr-FR'),
-    chantier:c.nom, client:clientFull(c)==='—'?'':clientFull(c), adresse:adresseFull(c)
+    chantier:c.nom, client:clientFull(c)==='—'?'':clientFull(c), adresse:adresseFull(c),
+    clientType:c.clientType||'particulier', clientSiren:(c.clientSiren||'').replace(/\s/g,''), clientSociete:c.clientSociete||'', clientTvaIntra:c.clientTvaIntra||''
   };
 }
 function buildDocHTML(doc){
@@ -3382,7 +3531,7 @@ function buildDocHTML(doc){
   <div class="toolbar"><button class="tb-close" onclick="window.close()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg> Fermer</button><button class="tb-print" onclick="window.print()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg> Imprimer / Enregistrer en PDF</button></div>
   <div class="head"><div style="display:flex;gap:14px;align-items:center">${logo}<div><h1>${esc(coName())}</h1><div class="muted">${esc(coSlogan()||'')}</div></div></div>
     <div class="muted" style="text-align:right"><b>${doc.type==='facture'?'FACTURE':'DEVIS'}</b><br>${doc.num}<br>${doc.date}</div></div>
-  <div class="muted"><b>Chantier :</b> ${esc(doc.chantier)}<br><b>Client :</b> ${esc(doc.client||'—')}<br><b>Adresse :</b> ${esc(doc.adresse||'—')}</div>
+  <div class="muted"><b>Chantier :</b> ${esc(doc.chantier)}<br><b>Client :</b> ${esc(doc.client||'—')}${(doc.clientType==='pro'&&doc.clientSiren)?(' (SIREN '+esc(doc.clientSiren)+')'):''}<br><b>Adresse :</b> ${esc(doc.adresse||'—')}</div>
   <div class="doc-title">${doc.type==='facture'?(doc.acompte?`Facture d'acompte (${doc.acompte===true?30:doc.acompte}%)`:(doc.solde?'Facture de solde':'Facture')):'Devis'}</div>
   <table><thead><tr><th>Description</th><th style="text-align:center">Qté</th><th style="text-align:right">P.U. HT</th><th style="text-align:right">Total HT</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals"><div><span>Total HT</span><span>${total.toFixed(2)} €</span></div>
