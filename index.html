@@ -729,6 +729,7 @@ function render(){
     if(useFB && AUTH_USER && !ME){ navEl.classList.add('hidden'); return renderJoinTeam(); }
     if(!ME){ navEl.classList.add('hidden'); return renderTeamAuth(); } // mode local : pas encore connecté
     if(isBoss() && !EMP_PREVIEW){
+      initSwipeBack();
       if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]){ if(!HUB) HUB='chantiers'; return renderBossChantier(); }
       if(HUB==='facturation') return renderFactuApp();
       if(HUB) return renderHub();
@@ -772,7 +773,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v80 · 27/06";
+const APP_VERSION="v81 · 27/06";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1836,7 +1837,7 @@ function viewArchivedList(){
   if(!list.length){ h+=`<div class="card empty">Aucun chantier archivé.</div>`; return h; }
   list.forEach(c=>{
     const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
-    h+=`<div class="chantier" style="opacity:.9">
+    h+=`<div class="chantier" style="opacity:.92;margin-bottom:16px;padding:16px">
       <div class="ch-top"><div><h3>${esc(c.nom)} <span class="pill"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archivé</span></h3><div class="ch-client"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))}${adresseFull(c)?' · '+esc(adresseFull(c)):''}</div></div>
         <span class="pill ${c.etape===ETAPES[ETAPES.length-1]?'ok':'acc'}">${esc(c.etape||ETAPES[0])}</span></div>
       <div class="progress"><span style="width:${pct}%"></span></div>
@@ -2695,9 +2696,8 @@ function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi 
 let FACTU_OPEN=false, FTAB='resume';
 let HUB=null, HTAB='';
 const HUBS={
-  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['planning','calendar','Planning'],['modeles','layers','Modèles'],['carte','map-pin','Carte']]},
+  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','users','Clients'],['modeles','layers','Modèles'],['carte','map-pin','Carte']]},
   equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['vehicules','truck','Véhicules'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
-  clients:{title:'Clients',icon:'user',tabs:[['annuaire','users','Annuaire'],['acces','key','Accès'],['messages','message','Messages'],['docs','file','Documents'],['avis','bookmark','Avis']]},
   planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
   ia:{title:'IA',icon:'robot',tabs:[['assistant','robot','Assistant'],['projection','eye','Projection'],['cr','mic','C.-rendus'],['devisia','file','Devis IA'],['redaction','edit','Rédaction']]},
   params:{title:'Paramètres',icon:'settings',tabs:[['entreprise','id','Entreprise'],['factu','receipt','Facturation'],['roles','shield','Rôles'],['apparence','palette','Apparence'],['systeme','settings','Système']]}
@@ -2710,6 +2710,16 @@ function goHub(h){ if(!isBoss()){ toast("Réservé au patron."); return; } HUB=h
 function goHome(){ HUB=null; FACTU_OPEN=false; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; closeModal(); render(); toTop(); }
 function setHTab(t){ HTAB=t; CUR_CHANTIER=null; render(); toTop(); }
 
+/* Geste : glisser du bord gauche vers la droite => revenir à l'Accueil (patron) */
+let _swipeInit=false, _swX=0, _swY=0, _swT=0;
+function initSwipeBack(){
+  if(_swipeInit) return; _swipeInit=true;
+  document.addEventListener('touchstart',function(e){ if(!e.touches||e.touches.length!==1) return; const t=e.touches[0]; _swX=t.clientX; _swY=t.clientY; _swT=Date.now(); },{passive:true});
+  document.addEventListener('touchend',function(e){ const t=e.changedTouches&&e.changedTouches[0]; if(!t) return; const dx=t.clientX-_swX, dy=t.clientY-_swY, dt=Date.now()-_swT;
+    if(_swX<=42 && dx>80 && Math.abs(dy)<60 && dt<700){ if(isBoss() && !EMP_PREVIEW && (CUR_CHANTIER||HUB)){ goHome(); } }
+  },{passive:true});
+}
+
 function renderAccueil(){
   navEl.classList.add('hidden');
   const all=Object.values(CHANTIERS).filter(c=>!c.archived);
@@ -2717,12 +2727,11 @@ function renderAccueil(){
   const docs=factuAllDocs(); const devAtt=docs.filter(d=>d.type!=='facture'&&!d.signature).length;
   const prenom=((ME&&ME.nom)||'').split(' ')[0]||'';
   const tiles=[
-    ['chantiers','building','Chantiers', actifs?(actifs+' en cours'):'—'],
+    ['chantiers','building','Chantiers', actifs+' chantier'+(actifs>1?'s':'')+' en cours'],
     ['equipe','users','Équipe', Object.keys(TEAM).length+' membres'],
-    ['clients','user','Clients',''],
     ['planning','calendar','Planning',''],
     ['facturation','receipt','Facturation', devAtt?(devAtt+' devis en attente'):''],
-    ['ia','robot','IA',''],
+    ['ia','robot','IA','Assistant, projection, rédaction'],
     ['params','settings','Paramètres','']
   ];
   app.innerHTML=`
@@ -2730,10 +2739,12 @@ function renderAccueil(){
     <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Accueil</h2></div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 14px 100px">
-    ${tiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px 10px;cursor:pointer;color:var(--txt);font:inherit;min-height:118px">
-      <span style="width:52px;height:52px;border-radius:15px;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'26px')}</span>
-      <b style="font-size:15px">${lb}</b>${bdg?`<small class="note" style="font-size:11px">${esc(bdg)}</small>`:''}</button>`).join('')}
+  <div style="display:flex;flex-direction:column;gap:10px;padding:0 14px 100px">
+    ${tiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;align-items:center;gap:14px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;color:var(--txt);font:inherit;text-align:left">
+      <span style="width:46px;height:46px;flex:0 0 46px;border-radius:13px;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'24px')}</span>
+      <span style="flex:1;min-width:0"><b style="font-size:16px;display:block">${lb}</b>${bdg?`<small class="note" style="font-size:12px">${esc(bdg)}</small>`:''}</span>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35;flex:0 0 20px"><path d="M9 18l6-6-6-6"/></svg>
+    </button>`).join('')}
   </div>`;
 }
 
@@ -2773,7 +2784,7 @@ function hubBody(hub,tab){
   if(hub==='chantiers'){
     if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
-    if(tab==='planning') return viewPlanning();
+    if(tab==='clients'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return factuClients(); }
     if(tab==='modeles') return hubPlaceholder('Modèles de chantier','Crée des modèles réutilisables (étapes + lignes de devis pré-remplies) pour démarrer un chantier en un clic.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Gérer les modèles</button>`);
     if(tab==='carte') return hubPlaceholder('Carte des chantiers','Tous tes chantiers situés sur une carte, pour organiser les tournées.');
   }
