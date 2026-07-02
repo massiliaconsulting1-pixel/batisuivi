@@ -773,7 +773,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v81 · 27/06";
+const APP_VERSION="v92 · 02/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1607,8 +1607,9 @@ function renderClientDashboard(){
   <div class="card">
     <div class="section-title" style="margin-top:0"><h2>Avancement</h2><span class="pill acc">${pct}%</span></div>
     <div class="progress"><span style="width:${pct}%"></span></div>
-    <p style="margin:12px 0 0;font-weight:700">${esc(ch.etape||ETAPES[0])}</p>
-    <p class="note">Début : ${frDate(ch.dateDebut)} · Fin prévue : ${frDate(ch.dateFin)}</p>
+    <div class="steps" style="margin-top:12px">${ETAPES.map((e,i)=>`<div class="step-dot ${i<=etapeIdx?'done':''}"></div>`).join('')}</div>
+    <div style="margin-top:12px">${ETAPES.map((e,i)=>{ const done=i<etapeIdx, cur=i===etapeIdx; const col=cur?'var(--acc)':(done?'var(--ok)':'var(--muted)'); const mark=done?'✓':(cur?'●':'·'); return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;color:${col};font-weight:${cur?'800':(done?'600':'400')}"><span style="flex:none;width:16px;text-align:center">${mark}</span><span>${esc(e)}</span></div>`; }).join('')}</div>
+    <p class="note" style="margin-top:10px">Début : ${frDate(ch.dateDebut)} · Fin prévue : ${frDate(ch.dateFin)}</p>
   </div>
 
   ${ch.dateRdv?`<div class="card" style="border-color:var(--acc)"><div class="section-title" style="margin-top:0"><h2><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Prochain rendez-vous</h2></div>
@@ -1983,17 +1984,29 @@ function viewChantier(id){
   </div>
 
   <div class="card">
-    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 9h18M3 15h18M8 4v5M16 4v5M12 9v6M8 15v5M16 15v5"/></svg> Matériel</h2><button class="btn ghost mini" onclick="addMateriel('${id}')">+</button></div>
-    ${mats.length?mats.map(m=>`<div class="task-row ${m.ok?'done':''}">
-      <div class="checkbox ${m.ok?'on':''}" onclick="toggleMateriel('${id}','${m.k}')">${m.ok?'✓':''}</div>
-      <span class="tk-label" style="flex:1">${esc(m.label)}</span>
-      ${isChef()?`<button class="iconbtn danger" onclick="delMateriel('${id}','${m.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}
-    </div>`).join(''):`<p class="note">Aucun matériel listé.</p>`}
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 9h18M3 15h18M8 4v5M16 4v5M12 9v6M8 15v5M16 15v5"/></svg> Matériel</h2><button class="btn ghost mini" onclick="openMateriel('${id}')">+</button></div>
+    ${mats.length?mats.map(m=>{ const st=matStatut(m); const sc=matStatutColor(st); const cout=parseFloat(m.cout); const meta=[m.qty?esc(m.qty):'', (!isNaN(cout)&&cout>0)?eurFmt(cout):'', m.fournisseur?esc(m.fournisseur):''].filter(Boolean).join(' · '); return `<div class="task-row ${st==='reçu'?'done':''}">
+      <span class="pill" style="flex:none;color:${sc};border-color:${sc};cursor:pointer" onclick="cycleMateriel('${id}','${m.k}')">${st}</span>
+      <div style="flex:1;min-width:0"><div class="tk-label">${esc(m.label)}</div>${meta?`<div class="note" style="font-size:11px">${meta}</div>`:''}</div>
+      ${isChef()?`<button class="iconbtn" onclick="openMateriel('${id}','${m.k}')">✎</button>
+      <button class="iconbtn danger" onclick="delMateriel('${id}','${m.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}
+    </div>`;}).join(''):`<p class="note">Aucun matériel listé.</p>`}
+    ${materielCost(c)>0?`<div class="task-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:10px"><span style="flex:1"><b>Total matériel</b></span><b>${eurFmt(materielCost(c))}</b></div>`:''}
   </div>
 
   ${pointageOn()? pointageCard(id,c):''}
 
   ${perm('gerer_devis')? devisCard(id,c):''}
+
+  ${isChef()? receptionCard(id,c):''}
+
+  ${isChef()? rentabiliteCard(id,c):''}
+
+  ${journalCard(id,c)}
+
+  ${plansCard(id,c)}
+
+  ${isChef()? projectionCard(id,c):''}
 
   ${isChef()?`<div class="card">
     <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Équipe assignée</h2><button class="btn ghost mini" onclick="assignMembers('${id}')">Gérer</button></div>
@@ -2008,13 +2021,16 @@ function viewChantier(id){
   </div>
 
   <div class="card">
-    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages client</h2></div>
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages</h2></div>
     <div class="chat-thread" id="chatScroll" style="max-height:300px">${clientChatHTML(id,c,'team')}</div>
     <div class="chat-bar" style="background:transparent;padding:6px 0 0"><input id="tm_msg_${id}" placeholder="Répondre au client…" onkeydown="if(event.key==='Enter'){event.preventDefault();teamSendMsg('${id}');}"><button class="btn primary" onclick="teamSendMsg('${id}')">Envoyer</button></div>
   </div>
 
   ${iaOn()?`<button class="btn ghost" style="width:100%;margin-top:6px" onclick="openCRVocal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Compte-rendu vocal (IA)</button>`:''}
   ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:6px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Compte-rendu du chantier (PDF)</button>`:''}
+
+  ${(isChef()&&!c.archived)? clotureCard(id,c):''}
+
   ${perm('suppr_chantier')?`<div class="row" style="margin-top:8px">
     ${c.archived?`<button class="btn ghost" onclick="unarchiveChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg> Désarchiver</button>`:`<button class="btn ghost" onclick="archiveChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archiver</button>`}
     <button class="btn danger" onclick="delChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer</button></div>`:''}`;
@@ -2076,15 +2092,96 @@ function pointageCard(id,c){
   h+=`</div>`;
   return h;
 }
+/* ============== MODULE PROJECTION (rendu IA) ============== */
+let _projImgs={}, _projLast={};
+function projectionCard(id,c){
+  const projs=c.projections?Object.keys(c.projections).map(k=>Object.assign({k:k},c.projections[k])).sort((a,b)=>(b.ts||0)-(a.ts||0)):[];
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Projection — rendu IA</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Montre au client le résultat : une photo de l'existant + l'inspiration du client → un rendu généré. Chaque génération a un petit coût, elle ne se lance qu'au clic sur « Générer ».</p>
+    <div class="row" style="gap:8px">
+      <div style="flex:1;min-width:0">
+        <label style="font-size:12px">Photo actuelle (l'existant) *</label>
+        <div id="proj_prev_a_${id}" style="margin:4px 0"></div>
+        <input type="file" accept="image/*" id="proj_in_a_${id}" style="display:none" onchange="projPick('${id}','a',this)">
+        <button class="btn ghost" style="width:100%" onclick="document.getElementById('proj_in_a_${id}').click()">📷 Choisir</button>
+      </div>
+      <div style="flex:1;min-width:0">
+        <label style="font-size:12px">Inspiration du client</label>
+        <div id="proj_prev_i_${id}" style="margin:4px 0"></div>
+        <input type="file" accept="image/*" id="proj_in_i_${id}" style="display:none" onchange="projPick('${id}','i',this)">
+        <button class="btn ghost" style="width:100%" onclick="document.getElementById('proj_in_i_${id}').click()">📷 Choisir</button>
+      </div>
+    </div>
+    <label style="margin-top:8px;font-size:12px">Précisions (optionnel)</label>
+    <input id="proj_txt_${id}" placeholder="ex: garder la fenêtre, sol parquet clair">
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="projGenerate('${id}')">✨ Générer le rendu</button>
+    <div id="proj_result_${id}" style="margin-top:10px"></div>`;
+  if(projs.length){
+    h+=`<div class="section-title"><h2 style="font-size:14px">Rendus enregistrés</h2></div>`;
+    projs.forEach(p=>{ h+=`<div style="margin-bottom:10px"><img src="${p.result}" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="tag">${frSignAt(p.ts)}${p.by?(' · '+esc(p.by)):''}<button class="iconbtn danger" style="float:right" onclick="delProjection('${id}','${p.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div></div>`; });
+  }
+  h+=`</div>`;
+  return h;
+}
+function _projCompress(dataUrl,cb){ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); cb(cv.toDataURL('image/jpeg',0.7)); }; img.onerror=()=>cb(null); img.src=dataUrl; }
+function projPick(id,slot,input){ const f=input.files&&input.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>{ _projCompress(e.target.result,url=>{ if(!url){ toast("Image illisible"); return; } if(!_projImgs[id])_projImgs[id]={}; _projImgs[id][slot]=url; const prev=document.getElementById('proj_prev_'+slot+'_'+id); if(prev) prev.innerHTML='<img src="'+url+'" style="width:100%;border-radius:8px;border:1px solid var(--line)">'; }); }; r.readAsDataURL(f); }
+function projGenerate(id){
+  const imgs=_projImgs[id]||{};
+  if(!imgs.a){ toast("Ajoute d'abord la photo actuelle"); return; }
+  const txt=(document.getElementById('proj_txt_'+id)||{}).value||'';
+  const res=document.getElementById('proj_result_'+id);
+  if(res) res.innerHTML='<p class="note" style="margin:0">⏳ Génération du rendu… (quelques secondes, ne ferme pas la page)</p>';
+  const pa=imgs.a.split(',').pop(), pi=imgs.i?imgs.i.split(',').pop():null;
+  const fn=firebase.app().functions('europe-west1').httpsCallable('projectionIA');
+  fn({photoActuelle:pa, photoInspiration:pi, texte:txt}).then(r=>{
+    const out=r.data&&r.data.image;
+    if(!out){ if(res) res.innerHTML='<p class="note" style="margin:0;color:#c0392b">❌ Aucun rendu reçu. Réessaie.</p>'; return; }
+    const url=(String(out).indexOf('data:')===0)?out:('data:image/png;base64,'+out);
+    _projLast[id]=url;
+    if(res) res.innerHTML='<img src="'+url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"><button class="btn primary" style="width:100%;margin-top:8px" onclick="projSave(\''+id+'\')">💾 Enregistrer ce rendu</button>';
+  }).catch(e=>{ if(res) res.innerHTML='<p class="note" style="margin:0;color:#c0392b">❌ '+esc((e&&e.message)||'Erreur pendant la génération')+'</p>'; });
+}
+function projSave(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Rien à enregistrer"); return; } _projCompress(url,small=>{ if(!small){ toast("Souci à l'enregistrement"); return; } const c=CHANTIERS[id]; if(!c.projections)c.projections={}; c.projections[uid()]={result:small,ts:Date.now(),by:ME?ME.nom:''}; saveChantier(id); toast("Rendu enregistré ✅"); render(); }); }
+function delProjection(id,k){ if(!confirm("Supprimer ce rendu ?")) return; delete CHANTIERS[id].projections[k]; saveChantier(id); render(); }
+
 function addPhoto(id,input){ const f=input.files&&input.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); const url=cv.toDataURL('image/jpeg',0.7); const c=CHANTIERS[id]; if(!c.photos)c.photos={}; const pid=uid(); c.photos[pid]={url,ts:Date.now(),by:ME?ME.nom:''}; saveChantier(id); render(); }; img.src=e.target.result; }; r.readAsDataURL(f); }
 function addTache(id){ openPrompt("Nouvelle tâche","ex: Poser le carrelage cuisine",v=>{ if(!v)return; const c=CHANTIERS[id]; if(!c.taches)c.taches={}; c.taches[uid()]={label:v,done:false}; saveChantier(id); render(); }); }
 function toggleTache(id,k){ const t=CHANTIERS[id].taches[k]; t.done=!t.done; saveChantier(id); render(); }
 function delTache(id,k){ delete CHANTIERS[id].taches[k]; saveChantier(id); render(); }
-function addMateriel(id){ openPrompt("Matériel à prévoir","ex: 10 sacs de ciment",v=>{ if(!v)return; const c=CHANTIERS[id]; if(!c.materiel)c.materiel={}; c.materiel[uid()]={label:v,ok:false}; saveChantier(id); render(); }); }
-function toggleMateriel(id,k){ const m=CHANTIERS[id].materiel[k]; m.ok=!m.ok; saveChantier(id); render(); }
+const MAT_STATUTS=['à commander','commandé','reçu'];
+function matStatut(m){ if(m&&m.statut&&MAT_STATUTS.indexOf(m.statut)>=0) return m.statut; return (m&&m.ok)?'reçu':'à commander'; }
+function matStatutColor(st){ return st==='reçu'?'var(--ok)':(st==='commandé'?'var(--warn)':'var(--muted)'); }
+function openMateriel(id,k){
+  const c=CHANTIERS[id]; const m=(k&&c.materiel&&c.materiel[k])||{}; const st=matStatut(m);
+  const cout=parseFloat(m.cout); const coutVal=(!isNaN(cout)&&cout>0)?String(cout):'';
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 12px">${k?'Modifier le matériel':'Ajouter du matériel'}</h2>
+    <label>Désignation</label><input id="mat_label" value="${esc(m.label||'')}" placeholder="ex: Sacs de ciment">
+    <div class="row" style="margin-top:8px;gap:8px">
+      <div style="flex:1"><label>Quantité</label><input id="mat_qty" value="${esc(m.qty||'')}" placeholder="ex: 10 sacs"></div>
+      <div style="flex:1"><label>Coût total (€)</label><input id="mat_cout" type="number" inputmode="decimal" step="0.01" min="0" value="${esc(coutVal)}" placeholder="ex: 85"></div>
+    </div>
+    <label style="margin-top:8px">Fournisseur (optionnel)</label><input id="mat_four" value="${esc(m.fournisseur||'')}" placeholder="ex: Point P">
+    <label style="margin-top:8px">Statut</label>
+    <select id="mat_statut">${MAT_STATUTS.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('')}</select>
+    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveMateriel('${id}','${k||''}')">Enregistrer</button>`);
+  setTimeout(()=>{const e=document.getElementById('mat_label');e&&e.focus();},50);
+}
+function saveMateriel(id,k){
+  const c=CHANTIERS[id]; if(!c) return;
+  const g=elId=>{ const e=document.getElementById(elId); return e?e.value.trim():''; };
+  const label=g('mat_label'); if(!label){ toast("Indique au moins la désignation."); return; }
+  const coutN=parseFloat((g('mat_cout')||'').replace(',','.'));
+  const statut=g('mat_statut'); const st=MAT_STATUTS.indexOf(statut)>=0?statut:'à commander';
+  const entry={ label:label, qty:g('mat_qty'), cout:(!isNaN(coutN)&&coutN>0)?coutN:0, fournisseur:g('mat_four'), statut:st, ok:(st==='reçu') };
+  if(!c.materiel) c.materiel={};
+  if(k){ c.materiel[k]=Object.assign({},c.materiel[k],entry); } else { c.materiel[uid()]=entry; }
+  saveChantier(id); closeModal(); render();
+}
+function cycleMateriel(id,k){ const c=CHANTIERS[id]; const m=c&&c.materiel&&c.materiel[k]; if(!m) return; const st=matStatut(m); const next=MAT_STATUTS[(MAT_STATUTS.indexOf(st)+1)%MAT_STATUTS.length]; m.statut=next; m.ok=(next==='reçu'); saveChantier(id); render(); }
 function delMateriel(id,k){ delete CHANTIERS[id].materiel[k]; saveChantier(id); render(); }
-function teamSendMsg(id){ const t=val('tm_msg_'+id); if(!t)return; const c=CHANTIERS[id]; if(!c.messages)c.messages={}; c.messages[uid()]={from:'team',txt:t,ts:Date.now()}; saveChantier(id); render(); if(typeof chatScrollDown==='function') chatScrollDown(); }
+function teamSendMsg(id){ const t=val('tm_msg_'+id); if(!t)return; const c=CHANTIERS[id]; if(!c.messages)c.messages={}; c.messages[uid()]={from:'team',txt:t,ts:Date.now(),by:(ME&&ME.nom)||''}; saveChantier(id); render(); if(typeof chatScrollDown==='function') chatScrollDown(); }
 function teamEditMsg(id,k){ const c=CHANTIERS[id]; const m=c.messages&&c.messages[k]; if(!m) return; openPrompt("Modifier le message",m.txt,v=>{ if(!v) return; m.txt=v; m.edited=true; saveChantier(id); render(); }); setTimeout(()=>{const e=document.getElementById('pr_in'); if(e)e.value=m.txt;},70); }
 function teamDelMsg(id,k){ if(!confirm("Supprimer ce message ?")) return; const c=CHANTIERS[id]; const m=c.messages&&c.messages[k]; if(!m) return; m.deleted=true; m.deletedBy=(ME&&ME.nom)||'équipe'; saveChantier(id); render(); }
 function shareCode(code,nom){ const msg=`Suivez l'avancement de votre chantier « ${nom} » sur l'app ${coName()} :\n${location.origin}${location.pathname}\nCode chantier : ${code}`; if(navigator.share) navigator.share({title:'Suivi de chantier',text:msg}).catch(()=>{}); else if(navigator.clipboard) navigator.clipboard.writeText(msg).then(()=>toast('Copié 📲')); else toast(code); }
@@ -2487,7 +2584,8 @@ function clientChatHTML(id, c, viewer){
     let act='';
     if(viewer==='team' && m.from!=='client') act=`<div class="cbub-act"><button onclick="teamEditMsg('${id}','${m.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><button onclick="teamDelMsg('${id}','${m.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button></div>`;
     if(viewer==='client' && m.from==='client') act=`<div class="cbub-act"><button onclick="clientEditMsg('${m.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><button onclick="clientDelMsg('${m.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg></button></div>`;
-    h+=`<div class="cbub ${mine?'me':'them'}">${esc(m.txt)}<div class="tm">${chatTime(m.ts)}${m.edited?' · modifié':''}</div>${act}</div>`;
+    const auteur=(viewer==='team' && m.from!=='client' && m.by)?`<div class="tm" style="margin:0 0 2px;opacity:.85;font-weight:700">${esc(m.by)}</div>`:'';
+    h+=`<div class="cbub ${mine?'me':'them'}">${auteur}${esc(m.txt)}<div class="tm">${chatTime(m.ts)}${m.edited?' · modifié':''}</div>${act}</div>`;
   });
   return h;
 }
@@ -2696,6 +2794,7 @@ function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi 
 let FACTU_OPEN=false, FTAB='resume';
 let HUB=null, HTAB='';
 const HUBS={
+  dashboard:{title:'Tableau de bord',icon:'chart',tabs:[['vue','chart',"Vue d'ensemble"]]},
   chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','users','Clients'],['modeles','layers','Modèles'],['carte','map-pin','Carte']]},
   equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['vehicules','truck','Véhicules'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
   planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
@@ -2727,6 +2826,7 @@ function renderAccueil(){
   const docs=factuAllDocs(); const devAtt=docs.filter(d=>d.type!=='facture'&&!d.signature).length;
   const prenom=((ME&&ME.nom)||'').split(' ')[0]||'';
   const tiles=[
+    ['dashboard','chart','Tableau de bord',"Chantiers, retards, main-d'œuvre"],
     ['chantiers','building','Chantiers', actifs+' chantier'+(actifs>1?'s':'')+' en cours'],
     ['equipe','users','Équipe', Object.keys(TEAM).length+' membres'],
     ['planning','calendar','Planning',''],
@@ -2781,6 +2881,7 @@ function hubFab(){
 }
 function hubPlaceholder(title,desc,extra){ return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(title)}</h2></div><p class="note" style="margin:0">${esc(desc)}</p>${extra||''}<p class="tag" style="margin-top:10px">🚧 En construction — bientôt disponible</p></div>`; }
 function hubBody(hub,tab){
+  if(hub==='dashboard') return viewDashboard();
   if(hub==='chantiers'){
     if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
@@ -3066,7 +3167,7 @@ function copyEreporting(){
   else fallbackCopy(txt,done);
 }
 function fallbackCopy(txt,done){ try{ const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand('copy'); ta.remove(); done&&done(); }catch(e){ toast("Copie impossible sur cet appareil"); } }
-/* ---- Factur-X : facture électronique structurée (format CII, profil BASIC) ---- */
+/* ---- Factur-X : facture électronique structurée (format CII, profil EN 16931) ---- */
 function fxAmt(n){ return (Math.round((n||0)*100)/100).toFixed(2); }
 function fxSafe(s){ return String(s||'').replace(/[^A-Za-z0-9_-]/g,''); }
 function facturXXml(snap){
@@ -3083,7 +3184,7 @@ function facturXXml(snap){
     lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc||('Ligne '+(i+1)))}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${fxCat()}</ram:CategoryCode><ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
   });
   let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
-  xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
+  xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
   xml+=`  <rsm:ExchangedDocument><ram:ID>${X(num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${ymd}</udt:DateTimeString></ram:IssueDateTime></rsm:ExchangedDocument>\n`;
   xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      <ram:SellerTradeParty><ram:Name>${X(coName())}</ram:Name>`;
   if(siren) xml+=`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${X(siren)}</ram:ID></ram:SpecifiedLegalOrganization>`;
@@ -3158,7 +3259,7 @@ async function facturXPdf(id,pid){
     y-=14; t('Désignation',M,y,bold,10); t('Qté',360,y,bold,10); t('PU HT',420,y,bold,10); t('Total HT',500,y,bold,10); y-=14;
     (snap.items||[]).forEach(it=>{ t(String(it.desc||'').slice(0,60),M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); y-=13; if(y<120){ y=800; doc.addPage([595.28,841.89]); } });
     y-=10; t('Total HT : '+fxAmt(ht)+' EUR',380,y,font,10); y-=13; t((isFranchiseTva()?'TVA non applicable':('TVA '+tvaPct()+'%'))+' : '+fxAmt(tva)+' EUR',380,y,font,10); y-=13; t('Total TTC : '+fxAmt(ttc)+' EUR',380,y,bold,11); y-=16; if(isFranchiseTva()){ t(tvaMention(),M,y,font,8,grey); y-=14; } y-=10;
-    t('Facture électronique — Factur-X (profil BASIC). Données structurées XML intégrées dans ce PDF.',M,y,font,8,grey);
+    t('Facture électronique — Factur-X (profil EN 16931). Données structurées XML intégrées dans ce PDF.',M,y,font,8,grey);
     const enc=new TextEncoder();
     await doc.attach(enc.encode(facturXXml(snap)),'factur-x.xml',{mimeType:'application/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
     try{ const stream=doc.context.stream(facturXXmp(snap.num||''),{Type:'Metadata',Subtype:'XML'}); doc.catalog.set(PDFName.of('Metadata'),doc.context.register(stream)); }catch(_){}
@@ -3196,7 +3297,7 @@ function facturXTestXml(em, dest, inv){
     lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc)}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
   });
   let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
-  xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
+  xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
   xml+=`  <rsm:ExchangedDocument><ram:ID>${X(inv.num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:IssueDateTime></rsm:ExchangedDocument>\n`;
   xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      ${_fxTestParty('SellerTradeParty', em)}\n      ${_fxTestParty('BuyerTradeParty', dest)}\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery/>\n`;
   xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
@@ -3233,7 +3334,7 @@ async function facturXTestPdf(){
     y-=14; t('Designation',M,y,bold,10); t('Qte',360,y,bold,10); t('PU HT',420,y,bold,10); t('Total HT',500,y,bold,10); y-=14;
     inv.items.forEach(it=>{ t(it.desc,M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); y-=13; });
     y-=10; t('Total HT : '+fxAmt(inv.ht)+' EUR',380,y,font,10); y-=13; t('TVA 20% : '+fxAmt(inv.tva)+' EUR',380,y,font,10); y-=13; t('Total TTC : '+fxAmt(inv.ttc)+' EUR',380,y,bold,11); y-=18;
-    t('Facture electronique de TEST - Factur-X (profil BASIC). Emetteur et destinataire de la Sandbox.',M,y,font,8,grey);
+    t('Facture electronique de TEST - Factur-X (profil EN 16931). Emetteur et destinataire de la Sandbox.',M,y,font,8,grey);
     const enc=new TextEncoder();
     await doc.attach(enc.encode(facturXTestXml(em,dest,inv)),'factur-x.xml',{mimeType:'application/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
     try{ const stream=doc.context.stream(facturXXmp(inv.num),{Type:'Metadata',Subtype:'XML'}); doc.catalog.set(PDFName.of('Metadata'),doc.context.register(stream)); }catch(_){}
@@ -3960,6 +4061,379 @@ function sigSave(){
   const ch=CHANTIERS[CLIENT.chantierId]; const d=ch&&ch.published&&ch.published[_sigPid]; if(!d) return;
   d.signature=url; d.signedAt=new Date().toISOString(); d.signedBy=CLIENT.nom;
   clientPersist('signDoc',{pid:_sigPid, signature:url}); closeModal(); toast("Devis signé ✅ Merci !"); render();
+}
+
+/* ============== MODULE RÉCEPTION & RÉSERVES + GARANTIES ============== */
+function addYears(iso,n){ const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return null; d.setFullYear(d.getFullYear()+n); return d; }
+function frDateFR(iso){ if(!iso) return '—'; const d=new Date(iso+'T00:00:00'); if(isNaN(d)) return esc(iso); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function garantieDates(dateISO){
+  const mk=(n)=>{ const e=addYears(dateISO,n); if(!e) return '—'; const exp=(e-new Date())<=0; return (exp?'Expirée le ':"Jusqu'au ")+e.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); };
+  return { gpaTxt:mk(1), bieTxt:mk(2), decTxt:mk(10) };
+}
+function chantierHT(c){ let ht=0; if(c.published){ Object.values(c.published).forEach(d=>{ if(d.type==='facture') ht+=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); }); } if(!ht && c.devis && c.devis.items){ ht=c.devis.items.reduce((s,it)=>s+it.qty*it.pu,0); } return ht; }
+
+/* ===== Compression image partagée (900px) ===== */
+function compresse900(file,cb){ if(!file) return; const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); cb(cv.toDataURL('image/jpeg',0.7)); }; img.src=e.target.result; }; r.readAsDataURL(file); }
+
+/* ===== Plans & repères : images annotées d'épingles numérotées (coords en %), interne à l'équipe ===== */
+function plansCard(id,c){
+  const plans=c.plans?Object.keys(c.plans).map(k=>({k,...c.plans[k]})):[];
+  let h=`<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Plans & repères</h2></div>`;
+  if(!plans.length){ h+=`<p class="note" style="margin:0 0 10px">Aucun plan. Ajoute une image (plan ou photo) puis pose des épingles numérotées pour marquer des points précis.</p>`; }
+  else plans.forEach(p=>{
+    const pins=p.pins||[];
+    h+=`<div style="margin-bottom:12px">
+      <div style="position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;line-height:0">
+        <img src="${p.img}" style="width:100%;display:block" alt="plan">
+        ${pins.map((pin,i)=>`<span style="position:absolute;left:${pin.x}%;top:${pin.y}%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:var(--acc2);color:var(--accText);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">${i+1}</span>`).join('')}
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:6px">
+        <span class="note" style="font-size:12px">${pins.length} repère${pins.length>1?'s':''}</span>
+        <div class="row" style="gap:6px">
+          <button class="btn ghost mini" onclick="openPlanEditor('${id}','${p.k}')">Ouvrir / annoter</button>
+          <button class="iconbtn danger" onclick="delPlan('${id}','${p.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+        </div>
+      </div>
+    </div>`;
+  });
+  h+=`<input type="file" id="plan_file_${id}" accept="image/*" style="display:none" onchange="addPlan('${id}',this)">
+    <button class="btn ghost" style="width:100%;margin-top:4px" onclick="document.getElementById('plan_file_'+'${id}').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter un plan</button></div>`;
+  return h;
+}
+function addPlan(id,input){ const f=input.files&&input.files[0]; if(!f) return; input.value=''; compresse900(f,url=>{ const c=CHANTIERS[id]; if(!c.plans)c.plans={}; const k=uid(); c.plans[k]={img:url,pins:[]}; saveChantier(id); render(); openPlanEditor(id,k); }); }
+function delPlan(id,k){ if(!confirm("Supprimer ce plan et ses repères ?")) return; const c=CHANTIERS[id]; if(c.plans) delete c.plans[k]; saveChantier(id); render(); }
+let _planPlacing=false;
+function openPlanEditor(id,k){
+  const c=CHANTIERS[id]; const p=c&&c.plans&&c.plans[k]; if(!p) return;
+  _planPlacing=false;
+  const pins=p.pins||[];
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 6px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Plans & repères</h2>
+    <p class="note" id="plan_hint" style="margin:0 0 8px;font-size:12px">Touche une épingle pour voir sa note. Bouton ci-dessous pour en poser une nouvelle.</p>
+    <div id="plan_stage" style="position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;line-height:0;touch-action:manipulation">
+      <img id="plan_img" src="${p.img}" style="width:100%;display:block" alt="plan">
+      ${pins.map((pin,i)=>`<span data-i="${i}" style="position:absolute;left:${pin.x}%;top:${pin.y}%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:var(--acc2);color:var(--accText);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer" onclick="event.stopPropagation();editPin('${id}','${k}',${i})">${i+1}</span>`).join('')}
+    </div>
+    <button class="btn ghost" id="plan_addbtn" style="width:100%;margin-top:12px" onclick="planTogglePlace('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Poser une épingle</button>`);
+  setTimeout(()=>{ const st=document.getElementById('plan_stage'); if(st){ st.onclick=ev=>planStageTap(ev,id,k); } },60);
+}
+function planTogglePlace(id,k){ _planPlacing=!_planPlacing; const b=document.getElementById('plan_addbtn'); const hint=document.getElementById('plan_hint'); if(b){ b.className='btn '+(_planPlacing?'primary':'ghost'); b.style.width='100%'; } if(hint) hint.textContent=_planPlacing?"Touche l'image à l'endroit voulu pour poser l'épingle.":"Touche une épingle pour voir sa note. Bouton ci-dessous pour en poser une nouvelle."; }
+function planStageTap(ev,id,k){
+  if(!_planPlacing) return;
+  const img=document.getElementById('plan_img'); if(!img) return;
+  const r=img.getBoundingClientRect();
+  const t=ev.touches?ev.touches[0]:ev;
+  const x=Math.max(0,Math.min(100,(t.clientX-r.left)/r.width*100));
+  const y=Math.max(0,Math.min(100,(t.clientY-r.top)/r.height*100));
+  const c=CHANTIERS[id]; const p=c&&c.plans&&c.plans[k]; if(!p) return; if(!p.pins)p.pins=[];
+  openPrompt("Note du repère","ex: Fissure à reprendre",v=>{ p.pins.push({x:x,y:y,note:(v||'').trim()}); _planPlacing=false; saveChantier(id); render(); openPlanEditor(id,k); });
+}
+function editPin(id,k,i){
+  const c=CHANTIERS[id]; const p=c&&c.plans&&c.plans[k]; if(!p||!p.pins||!p.pins[i]) return;
+  const pin=p.pins[i];
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 10px">Repère n°${i+1}</h2>
+    <input id="pin_note" value="${esc(pin.note||'')}" placeholder="ex: Fissure à reprendre">
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn ghost" style="flex:1;color:var(--danger)" onclick="delPin('${id}','${k}',${i})">Supprimer</button>
+      <button class="btn primary" style="flex:2" onclick="savePin('${id}','${k}',${i})">Enregistrer</button>
+    </div>`);
+  setTimeout(()=>{const e=document.getElementById('pin_note');e&&e.focus();},50);
+}
+function savePin(id,k,i){ const c=CHANTIERS[id]; const p=c&&c.plans&&c.plans[k]; if(!p||!p.pins||!p.pins[i]) return; const e=document.getElementById('pin_note'); p.pins[i].note=e?e.value.trim():''; saveChantier(id); render(); openPlanEditor(id,k); }
+function delPin(id,k,i){ const c=CHANTIERS[id]; const p=c&&c.plans&&c.plans[k]; if(!p||!p.pins) return; p.pins.splice(i,1); saveChantier(id); render(); openPlanEditor(id,k); }
+
+/* ===== Journal de chantier : fil d'entrées datées (texte + photos), interne à l'équipe ===== */
+function journalCard(id,c){
+  const entries=c.journal?Object.keys(c.journal).map(k=>({k,...c.journal[k]})).sort((a,b)=>b.ts-a.ts):[];
+  let h=`<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Journal de chantier</h2></div>`;
+  if(!entries.length){ h+=`<p class="note" style="margin:0 0 10px">Aucune entrée pour l'instant. Note ici l'avancement, un incident, une décision prise sur le terrain…</p>`; }
+  else entries.forEach(e=>{
+    h+=`<div style="border-left:3px solid var(--line);padding:0 0 12px 12px;margin-bottom:2px">
+      <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
+        <b style="font-size:13px">${esc(e.by||'—')}</b>
+        <span class="note" style="font-size:11px;flex:none">${frDateTime(e.ts)}</span>
+      </div>
+      ${e.txt?`<p style="white-space:pre-wrap;line-height:1.5;margin:4px 0 0">${esc(e.txt)}</p>`:''}
+      ${(e.photos&&e.photos.length)?`<div class="photo-grid" style="margin-top:8px">${e.photos.map(u=>`<div class="ph" style="background-image:url(${u})"></div>`).join('')}</div>`:''}
+      <button class="linkbtn" style="margin-top:8px;color:var(--danger)" onclick="delJournalEntry('${id}','${e.k}')">Supprimer</button>
+    </div>`;
+  });
+  h+=`<button class="btn ghost" style="width:100%;margin-top:4px" onclick="openJournal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter au journal</button></div>`;
+  return h;
+}
+function openJournal(id){
+  window._jrnPhotos=[];
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 10px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Ajouter au journal</h2>
+    <textarea id="jrn_txt" rows="4" placeholder="Ce qui s'est passé aujourd'hui sur le chantier…" style="width:100%;resize:vertical"></textarea>
+    <input type="file" id="jrn_file" accept="image/*" style="display:none" onchange="journalAddPhoto(this)">
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="document.getElementById('jrn_file').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Ajouter une photo</button>
+    <div id="jrn_prev" class="photo-grid" style="margin-top:10px"></div>
+    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveJournalEntry('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button>`);
+  setTimeout(()=>{const e=document.getElementById('jrn_txt');e&&e.focus();},50);
+}
+function journalAddPhoto(input){ const f=input.files&&input.files[0]; if(!f) return; input.value='';
+  const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); const url=cv.toDataURL('image/jpeg',0.7); (window._jrnPhotos||(window._jrnPhotos=[])).push(url); journalRenderPrev(); }; img.src=e.target.result; }; r.readAsDataURL(f);
+}
+function journalRenderPrev(){ const box=document.getElementById('jrn_prev'); if(!box) return; const arr=window._jrnPhotos||[]; box.innerHTML=arr.map((u,i)=>`<div class="ph" style="background-image:url(${u})"><span class="ph-like" style="left:auto;right:4px;cursor:pointer" onclick="journalDelPrev(${i})">✕</span></div>`).join(''); }
+function journalDelPrev(i){ if(window._jrnPhotos) window._jrnPhotos.splice(i,1); journalRenderPrev(); }
+function saveJournalEntry(id){
+  const c=CHANTIERS[id]; if(!c) return;
+  const e=document.getElementById('jrn_txt'); const txt=e?e.value.trim():'';
+  const photos=(window._jrnPhotos||[]).slice();
+  if(!txt && !photos.length){ toast("Écris quelque chose ou ajoute une photo."); return; }
+  if(!c.journal) c.journal={};
+  c.journal[uid()]={ ts:Date.now(), by:(ME&&ME.nom)||'', txt:txt, photos:photos };
+  window._jrnPhotos=[];
+  saveChantier(id); closeModal(); toast("Entrée ajoutée au journal ✅"); render();
+}
+function delJournalEntry(id,k){ if(!confirm("Supprimer cette entrée du journal ?")) return; const c=CHANTIERS[id]; if(c.journal) delete c.journal[k]; saveChantier(id); render(); }
+
+function materielCost(c){ if(!c.materiel) return 0; return Object.values(c.materiel).reduce((s,m)=>{ const v=parseFloat(m&&m.cout); return s+((!isNaN(v)&&v>0)?v:0); },0); }
+function rentabiliteCard(id,c){
+  const head=`<div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Rentabilité</h2></div>`;
+  const devise=chantierHT(c);
+  const mo=chantierCost(c); const mat=materielCost(c); const reel=mo+mat;
+  const heures=chantierHours(c);
+  if(heures<=0 && mat<=0){
+    return `<div class="card">${head}
+      <div class="task-row"><span style="flex:1">Montant devisé</span><b>${eurFmt(devise)}</b></div>
+      <p class="note" style="margin:10px 0 0">Aucune heure pointée pour l'instant : le coût réel ne peut pas encore être calculé. La marge s'affichera dès que l'équipe aura pointé des heures sur ce chantier.</p>
+    </div>`;
+  }
+  const marge=devise-reel; const pct=devise>0?(marge/devise*100):0;
+  const col=marge>=0?'var(--ok)':'var(--danger)';
+  return `<div class="card">${head}
+    <div class="task-row"><span style="flex:1">Montant devisé</span><b>${eurFmt(devise)}</b></div>
+    <div class="task-row"><span style="flex:1">Coût réel${mat>0?'':' (main-d’œuvre)'}</span><b>${eurFmt(reel)}</b></div>
+    <div class="task-row" style="padding-left:12px"><span style="flex:1" class="note">Main-d'œuvre${heures>0?` · ${fmtDur(chantierHours(c)*3600000)}`:''}</span><span class="note">${eurFmt(mo)}</span></div>
+    ${mat>0?`<div class="task-row" style="padding-left:12px"><span style="flex:1" class="note">Matériel</span><span class="note">${eurFmt(mat)}</span></div>`:''}
+    <div class="task-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:10px"><span style="flex:1"><b>Marge</b></span><b style="color:${col}">${eurFmt(marge)}</b></div>
+    <div class="task-row"><span style="flex:1">% de marge</span><b style="color:${col}">${devise>0?pct.toFixed(1)+' %':'—'}</b></div>
+    <p class="note" style="margin:8px 0 0;font-size:11px">Devisé = total HT du devis (ou des factures). Coût réel = heures pointées × coût horaire de chaque personne${mat>0?', plus le matériel chiffré':''}. Estimation indicative de gestion.</p>
+  </div>`;
+}
+
+function receptionCard(id,c){
+  const r=c.reception;
+  const head=`<div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Réception des travaux</h2></div>`;
+  if(!r||!r.done){
+    return `<div class="card">${head}
+      <p class="note" style="margin:0 0 10px">La réception officialise la fin du chantier, déclenche les garanties légales et le droit au solde. Prononce-la avec le client.</p>
+      <button class="btn primary" style="width:100%" onclick="openReception('${id}')">Prononcer la réception</button>
+    </div>`;
+  }
+  const reserves=r.reserves?Object.keys(r.reserves).map(k=>({k,...r.reserves[k]})):[];
+  const leve=reserves.filter(x=>x.statut==='done').length;
+  const g=garantieDates(r.date);
+  const ret=chantierHT(c)*(1+tvaFactor())*0.05;
+  let h=`<div class="card">${head}
+    <div class="task-row"><span style="flex:1">Réceptionné le</span><b>${frDateFR(r.date)}</b></div>
+    <div class="task-row"><span style="flex:1">Type</span><b>${r.withReserves?'Avec réserves':'Sans réserve'}</b></div>`;
+  if(r.signature){ h+=`<div class="task-row"><span style="flex:1">Signature client</span><b style="color:var(--ok)">${esc(r.signedBy||'client')}</b></div>
+    <img src="${r.signature}" alt="signature" style="max-height:70px;margin:6px 0;background:#fff;border:1px solid var(--line);border-radius:8px">
+    <p class="note" style="margin:0 0 4px;font-size:11px">Signé le ${frSignAt(r.signedAt)}</p>`; }
+  else { h+=`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="receptionSign('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/></svg> Faire signer le client</button>`; }
+  if(r.withReserves){
+    h+=`<div class="section-title"><h2 style="font-size:14px">Réserves ${reserves.length?`<span class="tag">${leve}/${reserves.length} levées</span>`:''}</h2><button class="btn ghost mini" onclick="addReserve('${id}')">+</button></div>`;
+    if(!reserves.length) h+=`<p class="note">Aucune réserve listée. Ajoute chaque défaut à corriger (précis et localisé).</p>`;
+    else reserves.forEach(x=>{ h+=`<div class="task-row ${x.statut==='done'?'done':''}">
+      <div class="checkbox ${x.statut==='done'?'on':''}" onclick="toggleReserve('${id}','${x.k}')">${x.statut==='done'?'✓':''}</div>
+      <span style="flex:1"><b>${esc(x.desc||'')}</b>${x.zone?`<div class="tag">📍 ${esc(x.zone)}</div>`:''}${x.delai&&x.statut!=='done'?`<div class="tag">à lever avant le ${frDateFR(x.delai)}</div>`:''}${x.statut==='done'&&x.doneAt?`<div class="tag" style="color:var(--ok)">levée le ${frDateFR(x.doneAt)}</div>`:''}</span>
+      <button class="iconbtn" onclick="editReserve('${id}','${x.k}')">✎</button>
+      <button class="iconbtn danger" onclick="delReserve('${id}','${x.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`; });
+    h+=`<p class="note" style="margin-top:10px;font-size:11px">Retenue de garantie 5 % du TTC : <b>${eurF2(ret)}</b> — libérée à la levée des réserves (ou après 1 an).</p>`;
+  }
+  h+=`<div class="section-title"><h2 style="font-size:14px">Garanties légales</h2></div>
+    <div class="task-row"><span style="flex:1">Parfait achèvement (1 an)</span><b>${g.gpaTxt}</b></div>
+    <div class="task-row"><span style="flex:1">Biennale (2 ans)</span><b>${g.bieTxt}</b></div>
+    <div class="task-row"><span style="flex:1">Décennale (10 ans)</span><b>${g.decTxt}</b></div>
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="receptionPV('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6"/></svg> Télécharger le PV de réception</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="annulerReception('${id}')">Annuler la réception</button>
+  </div>`;
+  return h;
+}
+function openReception(id){
+  const c=CHANTIERS[id]; const today=new Date().toISOString().slice(0,10); const r=c.reception||{};
+  openModal(`<div class="grabber"></div><h2 style="margin-bottom:6px">Prononcer la réception</h2>
+    <p class="note" style="margin-bottom:10px">Cette date déclenche les garanties légales. À choisir avec le client.</p>
+    <label>Date de réception</label><input type="date" id="rec_date" value="${esc(r.date||today)}">
+    <label style="margin-top:10px">Réserves</label>
+    <div class="row"><button type="button" class="btn ${r.withReserves?'ghost':'primary'}" id="rec_sr" onclick="recSetRes(false)">Sans réserve</button>
+      <button type="button" class="btn ${r.withReserves?'primary':'ghost'}" id="rec_ar" onclick="recSetRes(true)">Avec réserves</button></div>
+    <input type="hidden" id="rec_wr" value="${r.withReserves?'1':'0'}">
+    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveReception('${id}')">Valider la réception</button>`);
+}
+function recSetRes(v){ const hid=document.getElementById('rec_wr'); if(hid) hid.value=v?'1':'0'; const a=document.getElementById('rec_ar'), s=document.getElementById('rec_sr'); if(a)a.className='btn '+(v?'primary':'ghost'); if(s)s.className='btn '+(v?'ghost':'primary'); }
+function saveReception(id){
+  const c=CHANTIERS[id]; const date=val('rec_date'); if(!date){ toast("Choisis une date"); return; }
+  const wr=(document.getElementById('rec_wr')||{}).value==='1';
+  if(!c.reception) c.reception={}; c.reception.done=true; c.reception.date=date; c.reception.withReserves=wr; if(!c.reception.reserves) c.reception.reserves={};
+  saveChantier(id); closeModal(); render(); toast("Réception enregistrée ✅");
+}
+function annulerReception(id){ if(!confirm("Annuler la réception ? Les garanties et le PV seront retirés.")) return; delete CHANTIERS[id].reception; saveChantier(id); render(); }
+function addReserve(id){ editReserve(id,''); }
+function editReserve(id,rid){
+  const c=CHANTIERS[id]; const x=(rid&&c.reception&&c.reception.reserves&&c.reception.reserves[rid])||{};
+  openModal(`<div class="grabber"></div><h2 style="margin-bottom:10px">${rid?'Modifier la réserve':'Nouvelle réserve'}</h2>
+    <label>Description du défaut</label><input id="res_desc" value="${esc(x.desc||'')}" placeholder="ex: Prise de courant non fonctionnelle">
+    <label style="margin-top:8px">Localisation</label><input id="res_zone" value="${esc(x.zone||'')}" placeholder="ex: Salon, mur nord">
+    <label style="margin-top:8px">À lever avant le (optionnel)</label><input type="date" id="res_delai" value="${esc(x.delai||'')}">
+    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveReserve('${id}','${rid}')">Enregistrer</button>`);
+  setTimeout(()=>{const e=document.getElementById('res_desc'); if(e)e.focus();},60);
+}
+function saveReserve(id,rid){
+  const c=CHANTIERS[id]; const desc=val('res_desc'); if(!desc){ toast("Décris la réserve"); return; }
+  if(!c.reception) c.reception={done:true,date:new Date().toISOString().slice(0,10),withReserves:true,reserves:{}};
+  if(!c.reception.reserves) c.reception.reserves={}; c.reception.withReserves=true;
+  const k=rid||uid(); const prev=c.reception.reserves[k]||{};
+  c.reception.reserves[k]={desc, zone:val('res_zone'), delai:val('res_delai'), statut:prev.statut||'todo', doneAt:prev.doneAt||''};
+  saveChantier(id); closeModal(); render();
+}
+function toggleReserve(id,rid){ const x=CHANTIERS[id].reception&&CHANTIERS[id].reception.reserves&&CHANTIERS[id].reception.reserves[rid]; if(!x) return; if(x.statut==='done'){ x.statut='todo'; x.doneAt=''; } else { x.statut='done'; x.doneAt=new Date().toISOString().slice(0,10); } saveChantier(id); render(); }
+function delReserve(id,rid){ const c=CHANTIERS[id]; if(!c.reception||!c.reception.reserves) return; if(!confirm("Supprimer cette réserve ?")) return; delete c.reception.reserves[rid]; saveChantier(id); render(); }
+let _recSigId=null;
+function receptionSign(id){
+  _recSigId=id; _sigHas=false;
+  openModal(`<div class="grabber"></div><h2 style="margin-bottom:4px">Signature du client</h2>
+    <p class="note" style="margin-bottom:10px">Le client signe le PV de réception avec son doigt, puis valide.</p>
+    <canvas id="sigPad" style="width:100%;height:200px;background:#fff;border:1px solid var(--line);border-radius:12px;touch-action:none;display:block"></canvas>
+    <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="sigClear()">Effacer</button>
+      <button class="btn primary" onclick="recSigSave()">Valider la signature</button></div>`);
+  setTimeout(initSigPad,80);
+}
+function recSigSave(){
+  if(!_sigHas){ toast("Signe d'abord dans le cadre"); return; }
+  const cv=document.getElementById('sigPad'); const url=cv.toDataURL('image/png');
+  const c=CHANTIERS[_recSigId]; if(!c||!c.reception) return;
+  c.reception.signature=url; c.reception.signedAt=new Date().toISOString(); c.reception.signedBy=clientFull(c);
+  saveChantier(_recSigId); closeModal(); render(); toast("PV signé ✅");
+}
+/* ===== Clôture du chantier : check-list de fin, archivage + récap PDF ===== */
+function clotureEtats(c){
+  const recu=!!(c.reception&&c.reception.done);
+  const reserves=(c.reception&&c.reception.reserves)?Object.values(c.reception.reserves):[];
+  const reservesOK=reserves.every(x=>x.statut==='done');
+  const factureOK=!!(c.published&&Object.values(c.published).some(d=>d&&d.type==='facture'));
+  return {recu,reserves,reservesOK,factureOK};
+}
+function clotureCard(id,c){
+  const e=clotureEtats(c);
+  const row=(ok,label,attente)=>`<div class="task-row"><span style="flex:1">${label}</span><b style="color:${ok?'var(--ok)':'var(--warn)'}">${ok?'<svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> OK':esc(attente||'en attente')}</b></div>`;
+  const reservesLabel=e.reserves.length?`Réserves levées (${e.reserves.filter(x=>x.statut==='done').length}/${e.reserves.length})`:'Réserves levées';
+  const reservesAttente=e.reserves.length?'en attente':'aucune réserve';
+  const reservesOkDisp=e.reserves.length?e.reservesOK:true;
+  let h=`<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Clôture du chantier</h2></div>
+    <p class="note" style="margin:0 0 10px">Vérifie que tout est en ordre avant de clôturer. La clôture archive le chantier et génère un récap PDF.</p>
+    ${row(e.recu,'Réception prononcée','en attente')}
+    ${row(reservesOkDisp,reservesLabel,reservesAttente)}
+    ${row(e.factureOK,'Au moins une facture publiée','en attente')}
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="cloturerChantier('${id}')">Clôturer le chantier</button>
+  </div>`;
+  return h;
+}
+function clotureFactureHT(c){ let ht=0; if(c.published){ Object.values(c.published).forEach(d=>{ if(d&&d.type==='facture') ht+=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); }); } return ht; }
+async function cloturerChantier(id){
+  const c=CHANTIERS[id]; if(!c) return;
+  const e=clotureEtats(c);
+  const manque=[];
+  if(!e.recu) manque.push("réception non prononcée");
+  if(e.reserves.length && !e.reservesOK) manque.push("des réserves ne sont pas levées");
+  if(!e.factureOK) manque.push("aucune facture publiée");
+  const msg=manque.length? ("Attention : "+manque.join(", ")+".\n\nClôturer quand même ? Le chantier sera archivé.") : "Clôturer et archiver ce chantier ?";
+  if(!confirm(msg)) return;
+  const ok=await clotureRecapPDF(id);
+  if(!ok) return;
+  archiveChantier(id);
+}
+async function clotureRecapPDF(id){
+  const c=CHANTIERS[id]; if(!c) return false;
+  let PL; try{ toast("Génération du récap…"); PL=await loadPdfLib(); } catch(e){ toast("PDF indisponible hors ligne"); return false; }
+  try{
+    const {PDFDocument,StandardFonts,rgb}=PL;
+    const doc=await PDFDocument.create(); let page=doc.addPage([595.28,841.89]);
+    const font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
+    const dark=rgb(0.1,0.1,0.1), grey=rgb(0.4,0.4,0.4); const M=50; let y=800;
+    const t=(s,x,yy,f,sz,col)=>page.drawText(String(s==null?'':s),{x,y:yy,size:sz||10,font:f||font,color:col||dark});
+    const line=(s,f,sz,col)=>{ if(y<80){ page=doc.addPage([595.28,841.89]); y=800; } t(s,M,y,f,sz,col); y-=(sz||10)+5; };
+    t(coName(),M,y,bold,15); y-=16;
+    if(CONFIG_DB.adr){ t(CONFIG_DB.adr,M,y,font,9,grey); y-=11; }
+    const cpv=[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).join(' '); if(cpv){ t(cpv,M,y,font,9,grey); y-=11; }
+    if(CONFIG_DB.siren){ t('SIREN '+CONFIG_DB.siren,M,y,font,9,grey); y-=11; }
+    y-=16; t('RECAPITULATIF DE FIN DE CHANTIER',M,y,bold,14); y-=24;
+    line('Chantier : '+(c.nom||''),bold,11);
+    line('Client : '+(clientFull(c)||''),font,10);
+    const adr=adresseFull(c); if(adr) line('Adresse des travaux : '+adr,font,10);
+    y-=6;
+    const r=c.reception;
+    if(r&&r.done){
+      line('Reception prononcee le '+frDateFR(r.date)+(r.withReserves?' (avec reserves)':' (sans reserve)'),bold,11);
+      const reserves=r.reserves?Object.values(r.reserves):[];
+      if(reserves.length){
+        const leve=reserves.filter(x=>x.statut==='done').length;
+        line('Reserves : '+leve+'/'+reserves.length+' levees',font,10);
+        reserves.forEach((x,i)=>{ line('  '+(i+1)+'. '+(x.desc||'')+(x.zone?(' - '+x.zone):'')+(x.statut==='done'?(' [levee le '+frDateFR(x.doneAt)+']'):' [en attente]'),font,9,grey); });
+      }
+    } else { line('Reception : non prononcee.',bold,11); }
+    y-=8;
+    const ht=clotureFactureHT(c); const f=tvaFactor(); const ttc=ht*(1+f);
+    line('Total facture HT : '+fxAmt(ht)+' EUR',bold,11);
+    if(f>0){ line('TVA ('+tvaPct()+'%) : '+fxAmt(ht*f)+' EUR',font,10); line('Total facture TTC : '+fxAmt(ttc)+' EUR',bold,11); }
+    else { line('TVA non applicable (art. 293 B CGI).',font,9,grey); }
+    y-=14; line('Document interne de synthese. Fait le '+frDateFR(new Date().toISOString().slice(0,10)),font,9,grey);
+    const bytes=await doc.save(); const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='Recap_cloture_'+(c.nom||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("Récap de clôture téléchargé ✅");
+    return true;
+  }catch(e){ toast("Souci à la génération du récap"); return false; }
+}
+
+async function receptionPV(id){
+  const c=CHANTIERS[id]; const r=c.reception; if(!r||!r.done){ toast("Prononce d'abord la réception"); return; }
+  let PL; try{ toast("Génération du PV…"); PL=await loadPdfLib(); } catch(e){ toast("PDF indisponible hors ligne"); return; }
+  try{
+    const {PDFDocument,StandardFonts,rgb}=PL;
+    const doc=await PDFDocument.create(); let page=doc.addPage([595.28,841.89]);
+    const font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
+    const dark=rgb(0.1,0.1,0.1), grey=rgb(0.4,0.4,0.4); const M=50; let y=800;
+    const t=(s,x,yy,f,sz,col)=>page.drawText(String(s==null?'':s),{x,y:yy,size:sz||10,font:f||font,color:col||dark});
+    const line=(s,f,sz,col)=>{ if(y<80){ page=doc.addPage([595.28,841.89]); y=800; } t(s,M,y,f,sz,col); y-=(sz||10)+5; };
+    t(coName(),M,y,bold,15); y-=16;
+    if(CONFIG_DB.adr){ t(CONFIG_DB.adr,M,y,font,9,grey); y-=11; }
+    const cpv=[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).join(' '); if(cpv){ t(cpv,M,y,font,9,grey); y-=11; }
+    if(CONFIG_DB.siren){ t('SIREN '+CONFIG_DB.siren,M,y,font,9,grey); y-=11; }
+    y-=16; t('PROCES-VERBAL DE RECEPTION DE TRAVAUX',M,y,bold,14); y-=24;
+    line('Chantier : '+(c.nom||''),bold,11);
+    line('Client : '+(clientFull(c)||''),font,10);
+    const adr=adresseFull(c); if(adr) line('Adresse des travaux : '+adr,font,10);
+    line('Date de reception : '+frDateFR(r.date),font,10);
+    y-=6; line(r.withReserves?'Reception prononcee AVEC reserves (detaillees ci-dessous).':'Reception prononcee SANS reserve.',bold,11);
+    if(r.withReserves){
+      const reserves=r.reserves?Object.values(r.reserves):[]; y-=2; line('Reserves :',bold,11);
+      if(!reserves.length) line('  - Aucune reserve detaillee.',font,10);
+      reserves.forEach((x,i)=>{ line('  '+(i+1)+'. '+(x.desc||'')+(x.zone?(' - '+x.zone):'')+(x.delai?(' (a lever avant le '+frDateFR(x.delai)+')'):'')+(x.statut==='done'?(' [levee le '+frDateFR(x.doneAt)+']'):''),font,10); });
+      const ret=chantierHT(c)*(1+tvaFactor())*0.05; y-=2; line('Retenue de garantie (5% du TTC) : '+fxAmt(ret)+' EUR, liberee a la levee des reserves ou apres 1 an.',font,9,grey);
+    }
+    y-=8; line('Garanties legales (a compter de la date de reception) :',bold,10);
+    const g=garantieDates(r.date);
+    line('  - Parfait achevement : 1 an  ('+g.gpaTxt+')',font,9,grey);
+    line('  - Biennale : 2 ans  ('+g.bieTxt+')',font,9,grey);
+    line('  - Decennale : 10 ans  ('+g.decTxt+')',font,9,grey);
+    y-=12; line('Fait a '+(CONFIG_DB.ville||'________')+', le '+frDateFR(r.date),font,10);
+    y-=8; t('Le client :',M,y,font,10); t("L'entreprise :",330,y,font,10); y-=4;
+    if(r.signature){ try{ const png=await doc.embedPng(r.signature); const dim=png.scale(0.35); page.drawImage(png,{x:M,y:y-dim.height,width:dim.width,height:dim.height}); }catch(_){ } }
+    y-=64; if(r.signature&&r.signedBy){ t((r.signedBy||'')+' - signe le '+frSignAt(r.signedAt),M,y,font,8,grey); }
+    t('References : articles 1792 et suivants du Code civil. Document a conserver 15 ans.',M,55,font,8,grey);
+    const bytes=await doc.save(); const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download='PV_reception_'+(c.nom||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.pdf';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("PV de réception téléchargé ✅");
+  }catch(e){ toast("Souci à la génération du PV"); }
 }
 
 /* ============== itinéraire : ouvre l'app de cartes native ============== */
