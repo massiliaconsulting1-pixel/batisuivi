@@ -89,8 +89,8 @@ html,body{margin:0;color:var(--txt);font-family:'Manrope',system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
 /* Fond premium « verre dépoli » — FIXE, identique sur toutes les pages (écran de connexion inclus) */
 body,body[data-accent]{background:
-  radial-gradient(120% 90% at 100% 0%, #0f3b3f 0%, transparent 45%),
-  radial-gradient(120% 90% at 0% 100%, #123156 0%, transparent 50%),
+  radial-gradient(120% 90% at 100% 0%, rgba(var(--glow),.24) 0%, transparent 45%),
+  radial-gradient(120% 90% at 0% 100%, rgba(var(--glow),.16) 0%, transparent 50%),
   linear-gradient(160deg,#0A1220 0%,#0B1A2A 55%,#0A1524 100%);
   background-attachment:fixed;background-color:#0A1220}
 body[data-accent] .chat-full,.chat-full{background:transparent}
@@ -248,6 +248,8 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
 
 /* chantier card */
 .chantier{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-bottom:11px;cursor:pointer;transition:.15s}
+.ch-more{position:absolute;top:10px;right:10px;z-index:2;width:32px;height:32px;border-radius:10px;background:var(--card2);border:1px solid var(--line);color:var(--muted);font-size:20px;font-weight:800;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.chantier .ch-top{padding-right:38px}
 .swipe-wrap{position:relative;overflow:hidden;border-radius:var(--r);margin-bottom:11px}
 .swipe-wrap .chantier{margin-bottom:0;transition:transform .2s ease;will-change:transform}
 .swipe-actions{position:absolute;right:0;top:5px;bottom:5px;width:168px;display:flex;border-radius:0 var(--r) var(--r) 0;overflow:hidden}
@@ -770,7 +772,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v114 · 03/07";
+const APP_VERSION="v115 · 03/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1718,6 +1720,12 @@ function myArchived(){
   if(!isChef()){ const u=AUTH_USER?AUTH_USER.uid:''; all=all.filter(c=>c.assignes && c.assignes[u]); }
   return all;
 }
+function chMenu(id){ const c=CHANTIERS[id]; if(!c) return; openModal(`<div class="grabber"></div>
+  <h2 style="margin:0 0 4px">${esc(c.nom)}</h2>
+  <p class="note" style="margin:0 0 12px">Que veux-tu faire avec ce chantier ?</p>
+  <button class="btn ghost" style="width:100%" onclick="closeModal();archiveChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archiver</button>
+  <button class="btn danger" style="width:100%;margin-top:10px" onclick="closeModal();delChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer</button>
+  <button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeModal()">Annuler</button>`); }
 function archiveChantier(id){ CHANTIERS[id].archived=true; saveChantier(id); CUR_CHANTIER=null; toast("Chantier archivé 📦"); render(); }
 function unarchiveChantier(id){ delete CHANTIERS[id].archived; saveChantier(id); toast("Chantier réactivé ✅"); render(); }
 function openArchived(){ ARCH_VIEW=true; render(); toTop(); }
@@ -1822,10 +1830,8 @@ function chCard(c){
     <div class="ch-meta"><span class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> ${frDate(c.dateDebut)} → ${frDate(c.dateFin)}</span>
       <span class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> ${esc(c.clientCode||'')}</span></div>`;
   if(perm('suppr_chantier')){
-    return `<div class="swipe-wrap"><div class="swipe-actions">
-        <button class="swipe-arch" onclick="archiveChantier('${c.id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg><br>Archiver</button>
-        <button class="swipe-del" onclick="delChantier('${c.id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg><br>Supprimer</button></div>
-      <div class="chantier" ontouchstart="chTouchStart(event,'${c.id}')" ontouchmove="chTouchMove(event)" ontouchend="chTouchEnd(event)" onclick="chTap('${c.id}',event)">${inner}</div></div>`;
+    return `<div class="chantier" style="position:relative" onclick="openChantier('${c.id}')">
+      <button class="ch-more" onclick="event.stopPropagation();chMenu('${c.id}')" aria-label="Options du chantier">⋯</button>${inner}</div>`;
   }
   return `<div class="chantier" onclick="openChantier('${c.id}')">${inner}</div>`;
 }
@@ -2915,6 +2921,7 @@ function renderAccueil(){
   const all=Object.values(CHANTIERS).filter(c=>!c.archived);
   const actifs=all.filter(c=>c.etape&&c.etape!==ETAPES[ETAPES.length-1]).length;
   const docs=factuAllDocs(); const devAtt=docs.filter(d=>d.type!=='facture'&&!d.signature).length;
+  const rdvJour=all.filter(c=>c.dateRdv===todayISO()).length;
   const prenom=((ME&&ME.nom)||'').split(' ')[0]||'';
   const tiles=[
     ['dashboard','chart','Tableau de bord',"Chantiers, retards, main-d'œuvre"],
@@ -2930,6 +2937,13 @@ function renderAccueil(){
     <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Accueil</h2></div>
+  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:14px">${icone('calendar')} Aujourd'hui</h2></div>
+    <div class="kpis" style="margin-bottom:0;grid-template-columns:1fr 1fr 1fr">
+      <div class="kpi"><div class="big" style="font-size:22px">${actifs}</div><div class="lbl">En cours</div></div>
+      <div class="kpi"><div class="big" style="font-size:22px">${rdvJour}</div><div class="lbl">RDV du jour</div></div>
+      <div class="kpi"><div class="big" style="font-size:22px">${devAtt}</div><div class="lbl">Devis en attente</div></div>
+    </div>
+  </div>
   <div style="display:flex;flex-direction:column;gap:10px;padding:0">
     ${tiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;align-items:center;gap:14px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;color:var(--txt);font:inherit;text-align:left">
       <span style="width:46px;height:46px;flex:0 0 46px;border-radius:13px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'24px')}</span>
