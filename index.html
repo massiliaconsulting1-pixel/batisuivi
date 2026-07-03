@@ -550,8 +550,9 @@ function etPct(e){ const i=ETAPES.indexOf(e||ETAPES[0]); return Math.round(((i<0
 function myTheme(){ return lsGet(LS_THEME, CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT||'bleu'); }
 function _hexRgb(h){ h=(h||'').replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16)||0; return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
 function _lighten(h,amt){ const {r,g,b}=_hexRgb(h); const L=v=>Math.round(v+(255-v)*amt); const x=v=>('0'+v.toString(16)).slice(-2); return '#'+x(L(r))+x(L(g))+x(L(b)); }
-function clearCustomAccent(){ const s=document.body.style; ['--acc','--acc2','--accText','--glow'].forEach(v=>s.removeProperty(v)); }
-function applyCustomAccent(hex){ try{ const {r,g,b}=_hexRgb(hex); const lum=(0.299*r+0.587*g+0.114*b)/255; const s=document.body.style; s.setProperty('--acc',hex); s.setProperty('--acc2',_lighten(hex,0.2)); s.setProperty('--accText', lum>0.6?'#0a0f1a':'#ffffff'); s.setProperty('--glow', r+','+g+','+b); }catch(_){ } }
+function _darken(h,k){ const {r,g,b}=_hexRgb(h); const x=v=>('0'+Math.max(5,Math.round(v*k)).toString(16)).slice(-2); return '#'+x(r)+x(g)+x(b); }
+function clearCustomAccent(){ const s=document.body.style; ['--acc','--acc2','--accText','--glow','--bg','--bg2'].forEach(v=>s.removeProperty(v)); }
+function applyCustomAccent(hex){ try{ const {r,g,b}=_hexRgb(hex); const lum=(0.299*r+0.587*g+0.114*b)/255; const s=document.body.style; s.setProperty('--acc',hex); s.setProperty('--acc2',_lighten(hex,0.2)); s.setProperty('--accText', lum>0.6?'#0a0f1a':'#ffffff'); s.setProperty('--glow', r+','+g+','+b); s.setProperty('--bg',_darken(hex,0.09)); s.setProperty('--bg2',_darken(hex,0.14)); }catch(_){ } }
 function applyTheme(){ const raw=myTheme()||''; clearCustomAccent();
   if(raw && raw.charAt(0)==='#'){ document.body.removeAttribute('data-theme'); document.body.removeAttribute('data-accent'); applyCustomAccent(raw); }
   else { const dot=raw.indexOf('.'); const base=dot>0?raw.slice(0,dot):raw; const acc=dot>0?raw.slice(dot+1):''; if(base&&base!=='bleu') document.body.setAttribute('data-theme',base); else document.body.removeAttribute('data-theme'); if(acc) document.body.setAttribute('data-accent',acc); else document.body.removeAttribute('data-accent'); }
@@ -795,7 +796,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v122 · 03/07";
+const APP_VERSION="v123 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
