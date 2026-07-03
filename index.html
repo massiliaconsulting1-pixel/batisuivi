@@ -773,7 +773,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v92 · 02/07";
+const APP_VERSION="v107 · 03/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1838,7 +1838,7 @@ function viewArchivedList(){
   if(!list.length){ h+=`<div class="card empty">Aucun chantier archivé.</div>`; return h; }
   list.forEach(c=>{
     const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
-    h+=`<div class="chantier" style="opacity:.92;margin-bottom:16px;padding:16px">
+    h+=`<div class="chantier" style="opacity:.92">
       <div class="ch-top"><div><h3>${esc(c.nom)} <span class="pill"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archivé</span></h3><div class="ch-client"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))}${adresseFull(c)?' · '+esc(adresseFull(c)):''}</div></div>
         <span class="pill ${c.etape===ETAPES[ETAPES.length-1]?'ok':'acc'}">${esc(c.etape||ETAPES[0])}</span></div>
       <div class="progress"><span style="width:${pct}%"></span></div>
@@ -2750,6 +2750,100 @@ function aiAssistantSend(){
   }).finally(()=>{ AI_BUSY=false; render(); chatScrollDown(); });
 }
 
+/* ===== Rédaction assistée par IA (hub IA → Rédaction) : réutilise assistantBatiSuivi ===== */
+let REDAC={type:'client',ctx:'',busy:false,out:'',err:''};
+const REDAC_TYPES=[['client','Message au client'],['relance','Relance de devis'],['chantier','Description de chantier']];
+function redacSetType(t){ const e=document.getElementById('redac_ctx'); if(e) REDAC.ctx=e.value; REDAC.type=t; render(); }
+function redacConsigne(type){
+  if(type==='relance') return "Rédige une relance de devis en français : polie mais ferme, qui invite le client à valider ou donner une réponse, sans être agressive. Renvoie uniquement le message, prêt à envoyer.";
+  if(type==='chantier') return "Rédige une description de chantier en français, synthétique et professionnelle, utilisable dans un devis ou un suivi. Renvoie uniquement le texte.";
+  return "Rédige un message professionnel, courtois et clair en français, à envoyer à un client du bâtiment. Renvoie uniquement le message, prêt à envoyer.";
+}
+function redacGen(){
+  if(REDAC.busy) return;
+  const e=document.getElementById('redac_ctx'); const ctx=e?e.value.trim():(REDAC.ctx||'').trim(); REDAC.ctx=ctx;
+  if(!ctx){ toast("Décris d'abord le contexte."); return; }
+  if(!iaOn()){ toast("L'assistant IA est désactivé."); return; }
+  if(useFB && !(firebase.auth().currentUser)){ toast("Connecte-toi pour utiliser l'assistant."); return; }
+  if(!useFB){ toast("La rédaction fonctionnera une fois l'app en ligne sur Firebase."); return; }
+  const prompt=redacConsigne(REDAC.type)+" Contexte fourni par l'artisan : "+ctx;
+  REDAC.busy=true; REDAC.err=''; REDAC.out=''; render();
+  aiFn()({ messages:[{role:'user', content:prompt}] }).then(res=>{
+    const reply=(res&&res.data&&(res.data.reply||res.data.text))||'';
+    if(!reply.trim()){ REDAC.err="Pas de texte reçu. Reformule le contexte et réessaie."; }
+    else REDAC.out=reply.trim();
+  }).catch(err=>{
+    REDAC.err="L'assistant n'est pas joignable. Si la fonction serveur n'est pas encore déployée, c'est normal. (Détail : "+((err&&err.message)||'erreur')+")";
+  }).finally(()=>{ REDAC.busy=false; render(); });
+}
+function redacCopy(){ if(!REDAC.out){ toast("Rien à copier."); return; } if(navigator.clipboard) navigator.clipboard.writeText(REDAC.out).then(()=>toast('Copié 📋')); else toast('Copie non disponible'); }
+function viewRedaction(){
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('edit')} Rédaction</h2></div>
+    <p class="note" style="margin:0 0 8px">Choisis un type de texte, décris le contexte, et l'IA te propose une rédaction professionnelle en français.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap">${REDAC_TYPES.map(([t,lb])=>`<button class="btn ${REDAC.type===t?'primary':'ghost'} mini" onclick="redacSetType('${t}')">${esc(lb)}</button>`).join('')}</div>
+    <textarea id="redac_ctx" rows="3" placeholder="ex: prévenir M. Martin que le chantier prend 2 jours de retard à cause de la pluie" oninput="REDAC.ctx=this.value" style="width:100%;resize:vertical;margin-top:10px">${esc(REDAC.ctx||'')}</textarea>
+    <button class="btn primary" style="width:100%;margin-top:10px" ${REDAC.busy?'disabled style="opacity:.6;width:100%;margin-top:10px"':''} onclick="redacGen()">${REDAC.busy?'… en cours':'Rédiger'}</button></div>`;
+  if(REDAC.err) h+=`<div class="card"><p class="note" style="margin:0;color:var(--danger)">${esc(REDAC.err)}</p></div>`;
+  if(REDAC.out){
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Texte proposé</h2><button class="btn ghost mini" onclick="redacCopy()">Copier</button></div>
+      <p style="white-space:pre-wrap;line-height:1.5;margin:0">${esc(REDAC.out)}</p>
+      <p class="note" style="margin:8px 0 0;font-size:11px">Relis et ajuste avant d'envoyer.</p></div>`;
+  }
+  return h;
+}
+/* ===== Devis assisté par IA (hub IA → Devis IA) : réutilise assistantBatiSuivi ===== */
+let DEVISIA={txt:'',busy:false,lignes:null,err:''};
+function parseDevisJSON(s){
+  let t=String(s||'').trim();
+  t=t.replace(/```json/gi,'').replace(/```/g,'').trim();
+  const a=t.indexOf('['), b=t.lastIndexOf(']');
+  if(a<0||b<0||b<a) return null;
+  let arr; try{ arr=JSON.parse(t.slice(a,b+1)); }catch(_){ return null; }
+  if(!Array.isArray(arr)) return null;
+  const out=arr.map(x=>({ label:String((x&&x.label)||'').trim(), qty:(parseFloat(x&&x.qty)||0), unit:String((x&&x.unit)||'').trim(), pu:(parseFloat(x&&x.pu)||0) })).filter(x=>x.label);
+  return out.length?out:null;
+}
+function devisIAGen(){
+  if(DEVISIA.busy) return;
+  const e=document.getElementById('devisia_txt'); const txt=e?e.value.trim():(DEVISIA.txt||'').trim(); DEVISIA.txt=txt;
+  if(!txt){ toast("Décris d'abord les travaux."); return; }
+  if(!iaOn()){ toast("L'assistant IA est désactivé."); return; }
+  if(useFB && !(firebase.auth().currentUser)){ toast("Connecte-toi pour utiliser l'assistant."); return; }
+  if(!useFB){ toast("Le devis assisté fonctionnera une fois l'app en ligne sur Firebase."); return; }
+  const prompt=`Tu es un métreur du bâtiment en France. À partir de la description de travaux ci-dessous, propose des lignes de devis réalistes avec des prix HT en euros (marché français). Réponds UNIQUEMENT avec un tableau JSON valide, sans aucun texte autour ni explication, au format exact : [{"label":"désignation courte","qty":1,"unit":"u","pu":0}]. label = désignation, qty = quantité, unit = unité (u, m2, ml, h, forfait…), pu = prix unitaire HT en euros. Description des travaux : ${txt}`;
+  DEVISIA.busy=true; DEVISIA.err=''; DEVISIA.lignes=null; render();
+  aiFn()({ messages:[{role:'user', content:prompt}] }).then(res=>{
+    const reply=(res&&res.data&&(res.data.reply||res.data.text))||'';
+    const lignes=parseDevisJSON(reply);
+    if(!lignes){ DEVISIA.err="La réponse n'a pas pu être lue en lignes de devis. Reformule la description et réessaie."; }
+    else DEVISIA.lignes=lignes;
+  }).catch(err=>{
+    DEVISIA.err="L'assistant n'est pas joignable. Si la fonction serveur n'est pas encore déployée, c'est normal. (Détail : "+((err&&err.message)||'erreur')+")";
+  }).finally(()=>{ DEVISIA.busy=false; render(); });
+}
+function devisIACopy(){
+  const l=DEVISIA.lignes; if(!l||!l.length){ toast("Rien à copier."); return; }
+  const tot=l.reduce((s,x)=>s+x.qty*x.pu,0);
+  const lines=l.map(x=>`${x.label}\t${x.qty} ${x.unit}\t${eurFmt(x.pu)}\t${eurFmt(x.qty*x.pu)}`);
+  const txt=`Devis proposé (HT)\n`+lines.join('\n')+`\nTotal HT\t${eurFmt(tot)}`;
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>toast('Copié 📋')); else toast('Copie non disponible');
+}
+function viewDevisIA(){
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Devis assisté</h2></div>
+    <p class="note" style="margin:0 0 8px">Décris les travaux, l'IA propose des lignes de devis chiffrées (prix HT indicatifs, France) que tu ajustes. Aucune facture n'est créée : c'est une aide au chiffrage.</p>
+    <textarea id="devisia_txt" rows="4" placeholder="ex: Peinture d'un séjour de 25 m², 2 couches, murs et plafond. Rebouchage et ponçage inclus." oninput="DEVISIA.txt=this.value" style="width:100%;resize:vertical">${esc(DEVISIA.txt||'')}</textarea>
+    <button class="btn primary" style="width:100%;margin-top:10px" ${DEVISIA.busy?'disabled style="opacity:.6;width:100%;margin-top:10px"':''} onclick="devisIAGen()">${DEVISIA.busy?'… en cours':'Proposer des lignes de devis'}</button></div>`;
+  if(DEVISIA.err) h+=`<div class="card"><p class="note" style="margin:0;color:var(--danger)">${esc(DEVISIA.err)}</p></div>`;
+  if(DEVISIA.lignes&&DEVISIA.lignes.length){
+    const tot=DEVISIA.lignes.reduce((s,x)=>s+x.qty*x.pu,0);
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Lignes proposées</h2><button class="btn ghost mini" onclick="devisIACopy()">Copier</button></div>`;
+    DEVISIA.lignes.forEach(x=>{ h+=`<div class="task-row"><div style="flex:1;min-width:0"><b>${esc(x.label)}</b><div class="tag">${x.qty} ${esc(x.unit)} × ${eurFmt(x.pu)}</div></div><b class="tag" style="flex:none">${eurFmt(x.qty*x.pu)}</b></div>`; });
+    h+=`<div class="task-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:10px"><span style="flex:1"><b>Total HT</b></span><b>${eurFmt(tot)}</b></div>
+      <p class="note" style="margin:8px 0 0;font-size:11px">Estimation indicative générée par IA. Vérifie et ajuste chaque ligne avant de l'utiliser.</p></div>`;
+  }
+  return h;
+}
+
 /* ====================== TABLEAU DE BORD (boss) ====================== */
 function viewDashboard(){
   const all=Object.values(CHANTIERS).filter(c=>!c.archived);
@@ -2839,7 +2933,7 @@ function renderAccueil(){
     <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Accueil</h2></div>
-  <div style="display:flex;flex-direction:column;gap:10px;padding:0 14px 100px">
+  <div style="display:flex;flex-direction:column;gap:10px;padding:0">
     ${tiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;align-items:center;gap:14px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;color:var(--txt);font:inherit;text-align:left">
       <span style="width:46px;height:46px;flex:0 0 46px;border-radius:13px;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'24px')}</span>
       <span style="flex:1;min-width:0"><b style="font-size:16px;display:block">${lb}</b>${bdg?`<small class="note" style="font-size:12px">${esc(bdg)}</small>`:''}</span>
@@ -2880,44 +2974,45 @@ function hubFab(){
   return '';
 }
 function hubPlaceholder(title,desc,extra){ return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(title)}</h2></div><p class="note" style="margin:0">${esc(desc)}</p>${extra||''}<p class="tag" style="margin-top:10px">🚧 En construction — bientôt disponible</p></div>`; }
+function hubReady(title,desc,extra){ return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(title)}</h2></div><p class="note" style="margin:0">${esc(desc)}</p>${extra||''}</div>`; }
 function hubBody(hub,tab){
   if(hub==='dashboard') return viewDashboard();
   if(hub==='chantiers'){
     if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='clients'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return factuClients(); }
-    if(tab==='modeles') return hubPlaceholder('Modèles de chantier','Crée des modèles réutilisables (étapes + lignes de devis pré-remplies) pour démarrer un chantier en un clic.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Gérer les modèles</button>`);
-    if(tab==='carte') return hubPlaceholder('Carte des chantiers','Tous tes chantiers situés sur une carte, pour organiser les tournées.');
+    if(tab==='modeles') return hubReady('Modèles de chantier','Crée des modèles réutilisables (étapes + lignes de devis pré-remplies) pour démarrer un chantier en un clic.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Gérer les modèles</button>`);
+    if(tab==='carte') return viewCarte();
   }
   if(hub==='equipe'){
     if(tab==='membres'||tab==='vehicules') return viewEquipeVeh();
-    if(tab==='pointage') return hubPlaceholder('Pointage des heures','Heures pointées par chantier et par personne, validation et export pour la paie.');
-    if(tab==='frais') return hubPlaceholder('Notes de frais','Les tickets et notes de frais envoyés par l’équipe, classés et exportables.');
-    if(tab==='stats') return hubPlaceholder('Statistiques équipe','Heures travaillées, coût de main d’œuvre et performance par membre.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openTeamStats()">${icone('chart')} Voir les statistiques</button>`);
+    if(tab==='pointage') return viewPointage();
+    if(tab==='frais') return viewFrais();
+    if(tab==='stats') return hubReady('Statistiques équipe','Heures travaillées, coût de main d’œuvre et performance par membre.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openTeamStats()">${icone('chart')} Voir les statistiques</button>`);
   }
   if(hub==='clients'){
     if(tab==='annuaire') return factuClients();
     if(tab==='messages') return viewMessagerie();
-    if(tab==='acces') return hubPlaceholder('Accès clients','Les codes d’accès de chaque chantier, à partager avec tes clients pour qu’ils suivent l’avancement en direct.');
-    if(tab==='docs') return hubPlaceholder('Documents clients','Devis et factures partagés au client, avec leur statut (vu, signé).');
-    if(tab==='avis') return hubPlaceholder('Avis & satisfaction','Demande un avis en fin de chantier et suis la satisfaction de tes clients.');
+    if(tab==='acces') return viewAccesClients();
+    if(tab==='docs') return viewDocsClients();
+    if(tab==='avis') return viewAvis();
   }
   if(hub==='planning'){
     if(tab==='cal') return viewPlanning();
-    if(tab==='jour') return hubPlaceholder('Aujourd’hui','Les interventions et rendez-vous du jour, en un coup d’œil.');
-    if(tab==='rdv') return hubPlaceholder('Rendez-vous clients','Propositions et confirmations de créneaux avec tes clients.');
-    if(tab==='echeances') return hubPlaceholder('Échéances & retards','Les chantiers dont la date de fin approche ou est dépassée.');
-    if(tab==='charge') return hubPlaceholder('Charge de l’équipe','Qui est affecté à quoi, et les disponibilités de chacun.');
+    if(tab==='jour') return viewJour();
+    if(tab==='rdv') return viewRdvClients();
+    if(tab==='echeances') return viewEcheances();
+    if(tab==='charge') return viewCharge();
   }
   if(hub==='ia'){
-    if(tab==='assistant') return hubPlaceholder('Assistant IA','Pose tes questions (chiffrage, organisation, rédaction). Déjà disponible dans la messagerie ; il sera intégré ici.');
-    if(tab==='projection') return hubPlaceholder('Projection / Rendu','Le client envoie une photo de l’existant + une inspiration, l’IA génère un rendu projeté pour l’aider à se décider. Nécessite un moteur d’images dédié — à brancher.');
-    if(tab==='cr') return hubPlaceholder('Comptes-rendus vocaux','L’équipe dicte, l’IA structure le compte-rendu. Déjà actif sur les chantiers.');
-    if(tab==='devisia') return hubPlaceholder('Devis assisté','Décris le chantier en une phrase, l’IA propose des lignes de devis chiffrées que tu ajustes.');
-    if(tab==='redaction') return hubPlaceholder('Rédaction','Génère messages clients, descriptions de chantier et relances de devis.');
+    if(tab==='assistant'){ if(CHAT_OPEN==='ai') return '<div class="chat-full">'+chatThreadView()+'</div>'; return hubReady('Assistant IA','Pose tes questions sur tes chantiers, le bâtiment, l’organisation, tes devis. Réponses en quelques secondes.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openConv('ai')">${icone('robot')} Ouvrir l’assistant</button>`); }
+    if(tab==='projection') return hubReady('Projection / Rendu IA','Depuis une photo de l’existant (et une photo d’inspiration), l’IA génère un rendu projeté photoréaliste. Ça se passe dans chaque fiche chantier, carte « Projection — rendu IA ».',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="goHub('chantiers')">${icone('building')} Aller aux chantiers</button>`);
+    if(tab==='cr') return hubReady('Comptes-rendus vocaux','L’équipe dicte, l’IA structure le compte-rendu (travaux réalisés, matériaux, problèmes, notes). Ça se fait dans chaque fiche chantier, bouton « Compte-rendu vocal ».',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="goHub('chantiers')">${icone('building')} Aller aux chantiers</button>`);
+    if(tab==='devisia') return viewDevisIA();
+    if(tab==='redaction') return viewRedaction();
   }
   if(hub==='params'){
-    if(tab==='entreprise') return hubPlaceholder('Identité de l’entreprise','Nom, logo, slogan, coordonnées et SIREN — utilisés sur tes devis et factures.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFacturationSettings()">${icone('receipt')} Paramètres de facturation</button>`);
+    if(tab==='entreprise') return viewIdentite();
     if(tab==='factu') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
       <button class="btn ghost" style="width:100%" onclick="openFacturationSettings()">${icone('settings')} Préfixes, numéros, TVA</button>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting</button>
@@ -3076,6 +3171,316 @@ function factuParams(){
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()">${icone('send')} Facturation électronique — test plateforme agréée</button>
     <p class="note" style="margin-top:8px;font-size:11px">La transmission officielle des factures se fait via ta plateforme agréée (en cours de raccordement).</p>
   </div>`;
+}
+/* ===== Vue « Aujourd'hui » (hub Planning) : RDV du jour + chantiers actifs à cette date ===== */
+function viewJour(){
+  const today=todayISO();
+  const all=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived);
+  const rdvs=all.filter(x=>x.c.dateRdv===today);
+  const actifs=all.filter(x=>x.c.dateDebut&&x.c.dateFin&&x.c.dateDebut<=today&&today<=x.c.dateFin);
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('calendar')} Rendez-vous aujourd'hui${rdvs.length?` <span class="tag">${rdvs.length}</span>`:''}</h2></div>`;
+  if(!rdvs.length) h+=`<p class="note" style="margin:0">Aucun rendez-vous prévu aujourd'hui.</p>`;
+  else rdvs.sort((a,b)=>String(a.c.heureRdv||'').localeCompare(String(b.c.heureRdv||''))).forEach(x=>{
+    h+=`<div class="task-row" onclick="openChantier('${x.id}')" style="cursor:pointer">
+      <div style="flex:1;min-width:0"><b>${esc(x.c.nom)}</b><div class="tag">${esc(clientFull(x.c))}</div>${x.c.noteRdv?`<div class="note" style="font-size:11px">${esc(x.c.noteRdv)}</div>`:''}</div>
+      <span class="tag" style="flex:none">${x.c.heureRdv?esc(x.c.heureRdv):'—'}</span></div>`;
+  });
+  h+=`</div>`;
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('building')} Chantiers actifs aujourd'hui${actifs.length?` <span class="tag">${actifs.length}</span>`:''}</h2></div>`;
+  if(!actifs.length) h+=`<p class="note" style="margin:0">Aucun chantier actif à cette date.</p>`;
+  else actifs.forEach(x=>{
+    h+=`<div class="task-row" onclick="openChantier('${x.id}')" style="cursor:pointer">
+      <div style="flex:1;min-width:0"><b>${esc(x.c.nom)}</b><div class="tag">${esc(clientFull(x.c))} · ${frDate(x.c.dateDebut)} → ${frDate(x.c.dateFin)}</div></div>
+      <span class="tag" style="flex:none">${esc(x.c.etape||ETAPES[0])}</span></div>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+/* ===== Vue « Échéances & retards » (hub Planning) : chantiers en retard puis à échéance sous 7 jours ===== */
+function viewEcheances(){
+  const today=todayISO();
+  const dday=iso=>Math.round((new Date(iso+'T00:00:00')-new Date(today+'T00:00:00'))/86400000);
+  const all=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived);
+  const retards=all.filter(x=>isLate(x.c)).sort((a,b)=>String(a.c.dateFin).localeCompare(String(b.c.dateFin)));
+  const fin=ETAPES[ETAPES.length-1];
+  const echeances=all.filter(x=>x.c.dateFin && !isLate(x.c) && x.c.etape!==fin && x.c.dateFin>=today && dday(x.c.dateFin)<=7)
+                     .sort((a,b)=>String(a.c.dateFin).localeCompare(String(b.c.dateFin)));
+  const row=(id,c,tag,col)=>`<div class="task-row" onclick="openChantier('${id}')" style="cursor:pointer">
+    <div style="flex:1;min-width:0"><b>${esc(c.nom)}</b><div class="tag">${esc(clientFull(c))} · fin le ${frDate(c.dateFin)}</div></div>
+    <span class="tag" style="flex:none;color:${col}">${tag}</span></div>`;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('alert')} En retard${retards.length?` <span class="tag">${retards.length}</span>`:''}</h2></div>`;
+  if(!retards.length) h+=`<p class="note" style="margin:0">Aucun chantier en retard. 👍</p>`;
+  else retards.forEach(x=>{ const j=-dday(x.c.dateFin); h+=row(x.id,x.c,`en retard de ${j} j`,'var(--danger)'); });
+  h+=`</div>`;
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('clock')} À échéance sous 7 jours${echeances.length?` <span class="tag">${echeances.length}</span>`:''}</h2></div>`;
+  if(!echeances.length) h+=`<p class="note" style="margin:0">Aucune échéance dans les 7 prochains jours.</p>`;
+  else echeances.forEach(x=>{ const j=dday(x.c.dateFin); h+=row(x.id,x.c,j===0?'aujourd’hui':`dans ${j} j`,'var(--warn)'); });
+  h+=`</div>`;
+  return h;
+}
+/* ===== Vue « Charge de l'équipe » (hub Planning) : chantiers actifs par membre ===== */
+function viewCharge(){
+  const actifs=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived);
+  const members=Object.keys(TEAM).map(u=>{
+    const chs=actifs.filter(x=>x.c.assignes&&x.c.assignes[u]);
+    return {u, nom:(TEAM[u]||{}).nom||'?', chs};
+  }).sort((a,b)=> b.chs.length-a.chs.length || String(a.nom).localeCompare(String(b.nom)));
+  if(!members.length) return `<div class="card"><p class="note" style="margin:0">Aucun membre dans l'équipe.</p></div>`;
+  const libres=members.filter(m=>!m.chs.length).length;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('users')} Charge de l'équipe</h2></div>
+    <p class="note" style="margin:0">${members.length} membre${members.length>1?'s':''} · ${libres} libre${libres>1?'s':''}. Nombre de chantiers actifs affectés à chacun.</p></div>`;
+  members.forEach(m=>{
+    const n=m.chs.length;
+    const badge=n===0?`<span class="tag" style="flex:none;color:var(--ok)">Libre</span>`
+              :n>=4?`<span class="tag" style="flex:none;color:var(--warn)">Chargé · ${n}</span>`
+              :`<span class="tag" style="flex:none">${n} chantier${n>1?'s':''}</span>`;
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(m.nom)}</h2>${badge}</div>`;
+    if(!n) h+=`<p class="note" style="margin:0">Aucun chantier actif.</p>`;
+    else m.chs.forEach(x=>{ h+=`<div class="task-row" onclick="openChantier('${x.id}')" style="cursor:pointer">
+      <span style="flex:1">${esc(x.c.nom)}</span><span class="tag" style="flex:none">${esc(x.c.etape||ETAPES[0])}</span></div>`; });
+    h+=`</div>`;
+  });
+  return h;
+}
+/* ===== Vue « Rendez-vous clients » (hub Planning) : RDV à venir + passés récents ===== */
+function rdvStatutTag(c){
+  if(c.rdvStatus==='accepte') return `<span class="tag" style="flex:none;color:var(--ok)">Accepté</span>`;
+  if(c.rdvStatus==='propose') return `<span class="tag" style="flex:none;color:var(--warn)">En attente</span>`;
+  if(c.rdvStatus==='contre') return `<span class="tag" style="flex:none;color:var(--acc2)">Autre créneau proposé</span>`;
+  return '';
+}
+function viewRdvClients(){
+  const today=todayISO();
+  const cutoff=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+  const all=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived && x.c.dateRdv);
+  const byDate=(a,b)=>{ const d=String(a.c.dateRdv).localeCompare(String(b.c.dateRdv)); return d!==0?d:String(a.c.heureRdv||'').localeCompare(String(b.c.heureRdv||'')); };
+  const avenir=all.filter(x=>x.c.dateRdv>=today).sort(byDate);
+  const passes=all.filter(x=>x.c.dateRdv<today && x.c.dateRdv>=cutoff).sort((a,b)=>-byDate(a,b));
+  const row=(id,c)=>`<div class="task-row" onclick="openChantier('${id}')" style="cursor:pointer">
+    <div style="flex:1;min-width:0"><b>${esc(frDateTimeRdv(c.dateRdv,c.heureRdv))}</b><div class="tag">${esc(c.nom)} · ${esc(clientFull(c))}</div>${c.noteRdv?`<div class="note" style="font-size:11px">${esc(c.noteRdv)}</div>`:''}</div>
+    ${rdvStatutTag(c)}</div>`;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('calendar')} À venir${avenir.length?` <span class="tag">${avenir.length}</span>`:''}</h2></div>`;
+  if(!avenir.length) h+=`<p class="note" style="margin:0">Aucun rendez-vous à venir.</p>`;
+  else avenir.forEach(x=>{ h+=row(x.id,x.c); });
+  h+=`</div>`;
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('clock')} Passés récents${passes.length?` <span class="tag">${passes.length}</span>`:''}</h2></div>`;
+  if(!passes.length) h+=`<p class="note" style="margin:0">Aucun rendez-vous passé récemment.</p>`;
+  else passes.forEach(x=>{ h+=row(x.id,x.c); });
+  h+=`</div>`;
+  return h;
+}
+/* ===== Vue « Notes de frais » (hub Équipe) : notes par chantier, rassemblées ===== */
+function viewFrais(){
+  const notes=[];
+  Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(!c.frais) return; Object.keys(c.frais).forEach(k=>{ notes.push({id,k,nomChantier:c.nom||'Chantier',...c.frais[k]}); }); });
+  notes.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const total=notes.reduce((s,n)=>s+(parseFloat(n.montant)||0),0);
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Notes de frais</h2></div>
+    <div class="kpis"><div class="kpi acc"><div class="big" style="font-size:22px">${eurFmt(total)}</div><div class="lbl">Total des frais</div></div><div class="kpi"><div class="big" style="font-size:22px">${notes.length}</div><div class="lbl">Note${notes.length>1?'s':''}</div></div></div>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFrais()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter une note de frais</button></div>`;
+  if(!notes.length){ h+=`<div class="card"><p class="note" style="margin:0">Aucune note de frais pour l'instant.</p></div>`; return h; }
+  notes.forEach(n=>{
+    h+=`<div class="card"><div class="task-row" style="padding-top:0">
+      <div style="flex:1;min-width:0"><b style="font-size:16px">${eurFmt(parseFloat(n.montant)||0)}</b>${n.desc?`<div style="margin-top:2px">${esc(n.desc)}</div>`:''}
+        <div class="tag" style="margin-top:2px">${esc(n.nomChantier)}${n.by?' · '+esc(n.by):''} · ${frDateTime(n.ts)}</div></div>
+      <button class="iconbtn danger" onclick="delFrais('${n.id}','${n.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
+      ${n.photo?`<img src="${n.photo}" alt="justificatif" style="max-height:160px;border:1px solid var(--line);border-radius:10px;margin-top:6px">`:''}
+    </div>`;
+  });
+  return h;
+}
+function openFrais(){
+  window._fraisPhoto='';
+  const opts=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived).map(id=>`<option value="${id}">${esc(CHANTIERS[id].nom||'Chantier')}</option>`).join('');
+  if(!opts){ toast("Crée d'abord un chantier."); return; }
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 12px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Nouvelle note de frais</h2>
+    <label>Chantier concerné</label><select id="fr_chantier">${opts}</select>
+    <label style="margin-top:8px">Montant (€)</label><input id="fr_montant" type="number" inputmode="decimal" step="0.01" min="0" placeholder="ex: 42.90">
+    <label style="margin-top:8px">Description</label><input id="fr_desc" placeholder="ex: Carburant, péage, petit matériel…">
+    <input type="file" id="fr_file" accept="image/*" style="display:none" onchange="fraisAddPhoto(this)">
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="document.getElementById('fr_file').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Photo du justificatif (optionnel)</button>
+    <div id="fr_prev" style="margin-top:10px"></div>
+    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveFraisEntry()">Enregistrer</button>`);
+  setTimeout(()=>{const e=document.getElementById('fr_montant');e&&e.focus();},50);
+}
+function fraisAddPhoto(input){ const f=input.files&&input.files[0]; if(!f) return; input.value=''; compresse900(f,url=>{ window._fraisPhoto=url; const box=document.getElementById('fr_prev'); if(box) box.innerHTML=`<img src="${url}" style="max-height:150px;border:1px solid var(--line);border-radius:10px"> <button class="linkbtn" style="color:var(--danger)" onclick="window._fraisPhoto='';document.getElementById('fr_prev').innerHTML='';">Retirer</button>`; }); }
+function saveFraisEntry(){
+  const cid=(document.getElementById('fr_chantier')||{}).value;
+  const c=CHANTIERS[cid]; if(!c){ toast("Choisis un chantier."); return; }
+  const mt=parseFloat(((document.getElementById('fr_montant')||{}).value||'').toString().replace(',','.'));
+  if(isNaN(mt)||mt<=0){ toast("Indique un montant."); return; }
+  const desc=((document.getElementById('fr_desc')||{}).value||'').trim();
+  if(!c.frais) c.frais={};
+  c.frais[uid()]={ ts:Date.now(), by:(ME&&ME.nom)||'', montant:mt, desc:desc, chantierId:cid, photo:(window._fraisPhoto||'') };
+  window._fraisPhoto='';
+  saveChantier(cid); closeModal(); toast("Note de frais ajoutée ✅"); render();
+}
+function delFrais(id,k){ if(!confirm("Supprimer cette note de frais ?")) return; const c=CHANTIERS[id]; if(c&&c.frais) delete c.frais[k]; saveChantier(id); render(); }
+/* ===== Vue « Avis & satisfaction » (hub Clients) : un avis client par chantier ===== */
+function avisStars(note){ const n=Math.max(0,Math.min(5,Math.round(note||0))); return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n); }
+function viewAvis(){
+  const withAvis=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>x.c.avis&&x.c.avis.note).sort((a,b)=>((b.c.avis.ts||0)-(a.c.avis.ts||0)));
+  const sansAvis=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived && !(x.c.avis&&x.c.avis.note));
+  const moy=withAvis.length?(withAvis.reduce((s,x)=>s+(x.c.avis.note||0),0)/withAvis.length):0;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('star')||'⭐'} Avis & satisfaction</h2></div>
+    <div class="kpis"><div class="kpi acc"><div class="big" style="font-size:22px">${withAvis.length?moy.toFixed(1)+' / 5':'—'}</div><div class="lbl">Note moyenne</div></div><div class="kpi"><div class="big" style="font-size:22px">${withAvis.length}</div><div class="lbl">Avis</div></div></div>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openAvis()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter un avis</button></div>`;
+  if(withAvis.length){
+    withAvis.forEach(x=>{ const a=x.c.avis;
+      h+=`<div class="card"><div class="task-row" style="padding-top:0"><div style="flex:1;min-width:0">
+        <div style="color:var(--gold);font-size:16px;letter-spacing:2px">${avisStars(a.note)}</div>
+        <b>${esc(x.c.nom)}</b><div class="tag">${esc(clientFull(x.c))}${a.by?' · '+esc(a.by):''} · ${frDateTime(a.ts)}</div></div>
+        <button class="iconbtn danger" onclick="delAvis('${x.id}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
+        ${a.commentaire?`<p style="white-space:pre-wrap;line-height:1.5;margin:2px 0 0">${esc(a.commentaire)}</p>`:''}</div>`;
+    });
+  }
+  if(sansAvis.length){
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">En attente d'avis</h2></div>`;
+    sansAvis.forEach(x=>{ h+=`<div class="task-row"><span style="flex:1">${esc(x.c.nom)}</span><button class="btn ghost mini" onclick="openAvis('${x.id}')">+ Ajouter un avis</button></div>`; });
+    h+=`</div>`;
+  }
+  return h;
+}
+function avisSetNote(n){ window._avisNote=n; const box=document.getElementById('avis_stars'); if(box) box.innerHTML=avisStarsInput(n); }
+function avisStarsInput(n){ let s=''; for(let i=1;i<=5;i++){ s+=`<span onclick="avisSetNote(${i})" style="cursor:pointer;font-size:30px;color:${i<=n?'var(--gold)':'var(--line)'}">★</span>`; } return s; }
+function openAvis(preselectId){
+  window._avisNote=0;
+  const dispo=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived && !(CHANTIERS[id].avis&&CHANTIERS[id].avis.note));
+  if(preselectId && dispo.indexOf(preselectId)<0 && CHANTIERS[preselectId]) dispo.unshift(preselectId);
+  if(!dispo.length){ toast("Tous les chantiers ont déjà un avis."); return; }
+  const sel=preselectId&&dispo.indexOf(preselectId)>=0?preselectId:dispo[0];
+  const opts=dispo.map(id=>`<option value="${id}" ${id===sel?'selected':''}>${esc(CHANTIERS[id].nom||'Chantier')}</option>`).join('');
+  openModal(`<div class="grabber"></div>
+    <h2 style="margin:0 0 12px">Nouvel avis client</h2>
+    <label>Chantier</label><select id="avis_chantier">${opts}</select>
+    <label style="margin-top:8px">Note</label><div id="avis_stars">${avisStarsInput(0)}</div>
+    <label style="margin-top:8px">Commentaire (optionnel)</label><textarea id="avis_com" rows="3" placeholder="ex: Client très satisfait, ponctualité appréciée." style="width:100%;resize:vertical"></textarea>
+    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveAvis()">Enregistrer</button>`);
+}
+function saveAvis(){
+  const id=(document.getElementById('avis_chantier')||{}).value; const c=CHANTIERS[id]; if(!c){ toast("Choisis un chantier."); return; }
+  const note=window._avisNote||0; if(note<1){ toast("Choisis une note (étoiles)."); return; }
+  const com=((document.getElementById('avis_com')||{}).value||'').trim();
+  c.avis={ note:note, commentaire:com, ts:Date.now(), by:(ME&&ME.nom)||'' };
+  window._avisNote=0;
+  saveChantier(id); closeModal(); toast("Avis enregistré ✅"); render();
+}
+function delAvis(id){ if(!confirm("Supprimer cet avis ?")) return; const c=CHANTIERS[id]; if(c&&c.avis) delete c.avis; saveChantier(id); render(); }
+/* ===== Vue « Carte des chantiers » (hub Chantiers) : v1 liste par ville + lien Maps ===== */
+function openMapsChantier(id){ const c=CHANTIERS[id]; if(!c) return; const a=adresseFull(c); if(!a){ toast("Pas d'adresse pour ce chantier"); return; } window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a),'_blank'); }
+function viewCarte(){
+  const all=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived && adresseFull(x.c));
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('map-pin')} Carte des chantiers</h2></div>
+    <p class="note" style="margin:0">Tes chantiers avec une adresse, regroupés par ville. Touche une ligne pour ouvrir le chantier, ou « Itinéraire » pour l'ouvrir dans Google Maps.</p></div>`;
+  if(!all.length){ h+=`<div class="card"><p class="note" style="margin:0">Aucun chantier avec une adresse renseignée.</p></div>`; return h; }
+  const groupes={};
+  all.forEach(x=>{ const v=(x.c.ville||'').trim()||'Autres'; if(!groupes[v]) groupes[v]=[]; groupes[v].push(x); });
+  Object.keys(groupes).sort((a,b)=>a.localeCompare(b)).forEach(ville=>{
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('map-pin')} ${esc(ville)} <span class="tag">${groupes[ville].length}</span></h2></div>`;
+    groupes[ville].forEach(x=>{
+      h+=`<div class="task-row" onclick="openChantier('${x.id}')" style="cursor:pointer">
+        <div style="flex:1;min-width:0"><b>${esc(x.c.nom)}</b><div class="tag">${esc(clientFull(x.c))}</div><div class="note" style="font-size:11px">${esc(adresseFull(x.c))}</div></div>
+        <button class="btn ghost mini" style="flex:none" onclick="event.stopPropagation();openMapsChantier('${x.id}')">Itinéraire</button></div>`;
+    });
+    h+=`</div>`;
+  });
+  return h;
+}
+/* ===== Vue « Identité entreprise » (hub Paramètres) : lecture seule de CONFIG_DB ===== */
+function viewIdentite(){
+  const ci=contactInfo();
+  const adrEnt=[(CONFIG_DB.adr||'').trim(),[(CONFIG_DB.cp||'').trim(),(CONFIG_DB.ville||'').trim()].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const row=(lb,val)=>val?`<div class="task-row"><span style="flex:1">${esc(lb)}</span><b style="text-align:right;min-width:0">${esc(val)}</b></div>`:'';
+  let h=`<div class="card" style="text-align:center">
+    <div class="prof-avatar" style="margin:0 auto 10px;background:var(--card2)">${logoHTML()}</div>
+    <h2 style="margin:0">${esc(coName())}</h2>
+    ${coSlogan()?`<p class="note" style="margin:4px 0 0">${esc(coSlogan())}</p>`:''}
+  </div>`;
+  const details=[
+    row('SIREN', CONFIG_DB.siren),
+    row('N° TVA intracom.', CONFIG_DB.tvaIntra),
+    row('Régime TVA', tvaLabel()),
+    row('Adresse', adrEnt),
+    row('Téléphone', ci.tel),
+    row('E-mail', ci.email)
+  ].join('');
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('id')||icone('shield')} Coordonnées & mentions légales</h2></div>
+    ${details||`<p class="note" style="margin:0">Aucune information renseignée pour l'instant.</p>`}
+    <button class="btn ghost" style="width:100%;margin-top:12px" onclick="openFacturationSettings()">${icone('edit')} Modifier</button>
+    <p class="note" style="margin:8px 0 0;font-size:11px">Ces informations apparaissent sur tes devis et factures.</p></div>`;
+  return h;
+}
+/* ===== Vue « Documents clients » (hub Clients) : tous les devis/factures publiés ===== */
+function viewDocsClients(){
+  const docs=factuAllDocs();
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Documents clients</h2></div>
+    <p class="note" style="margin:0">Tous les devis et factures publiés aux clients, du plus récent au plus ancien. Touche un document pour l'ouvrir.</p></div>`;
+  if(!docs.length){ h+=`<div class="card"><p class="note" style="margin:0">Aucun document publié pour l'instant.</p></div>`; return h; }
+  docs.forEach(d=>{
+    const c=CHANTIERS[d.id]||{};
+    const statut = d.type==='facture'
+      ? `<span class="pill">Émise</span>`
+      : (d.signature?`<span class="pill" style="color:var(--ok)">Signé</span>`:`<span class="pill" style="color:var(--warn)">En attente</span>`);
+    h+=`<div class="card" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])" style="cursor:pointer">
+      <div class="task-row" style="padding-top:0"><div style="flex:1;min-width:0">
+        <b>${d.type==='facture'?'🧾 Facture':'📄 Devis'}${d.num?' '+esc(d.num):''}</b>
+        <div class="tag">${esc(c.nom||d.nom||'')} · ${esc(clientFull(c))}</div>
+        ${d.date?`<div class="note" style="font-size:11px">${esc(d.date)}</div>`:''}
+      </div>
+      <div style="text-align:right;flex:none"><b>${eurFmt(docTotal(d))}</b><div style="margin-top:4px">${statut}</div></div></div>
+    </div>`;
+  });
+  return h;
+}
+/* ===== Vue « Accès clients » (hub Clients) : codes d'accès de chaque chantier ===== */
+function genClientCode(id){ if(!CHANTIERS[id]) return; CHANTIERS[id].clientCode=code6(); saveChantier(id); toast("Code généré ✅"); render(); }
+function viewAccesClients(){
+  const all=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived).sort((a,b)=>(b.c.createdAt||0)-(a.c.createdAt||0));
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('key')} Accès clients</h2></div>
+    <p class="note" style="margin:0">Chaque chantier a un code que le client saisit pour suivre son avancement en direct. Partage-le, ou génère-en un s'il manque.</p></div>`;
+  if(!all.length){ h+=`<div class="card"><p class="note" style="margin:0">Aucun chantier actif.</p></div>`; return h; }
+  all.forEach(x=>{
+    const c=x.c; const code=c.clientCode||'';
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(c.nom)}</h2></div>
+      <div class="task-row"><span style="flex:1">${esc(clientFull(c))}</span>${code?`<b class="tag" style="color:var(--acc2);letter-spacing:2px;font-family:'Archivo'">${esc(code)}</b>`:`<span class="tag" style="color:var(--warn)">Aucun code</span>`}</div>
+      ${code?`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="shareCode('${esc(code)}','${esc(c.nom)}')">${icone('key')} Partager le code</button>`
+            :`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="genClientCode('${x.id}')">${icone('key')} Générer un code</button>`}
+    </div>`;
+  });
+  return h;
+}
+/* ===== Vue Pointage (hub Équipe) : heures de TOUS les chantiers, regroupées par personne ===== */
+function viewPointage(){
+  const byUser={};
+  Object.values(CHANTIERS).forEach(c=>{
+    if(!c.pointages) return;
+    Object.keys(c.pointages).forEach(u=>{
+      const ms=totalHeures(c.pointages[u]);   // ne compte que les pointages terminés (avec out)
+      if(ms<=0) return;
+      if(!byUser[u]){ const nom=(TEAM[u]||{}).nom || (c.pointages[u][0]&&c.pointages[u][0].nom) || '?'; byUser[u]={nom, ms:0, chantiers:[]}; }
+      byUser[u].ms+=ms;
+      byUser[u].chantiers.push({nom:c.nom||'Chantier', ms});
+    });
+  });
+  const people=Object.keys(byUser).map(u=>({u,...byUser[u], cost:(byUser[u].ms/3600000)*memberCout(u)})).sort((a,b)=>b.ms-a.ms);
+  const totMs=people.reduce((s,p)=>s+p.ms,0);
+  const totCost=people.reduce((s,p)=>s+p.cost,0);
+  let h='';
+  if(!people.length){
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Pointage des heures</h2></div><p class="note" style="margin:0">Aucune heure pointée pour l'instant. Les heures apparaîtront ici dès que l'équipe pointera sur les chantiers.</p></div>`;
+    return h;
+  }
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Total pointé</h2></div>
+    <div class="kpis"><div class="kpi"><div class="big" style="font-size:22px">${fmtDur(totMs)}</div><div class="lbl">Heures pointées</div></div><div class="kpi acc"><div class="big" style="font-size:22px">${eurFmt(totCost)}</div><div class="lbl">Coût main-d'œuvre</div></div></div>
+    <p class="note" style="margin-top:8px;font-size:11px">Seuls les pointages terminés sont comptés. Coût = heures × coût horaire de chaque personne (Équipe → un membre → « Coût horaire »).</p></div>`;
+  people.forEach(p=>{
+    const chs=p.chantiers.slice().sort((a,b)=>b.ms-a.ms);
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(p.nom)}</h2><span class="tag">${fmtDur(p.ms)}${p.cost>0?` · <b style="color:var(--acc2)">${eurFmt(p.cost)}</b>`:''}</span></div>`;
+    chs.forEach(x=>{ h+=`<div class="task-row"><span style="flex:1">${esc(x.nom)}</span><span class="tag">${fmtDur(x.ms)}</span></div>`; });
+    h+=`</div>`;
+  });
+  return h;
 }
 function laborCard(all,eur){
   const rows=all.map(c=>({c,h:chantierHours(c),cost:chantierCost(c)})).filter(x=>x.h>0.01).sort((a,b)=>b.h-a.h);
