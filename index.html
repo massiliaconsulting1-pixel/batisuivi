@@ -555,7 +555,17 @@ function applyCustomAccent(hex){ try{ const {r,g,b}=_hexRgb(hex); const lum=(0.2
 function applyTheme(){ const raw=myTheme()||''; clearCustomAccent();
   if(raw && raw.charAt(0)==='#'){ document.body.removeAttribute('data-theme'); document.body.removeAttribute('data-accent'); applyCustomAccent(raw); }
   else { const dot=raw.indexOf('.'); const base=dot>0?raw.slice(0,dot):raw; const acc=dot>0?raw.slice(dot+1):''; if(base&&base!=='bleu') document.body.setAttribute('data-theme',base); else document.body.removeAttribute('data-theme'); if(acc) document.body.setAttribute('data-accent',acc); else document.body.removeAttribute('data-accent'); }
-  try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); }
+  try{ document.body.classList.toggle('big-text', bigText()); }catch(_){ } applyAppIcons(); paintBg(); }
+/* Force le fond premium (lueurs dérivées de l'accent) en écrivant le style du body :
+   garantit le re-dessin quand on change de couleur, là où une simple variable CSS dans un dégradé ne suffit pas. */
+function paintBg(){ try{ const glow=((getComputedStyle(document.body).getPropertyValue('--glow'))||'').trim()||'45,212,191';
+  document.body.style.background=
+    'radial-gradient(120% 90% at 100% 0%, rgba('+glow+',.30) 0%, transparent 45%),'+
+    'radial-gradient(120% 90% at 0% 100%, rgba('+glow+',.20) 0%, transparent 50%),'+
+    'linear-gradient(160deg,#0A1220 0%,#0B1A2A 55%,#0A1524 100%)';
+  document.body.style.backgroundRepeat='no-repeat';
+  document.body.style.backgroundColor='#0A1220';
+}catch(_){ } }
 let _iconCache={src:null,icon:null};
 function _iconWithBg(src,size,cb){
   try{
@@ -775,7 +785,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v117 · 03/07";
+const APP_VERSION="v118 · 03/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
