@@ -88,13 +88,14 @@ body[data-theme]{ --bg:#0A1220; --bg2:#0B1A2A; --card:rgba(255,255,255,.055); --
 html,body{margin:0;color:var(--txt);font-family:'Manrope',system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
 html{background:#0A1220}
-/* Fond premium « verre dépoli » — couche FIXE plein écran via body::before (et non background-attachment:fixed),
-   pour que les lueurs — dérivées de l'accent (var(--glow)) — se repeignent bien quand on change de couleur. */
-body{background:transparent}
-body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+/* Fond premium « verre dépoli » — lueurs dérivées de l'accent (var(--glow)).
+   Posé sur le body NON fixe : le body n'est pas composité, donc les lueurs se re-peignent
+   correctement dès qu'on change de couleur (contrairement à background-attachment:fixed / position:fixed). */
+body{min-height:100vh;background:
   radial-gradient(120% 90% at 100% 0%, rgba(var(--glow),.30) 0%, transparent 45%),
   radial-gradient(120% 90% at 0% 100%, rgba(var(--glow),.20) 0%, transparent 50%),
-  linear-gradient(160deg,#0A1220 0%,#0B1A2A 55%,#0A1524 100%)}
+  linear-gradient(160deg,#0A1220 0%,#0B1A2A 55%,#0A1524 100%);
+  background-repeat:no-repeat;background-color:#0A1220}
 .chat-full{background:transparent}
 h1,h2,h3{font-family:'Sora',sans-serif;margin:0;letter-spacing:-.02em}
 .wrap{max-width:560px;margin:0 auto;padding:0 16px 110px;position:relative;z-index:1;isolation:isolate;min-height:100vh}
@@ -774,7 +775,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v116 · 03/07";
+const APP_VERSION="v117 · 03/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
