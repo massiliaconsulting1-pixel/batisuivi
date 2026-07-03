@@ -195,10 +195,10 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
   transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden;
   border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
 .nav.hidden{display:none}
-.nav button{background:none;border:none;color:var(--muted);font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 10px;cursor:pointer;border-radius:10px}
+.nav button{background:none;border:none;color:var(--muted);font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 10px;cursor:pointer;border-radius:10px;flex:1 1 0;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav button .ic{font-size:20px}
 .nav button.on{color:var(--acc2)}
-.nav.compact button{font-size:9px;padding:5px 4px;gap:2px}
+.nav.compact button{font-size:9px;padding:5px 4px;gap:3px}
 .nav.compact button .ic{font-size:18px}
 
 /* ---- écran d'accueil / auth ---- */
@@ -746,7 +746,7 @@ function renderEntry(){
     <div style="text-align:center;margin-bottom:22px">
       <div class="hero-logo" style="width:148px;height:148px;border-radius:36px;font-size:76px;margin-bottom:18px">${logoHTML()}</div>
       <h1 style="font-size:28px;line-height:1.15;word-break:break-word;padding:0 6px">${esc(coName())}</h1>
-      <p class="note" style="margin-top:6px">${esc(coSlogan())}</p>
+      <p class="note" style="margin-top:8px">${esc(coSlogan())}</p>
     </div>
     <div class="role-choice">
       <div class="role-btn" onclick="goClientLogin()">
@@ -773,12 +773,12 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v107 · 03/07";
+const APP_VERSION="v112 · 03/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
     <input id="dev_code" type="password" inputmode="numeric" placeholder="Code d'accès" style="margin-top:10px;text-align:center;letter-spacing:4px;font-family:'Archivo';font-weight:800">
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="enterDev()">Entrer</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="enterDev()">Entrer</button>
     <div id="dev_err" class="err"></div>`);
   setTimeout(()=>{const e=document.getElementById('dev_code');e&&e.focus();},60);
 }
@@ -801,7 +801,7 @@ function openDevLogin(){
     <p class="note" style="text-align:center;margin-bottom:14px">Accès réservé.</p>
     <input id="dev_em" type="email" placeholder="Email" autocomplete="username">
     <input id="dev_pw" type="password" placeholder="Mot de passe" autocomplete="current-password" style="margin-top:8px" onkeydown="if(event.key==='Enter')devLoginPw()">
-    <button class="btn primary" style="width:100%;margin-top:12px" onclick="devLoginPw()">Se connecter</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="devLoginPw()">Se connecter</button>
     <div id="dev_em_err" class="err"></div>`);
 }
 function devLoginPw(){
@@ -827,7 +827,7 @@ function renderDev(){
     <button class="backbtn" style="align-self:flex-start" onclick="backToEntry()"><span class="ar"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span> Quitter</button>
     <div style="text-align:center;margin:8px 0 16px"><div class="hero-logo"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg></div>
       <h1 style="font-size:22px">Espace développeur</h1>
-      <p class="note" style="margin-top:6px">Accès total — ${esc(coName())}</p></div>
+      <p class="note" style="margin-top:8px">Accès total — ${esc(coName())}</p></div>
 
     <div class="card">
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg> État de l'app</h2></div>
@@ -842,13 +842,13 @@ function renderDev(){
     <div class="card" style="border-color:var(--acc)">
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Accès complet</h2></div>
       <p class="note">Ouvre l'app en <b>patron</b> : tu vois et modifies tout (chantiers, équipe, véhicules, planning, devis/factures, réglages). Utilise-le pour répondre à une demande d'un client.</p>
-      <button class="btn primary" style="width:100%;margin-top:12px" onclick="devOpenAsBoss()">Ouvrir l'app en accès patron</button>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="devOpenAsBoss()">Ouvrir l'app en accès patron</button>
     </div>
 
     <div class="card">
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Aperçu côté client</h2></div>
       <p class="note">Voir exactement ce que voit le client d'un chantier (avec son code).</p>
-      ${nbCh?`<div style="margin-top:8px">${chs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(c=>`<div class="task-row"><div style="flex:1;min-width:0"><b style="font-size:13px">${esc(c.nom)}</b><div class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))} · 🔑 ${esc(c.clientCode||'—')}</div></div><button class="btn ghost mini" onclick="devOpenClient('${c.id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Voir</button></div>`).join('')}</div>`:`<p class="note" style="margin-top:6px">Aucun chantier pour l'instant.</p>`}
+      ${nbCh?`<div style="margin-top:8px">${chs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(c=>`<div class="task-row"><div style="flex:1;min-width:0"><b style="font-size:13px">${esc(c.nom)}</b><div class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))} · 🔑 ${esc(c.clientCode||'—')}</div></div><button class="btn ghost mini" onclick="devOpenClient('${c.id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Voir</button></div>`).join('')}</div>`:`<p class="note" style="margin-top:8px">Aucun chantier pour l'instant.</p>`}
     </div>
 
     <div class="card">
@@ -877,10 +877,10 @@ function renderDev(){
       <label style="margin-top:10px">Couleur par défaut de l'app (pour tout le monde)</label>
       <p class="note" style="margin:2px 0 6px">Choisis parmi les couleurs de l'app. Touche Blanc ou Noir pour voir les variantes « + une couleur ».</p>
       ${devColorPicker()}
-      <label style="margin-top:14px">Couleurs proposées aux utilisateurs</label>
+      <label style="margin-top:10px">Couleurs proposées aux utilisateurs</label>
       <p class="note" style="margin:2px 0 6px">Coche les couleurs que les utilisateurs pourront choisir dans leur menu. Les autres seront masquées. La couleur par défaut reste toujours proposée.</p>
       ${devColorAvailablePicker()}
-      <div class="row" style="margin-top:12px"><div><label>Pointage horaire</label>
+      <div class="row" style="margin-top:10px"><div><label>Pointage horaire</label>
         <div class="row" style="gap:6px"><button class="btn ${pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(true)">Activé</button><button class="btn ${!pointageOn()?'primary':'ghost'} mini" onclick="devSetPointage(false)">Désactivé</button></div></div>
       </div>
       <label style="margin-top:10px">Facturation dans l'app</label>
@@ -891,17 +891,17 @@ function renderDev(){
       <p class="note" style="font-size:11px;margin-top:4px">Désactive si le client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
       <div class="row" style="margin-top:10px"><div><label>Préfixe devis</label><input id="cfg_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
         <div><label>Prochain n° devis</label><input id="cfg_devnum" type="number" min="1" value="${(CONFIG_DB.devisCounter||0)+1}"></div></div>
-      <div class="row" style="margin-top:8px"><div><label>Préfixe facture</label><input id="cfg_factpre" type="text" value="${factPrefix()}" maxlength="6"></div>
+      <div class="row" style="margin-top:10px"><div><label>Préfixe facture</label><input id="cfg_factpre" type="text" value="${factPrefix()}" maxlength="6"></div>
         <div><label>Prochain n° de facture</label><input id="cfg_fact" type="number" min="1" value="${(CONFIG_DB.factCounter||0)+1}" title="Numéro qui sera attribué à la prochaine facture"></div></div>
-      <button class="btn primary" style="width:100%;margin-top:14px" onclick="devSaveConfig()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer la configuration</button>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="devSaveConfig()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer la configuration</button>
     </div>
 
     <div class="card">
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Rôles & 📋 Modèles</h2></div>
       <p class="note">Gère les rôles/permissions et les modèles de chantier de l'entreprise (mêmes outils que le patron).</p>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openRolesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Gérer les rôles & permissions</button>
-      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openModelesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Gérer les modèles de chantier</button>
-      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openEtapesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg> Gérer les étapes d'avancement</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Gérer les modèles de chantier</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEtapesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg> Gérer les étapes d'avancement</button>
     </div>
 
     <div class="card">
@@ -912,15 +912,15 @@ function renderDev(){
       </div>
       <p class="note" style="font-size:11px">Aucune sélection = tous les métiers. Chaque métier ajoute 4 chantiers à des étapes différentes (tâches, matériaux, photos, messages, comptes-rendus).</p>
       <button class="btn primary" style="width:100%;margin-top:10px" onclick="devLoadDemo()">Charger la démo</button>
-      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="exportData()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Exporter / sauvegarder les données</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="exportData()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Exporter / sauvegarder les données</button>
     </div>
 
     <div class="card">
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21h13"/><path d="M3 17 12 8l5 5-6 6H6z"/></svg> Réinitialiser pour un nouveau client</h2></div>
       <p class="note">Avant de livrer l'app à un artisan, efface les données de test.</p>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="devClearChantiers()">Effacer tous les chantiers</button>
-      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="devClearChantiersTeam()">Effacer chantiers + équipe</button>
-      <button class="btn danger" style="width:100%;margin-top:8px" onclick="devResetAll()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Tout réinitialiser (chantiers + équipe + réglages)</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="devClearChantiersTeam()">Effacer chantiers + équipe</button>
+      <button class="btn danger" style="width:100%;margin-top:10px" onclick="devResetAll()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Tout réinitialiser (chantiers + équipe + réglages)</button>
       <p class="note" style="margin-top:8px;font-size:11px">« Tout réinitialiser » supprime aussi les comptes équipe : le premier qui se reconnecte redevient patron.</p>
     </div>
     <button class="btn ghost" style="width:100%" onclick="devSignOut()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Me déconnecter</button>
@@ -1349,7 +1349,7 @@ function renderClient(){
     <button class="backbtn" style="align-self:flex-start" onclick="backToEntry()"><span class="ar"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span> Retour</button>
     <div style="text-align:center;margin-bottom:14px"><div class="hero-logo"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
       <h1 style="font-size:24px">Suivi de mon chantier</h1>
-      <p class="note" style="margin-top:6px">Entre le code que ${esc(coName())} t'a communiqué.</p></div>
+      <p class="note" style="margin-top:8px">Entre le code que ${esc(coName())} t'a communiqué.</p></div>
     <div class="card">
       <label>Code chantier</label>
       <input id="cl_code" maxlength="6" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:5px;font-family:'Archivo';font-size:22px;text-align:center;font-weight:800">
@@ -1440,7 +1440,7 @@ function clientContact(){
     ${email?`<a class="contact-row" href="mailto:${esc(email)}"><span class="ci"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></span><div><div class="tag">Email</div><b>${esc(email)}</b></div></a>`:''}
     ${adr?`<div class="contact-row"><span class="ci"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></span><div><div class="tag">Adresse</div><b>${esc(adr)}</b></div></div>`:''}
     ${hor?`<div class="contact-row"><span class="ci"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><div class="tag">Horaires</div><b>${esc(hor)}</b></div></div>`:''}
-    ${tel?`<a class="btn primary" style="width:100%;margin-top:14px;text-decoration:none;text-align:center" href="tel:${telLink}">Appeler maintenant</a>`:''}`);
+    ${tel?`<a class="btn primary" style="width:100%;margin-top:10px;text-decoration:none;text-align:center" href="tel:${telLink}">Appeler maintenant</a>`:''}`);
 }
 function clientHelp(){
   const step=(ic,t,d)=>`<div class="help-step"><div class="help-ic">${icone(ic,'30px')}</div><div><b>${t}</b><div class="note" style="margin-top:2px">${d}</div></div></div>`;
@@ -1463,7 +1463,7 @@ function renderTeamAuth(){
     <button class="backbtn" style="align-self:flex-start" onclick="backToEntry()"><span class="ar"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span> Retour</button>
     <div style="text-align:center;margin-bottom:12px"><div class="hero-logo"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6"/><path d="M14 6a6 6 0 0 1 6 6v3"/></svg></div>
       <h1 style="font-size:24px">Espace équipe</h1>
-      <p class="note" style="margin-top:6px">${esc(coName())}</p></div>
+      <p class="note" style="margin-top:8px">${esc(coName())}</p></div>
     ${!useFB?`<div class="card" style="border-color:var(--acc);background:var(--card2)">
       <p class="note" style="margin:0 0 10px"><b style="color:var(--acc2)">Mode test (local)</b><br>Firebase n'est pas configuré. Clique ci-dessous pour entrer directement en Patron et tout tester.</p>
       <button class="btn primary" style="width:100%" onclick="localTeamDemo()">🚀 Entrer en tant que Patron (démo)</button>
@@ -1476,7 +1476,7 @@ function renderTeamAuth(){
     ${login?`
       <label>Email</label><input id="t_email" type="email" inputmode="email" placeholder="ton@email.com">
       <label>Mot de passe</label><input id="t_pass" type="password" placeholder="••••••••">
-      <button class="btn primary" style="width:100%;margin-top:14px" onclick="teamLogin()">Se connecter</button>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="teamLogin()">Se connecter</button>
       <p style="text-align:center;margin-top:10px"><button class="linkbtn" onclick="teamReset()">Mot de passe oublié ?</button></p>
     `:`
       <label>Nom complet <span class="tag">(facultatif si déjà renseigné par le patron)</span></label><input id="t_nom" maxlength="40" placeholder="ex: Karim B.">
@@ -1484,7 +1484,7 @@ function renderTeamAuth(){
       <input id="t_invite" maxlength="6" placeholder="Code équipe" style="text-transform:uppercase;letter-spacing:4px;font-family:'Archivo';font-weight:800;text-align:center">
       <label>Email</label><input id="t_email" type="email" inputmode="email" placeholder="ton@email.com">
       <label>Mot de passe (6 car. min)</label><input id="t_pass" type="password" placeholder="••••••••">
-      <button class="btn primary" style="width:100%;margin-top:14px" onclick="teamSignup()">Créer mon compte</button>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="teamSignup()">Créer mon compte</button>
       <p class="note" style="margin-top:8px;font-size:11px">Le tout premier compte créé devient automatiquement le <b>patron</b> (aucun code requis).</p>
     `}
       <div id="t_err" class="err"></div>
@@ -1558,11 +1558,11 @@ function renderJoinTeam(){
   app.innerHTML=`<div class="center-wrap">
     <div style="text-align:center;margin-bottom:12px"><div class="hero-logo"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg></div>
       <h1 style="font-size:22px">Rejoindre l'équipe</h1>
-      <p class="note" style="margin-top:6px">Entre le code d'invitation donné par le patron.</p></div>
+      <p class="note" style="margin-top:8px">Entre le code d'invitation donné par le patron.</p></div>
     <div class="card">
       <label>Code d'invitation</label>
       <input id="j_invite" maxlength="6" placeholder="Code équipe" style="text-transform:uppercase;letter-spacing:4px;font-family:'Archivo';font-weight:800;text-align:center">
-      <button class="btn primary" style="width:100%;margin-top:14px" onclick="joinTeam()">Rejoindre</button>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="joinTeam()">Rejoindre</button>
       <div id="j_err" class="err"></div>
       <button class="linkbtn" style="display:block;margin:12px auto 0" onclick="teamSignOut()">Se déconnecter</button>
     </div>
@@ -1609,7 +1609,7 @@ function renderClientDashboard(){
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="steps" style="margin-top:12px">${ETAPES.map((e,i)=>`<div class="step-dot ${i<=etapeIdx?'done':''}"></div>`).join('')}</div>
     <div style="margin-top:12px">${ETAPES.map((e,i)=>{ const done=i<etapeIdx, cur=i===etapeIdx; const col=cur?'var(--acc)':(done?'var(--ok)':'var(--muted)'); const mark=done?'✓':(cur?'●':'·'); return `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;color:${col};font-weight:${cur?'800':(done?'600':'400')}"><span style="flex:none;width:16px;text-align:center">${mark}</span><span>${esc(e)}</span></div>`; }).join('')}</div>
-    <p class="note" style="margin-top:10px">Début : ${frDate(ch.dateDebut)} · Fin prévue : ${frDate(ch.dateFin)}</p>
+    <p class="note" style="margin-top:8px">Début : ${frDate(ch.dateDebut)} · Fin prévue : ${frDate(ch.dateFin)}</p>
   </div>
 
   ${ch.dateRdv?`<div class="card" style="border-color:var(--acc)"><div class="section-title" style="margin-top:0"><h2><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Prochain rendez-vous</h2></div>
@@ -1628,7 +1628,7 @@ function renderClientDashboard(){
     ${pubDocs.map(d=>`<div style="border-bottom:1px solid var(--line);padding:10px 0">
       <div class="task-row" style="padding:0"><div style="flex:1"><b style="font-size:14px">${d.type==='facture'?'🧾 Facture':'📄 Devis'}</b><div class="tag">${esc(d.num)} · ${d.date}</div>${d.signature?`<div class="tag" style="color:var(--ok);margin-top:2px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> Signé le ${frSignAt(d.signedAt)} par ${esc(d.signedBy||'')}</div>`:''}</div>
         <button class="btn ghost mini" onclick="clientOpenDoc(CLIENT.chantierId,'${d.pid}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> PDF</button></div>
-      ${d.type==='devis'&&!d.signature?`<button class="btn primary" style="width:100%;margin-top:8px" onclick="clientSignDoc('${d.pid}')">✍️ Signer le devis (bon pour accord)</button>`:''}
+      ${d.type==='devis'&&!d.signature?`<button class="btn primary" style="width:100%;margin-top:10px" onclick="clientSignDoc('${d.pid}')">✍️ Signer le devis (bon pour accord)</button>`:''}
     </div>`).join('')}
     ${docs.map(d=>`<div class="task-row"><span>📎 ${esc(d.nom)}</span><a class="linkbtn" style="margin-left:auto" href="${d.url}" target="_blank">Ouvrir</a></div>`).join('')}</div>`:''}
 
@@ -1664,7 +1664,7 @@ function clientViewPhoto(k){
   openModal(`<div class="grabber"></div><img src="${p.url}" style="width:100%;border-radius:12px">
     ${p.desc?`<p style="margin-top:10px;font-weight:600;line-height:1.5">${esc(p.desc)}</p>`:''}
     <p class="tag" style="margin-top:8px">${frDateTime(p.ts)}</p>
-    <button class="btn ${p.clientLiked?'ok':'primary'}" style="width:100%;margin-top:12px" onclick="clientLikePhoto('${k}')">${p.clientLiked?'👍 Validée — retirer':"👍 J'aime / valider cette photo"}</button>`);
+    <button class="btn ${p.clientLiked?'ok':'primary'}" style="width:100%;margin-top:10px" onclick="clientLikePhoto('${k}')">${p.clientLiked?'👍 Validée — retirer':"👍 J'aime / valider cette photo"}</button>`);
 }
 function clientLikePhoto(k){ const ch=CHANTIERS[CLIENT.chantierId]; const p=ch&&ch.photos&&ch.photos[k]; if(!p) return; p.clientLiked=!p.clientLiked; clientPersist('likePhoto',{key:k, liked:p.clientLiked}); clientViewPhoto(k); render(); }
 function viewChantierPhoto(id,k){
@@ -1674,12 +1674,12 @@ function viewChantierPhoto(id,k){
     <label style="margin-top:10px">Description (visible par le client) 👁️</label>
     <textarea id="ph_desc_${k}" rows="2" placeholder="ex : Pose du carrelage terminée dans la salle de bain">${esc(p.desc||'')}</textarea>
     <button class="btn ghost mini" style="margin-top:6px" onclick="setPhotoDesc('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer la description</button>
-    <label style="margin-top:12px">Étiquette</label>
+    <label style="margin-top:10px">Étiquette</label>
     <div class="row">
       <button class="btn ${p.tag==='avant'?'primary':'ghost'} mini" onclick="setPhotoTag('${id}','${k}','avant')">Avant</button>
       <button class="btn ${p.tag==='apres'?'primary':'ghost'} mini" onclick="setPhotoTag('${id}','${k}','apres')">Après</button>
       <button class="btn ${!p.tag?'primary':'ghost'} mini" onclick="setPhotoTag('${id}','${k}','')">Aucune</button></div>
-    <button class="btn danger" style="width:100%;margin-top:12px" onclick="delChantierPhoto('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer cette photo</button>`);
+    <button class="btn danger" style="width:100%;margin-top:10px" onclick="delChantierPhoto('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer cette photo</button>`);
 }
 function setPhotoTag(id,k,tag){ const c=CHANTIERS[id]; if(!c.photos||!c.photos[k])return; if(tag)c.photos[k].tag=tag; else delete c.photos[k].tag; saveChantier(id); viewChantierPhoto(id,k); render(); }
 function setPhotoDesc(id,k){ const c=CHANTIERS[id]; if(!c.photos||!c.photos[k])return; const e=document.getElementById('ph_desc_'+k); const v=e?e.value.trim():''; if(v)c.photos[k].desc=v; else delete c.photos[k].desc; saveChantier(id); toast(v?"Description enregistrée ✅":"Description retirée"); render(); }
@@ -2026,8 +2026,8 @@ function viewChantier(id){
     <div class="chat-bar" style="background:transparent;padding:6px 0 0"><input id="tm_msg_${id}" placeholder="Répondre au client…" onkeydown="if(event.key==='Enter'){event.preventDefault();teamSendMsg('${id}');}"><button class="btn primary" onclick="teamSendMsg('${id}')">Envoyer</button></div>
   </div>
 
-  ${iaOn()?`<button class="btn ghost" style="width:100%;margin-top:6px" onclick="openCRVocal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Compte-rendu vocal (IA)</button>`:''}
-  ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:6px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Compte-rendu du chantier (PDF)</button>`:''}
+  ${iaOn()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openCRVocal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Compte-rendu vocal (IA)</button>`:''}
+  ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Compte-rendu du chantier (PDF)</button>`:''}
 
   ${(isChef()&&!c.archived)? clotureCard(id,c):''}
 
@@ -2044,7 +2044,7 @@ function editChantierDesc(id){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px">Description interne</h2>
     <p class="note" style="margin-bottom:8px">Notes visibles par toute l'équipe, jamais par le client.</p>
     <textarea id="ch_desc" style="min-height:140px" placeholder="ex: Accès par l'arrière, badge parking n°12, prévoir échafaudage…">${esc(c.description||'')}</textarea>
-    <button class="btn primary" style="width:100%;margin-top:12px" onclick="saveChantierDesc('${id}')">Enregistrer</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveChantierDesc('${id}')">Enregistrer</button>`);
   setTimeout(()=>{const e=document.getElementById('ch_desc'); if(e)e.focus();},60);
 }
 function saveChantierDesc(id){ const v=document.getElementById('ch_desc').value.trim(); CHANTIERS[id].description=v; saveChantier(id); closeModal(); render(); }
@@ -2112,7 +2112,7 @@ function projectionCard(id,c){
         <button class="btn ghost" style="width:100%" onclick="document.getElementById('proj_in_i_${id}').click()">📷 Choisir</button>
       </div>
     </div>
-    <label style="margin-top:8px;font-size:12px">Précisions (optionnel)</label>
+    <label style="margin-top:10px;font-size:12px">Précisions (optionnel)</label>
     <input id="proj_txt_${id}" placeholder="ex: garder la fenêtre, sol parquet clair">
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="projGenerate('${id}')">✨ Générer le rendu</button>
     <div id="proj_result_${id}" style="margin-top:10px"></div>`;
@@ -2138,7 +2138,7 @@ function projGenerate(id){
     if(!out){ if(res) res.innerHTML='<p class="note" style="margin:0;color:#c0392b">❌ Aucun rendu reçu. Réessaie.</p>'; return; }
     const url=(String(out).indexOf('data:')===0)?out:('data:image/png;base64,'+out);
     _projLast[id]=url;
-    if(res) res.innerHTML='<img src="'+url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"><button class="btn primary" style="width:100%;margin-top:8px" onclick="projSave(\''+id+'\')">💾 Enregistrer ce rendu</button>';
+    if(res) res.innerHTML='<img src="'+url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"><button class="btn primary" style="width:100%;margin-top:10px" onclick="projSave(\''+id+'\')">💾 Enregistrer ce rendu</button>';
   }).catch(e=>{ if(res) res.innerHTML='<p class="note" style="margin:0;color:#c0392b">❌ '+esc((e&&e.message)||'Erreur pendant la génération')+'</p>'; });
 }
 function projSave(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Rien à enregistrer"); return; } _projCompress(url,small=>{ if(!small){ toast("Souci à l'enregistrement"); return; } const c=CHANTIERS[id]; if(!c.projections)c.projections={}; c.projections[uid()]={result:small,ts:Date.now(),by:ME?ME.nom:''}; saveChantier(id); toast("Rendu enregistré ✅"); render(); }); }
@@ -2162,10 +2162,10 @@ function openMateriel(id,k){
       <div style="flex:1"><label>Quantité</label><input id="mat_qty" value="${esc(m.qty||'')}" placeholder="ex: 10 sacs"></div>
       <div style="flex:1"><label>Coût total (€)</label><input id="mat_cout" type="number" inputmode="decimal" step="0.01" min="0" value="${esc(coutVal)}" placeholder="ex: 85"></div>
     </div>
-    <label style="margin-top:8px">Fournisseur (optionnel)</label><input id="mat_four" value="${esc(m.fournisseur||'')}" placeholder="ex: Point P">
-    <label style="margin-top:8px">Statut</label>
+    <label style="margin-top:10px">Fournisseur (optionnel)</label><input id="mat_four" value="${esc(m.fournisseur||'')}" placeholder="ex: Point P">
+    <label style="margin-top:10px">Statut</label>
     <select id="mat_statut">${MAT_STATUTS.map(s=>`<option ${s===st?'selected':''}>${s}</option>`).join('')}</select>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveMateriel('${id}','${k||''}')">Enregistrer</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveMateriel('${id}','${k||''}')">Enregistrer</button>`);
   setTimeout(()=>{const e=document.getElementById('mat_label');e&&e.focus();},50);
 }
 function saveMateriel(id,k){
@@ -2206,7 +2206,7 @@ function chantierForm(id){
       <div class="row"><div><label>SIREN (9 chiffres)</label><input id="f_siren" value="${esc(c.clientSiren||'')}" inputmode="numeric" maxlength="11" placeholder="123456789"></div>
         <div><label>N° TVA (option)</label><input id="f_ctva" value="${esc(c.clientTvaIntra||'')}" placeholder="FR..."></div></div>
     </div>
-    <div class="row" style="margin-top:8px"><div><label id="lbl_prenom">Prénom ${c.clientType==='pro'?'du contact':'du client'}</label><input id="f_prenom" value="${esc(c.clientPrenom||'')}" placeholder="ex: Jean"></div>
+    <div class="row" style="margin-top:10px"><div><label id="lbl_prenom">Prénom ${c.clientType==='pro'?'du contact':'du client'}</label><input id="f_prenom" value="${esc(c.clientPrenom||'')}" placeholder="ex: Jean"></div>
       <div><label id="lbl_nom">Nom ${c.clientType==='pro'?'du contact':'du client'}</label><input id="f_client" value="${esc(c.client||'')}" placeholder="ex: Dupont"></div></div>
     <label>Adresse</label><input id="f_adr" value="${esc(c.adresse||'')}" placeholder="ex: 12 rue des Lilas">
     <div class="row"><div style="flex:0 0 38%"><label>Code postal</label><input id="f_cp" value="${esc(c.cp||'')}" inputmode="numeric" maxlength="5" placeholder="21000"></div>
@@ -2247,12 +2247,12 @@ function assignMembers(id){
       ${avatarTag(t)}
       <div style="flex:1"><b>${esc(t.nom)}</b><div class="tag">${roleLabel(t.role)}</div></div>
       <div class="checkbox ${on?'on':''}" onclick="toggleAssign('${id}','${u}',this)">${on?'✓':''}</div></div>`;}).join('')}
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="closeModal();render()">OK</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="closeModal();render()">OK</button>`);
 }
 function toggleAssign(id,u,el){ const c=CHANTIERS[id]; if(!c.assignes)c.assignes={}; if(c.assignes[u]){ delete c.assignes[u]; el.classList.remove('on'); el.textContent=''; } else { c.assignes[u]=true; el.classList.add('on'); el.textContent='✓'; } saveChantier(id); }
 
 /* ---- prompt générique ---- */
-function openPrompt(title,ph,cb){ openModal(`<div class="grabber"></div><h2 style="margin-bottom:10px">${esc(title)}</h2><input id="pr_in" placeholder="${esc(ph)}"><button class="btn primary" style="width:100%;margin-top:14px" onclick="(function(){var v=document.getElementById('pr_in').value.trim();closeModal();window._prcb&&window._prcb(v);})()">Valider</button>`); window._prcb=cb; setTimeout(()=>{const e=document.getElementById('pr_in');e&&e.focus();},50); }
+function openPrompt(title,ph,cb){ openModal(`<div class="grabber"></div><h2 style="margin-bottom:10px">${esc(title)}</h2><input id="pr_in" placeholder="${esc(ph)}"><button class="btn primary" style="width:100%;margin-top:10px" onclick="(function(){var v=document.getElementById('pr_in').value.trim();closeModal();window._prcb&&window._prcb(v);})()">Valider</button>`); window._prcb=cb; setTimeout(()=>{const e=document.getElementById('pr_in');e&&e.focus();},50); }
 </script>
 <script>
 /* ====================== ÉQUIPE (chef/boss) ====================== */
@@ -2298,7 +2298,7 @@ function viewEquipe(){
         <div><label>Nom</label><input id="inviteNom" placeholder="ex: Martin"></div></div>
       <label style="margin-top:10px">Rôle de la personne</label>
       <select id="inviteRole">${Object.keys(allRoles()).filter(k=>k!=='boss').map(k=>`<option value="${k}">${esc(roleLabel(k))}</option>`).join('')}</select>
-      <button class="btn primary" style="width:100%;margin-top:12px" onclick="genInvite()">Générer le code d'invitation</button>
+      <button class="btn primary" style="width:100%;margin-top:10px" onclick="genInvite()">Générer le code d'invitation</button>
       <div id="inviteOut"></div>
     </div></details>`;
   }
@@ -2363,7 +2363,7 @@ function vehiculeForm(id){
     <label>Carburant</label>
     <select id="v_carburant">${CARBURANTS.map(c=>`<option ${c===(v.carburant||'Diesel')?'selected':''}>${c}</option>`).join('')}</select>
     <label>Note (optionnel)</label><input id="v_note" value="${esc(v.note||'')}" placeholder="ex: révision en mars">
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveVehiculeForm('${id||''}')">${id?'Enregistrer':'Ajouter'}</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveVehiculeForm('${id||''}')">${id?'Enregistrer':'Ajouter'}</button>`);
 }
 function saveVehiculeForm(id){
   const nom=val('v_nom'); if(!nom){ toast("Donne un nom au véhicule"); return; }
@@ -2380,7 +2380,7 @@ function assignVehicule(id){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:6px">Assigner le véhicule</h2>
     <p class="note" style="margin-bottom:10px">Coche toutes les personnes qui utilisent ce véhicule.</p>
     ${members.length?members.map(u=>{const t=TEAM[u];const on=v.assignes&&v.assignes[u];return `<div class="member-row" onclick="toggleVehAssigne('${id}','${u}',this)" style="cursor:pointer">${avatarTag(t)}<div style="flex:1"><b>${esc(t.nom)}</b><div class="tag">${roleLabel(t.role)}</div></div><div class="checkbox ${on?'on':''}">${on?'✓':''}</div></div>`;}).join(''):`<p class="note">Aucun membre dans l'équipe pour l'instant.</p>`}
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="closeModal();render()">Terminé</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="closeModal();render()">Terminé</button>`);
 }
 function toggleVehAssigne(id,u,el){
   const v=VEHICULES[id]; if(!v.assignes)v.assignes={};
@@ -2400,7 +2400,7 @@ function openVehIncidents(id){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Incidents — ${esc(v.nom||'Véhicule')}</h2>
     <p class="note" style="margin-bottom:12px">${photos.length?photos.length+' incident(s) signalé(s).':'Aucun incident signalé pour ce véhicule.'}</p>
     ${photos.length?`<div class="photo-grid">${photos.map(p=>`<div class="ph" style="background-image:url(${p.url})" onclick="viewVehPhoto('${id}','${p.k}')"></div>`).join('')}</div>`:''}
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="addVehPhoto('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Signaler un incident</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="addVehPhoto('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Signaler un incident</button>`);
 }
 function addVehPhoto(id){
   const inp=document.getElementById('photoFile'); inp.value='';
@@ -2415,7 +2415,7 @@ function addVehPhoto(id){
         <img src="${url}" style="width:100%;border-radius:12px;max-height:240px;object-fit:cover">
         <label>Description de l'incident</label>
         <textarea id="vp_desc" placeholder="ex: Rayure portière avant droite, pare-chocs fissuré…"></textarea>
-        <button class="btn primary" style="width:100%;margin-top:12px" onclick="saveVehPhoto('${id}')">Enregistrer l'incident</button>`);
+        <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveVehPhoto('${id}')">Enregistrer l'incident</button>`);
     }; img.src=e.target.result; }; r.readAsDataURL(f); };
   inp.click();
 }
@@ -2430,9 +2430,9 @@ function saveVehPhoto(id){
 function viewVehPhoto(id,k){
   const v=VEHICULES[id]; const p=v.photos&&v.photos[k]; if(!p) return;
   openModal(`<div class="grabber"></div><img src="${p.url}" style="width:100%;border-radius:12px">
-    ${p.desc?`<p style="margin-top:14px;font-size:15px">${esc(p.desc)}</p>`:`<p class="note" style="margin-top:14px">Aucune description.</p>`}
+    ${p.desc?`<p style="margin-top:14px;font-size:15px">${esc(p.desc)}</p>`:`<p class="note" style="margin-top:8px">Aucune description.</p>`}
     <p class="tag" style="margin-top:8px">Signalé par ${esc(p.by||'?')} · ${frDateTime(p.ts)}</p>
-    ${isChef()?`<button class="btn danger" style="width:100%;margin-top:14px" onclick="delVehPhoto('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer cette photo</button>`:''}`);
+    ${isChef()?`<button class="btn danger" style="width:100%;margin-top:10px" onclick="delVehPhoto('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer cette photo</button>`:''}`);
 }
 function delVehPhoto(id,k){ const v=VEHICULES[id]; if(v.photos)delete v.photos[k]; saveVehicule(id); closeModal(); render(); }
 
@@ -2482,7 +2482,7 @@ function viewPlanning(){
   h+=`<div id="pdayList">${pdayListHTML()}</div>`;
   if(canEdit) h+=`<button class="btn ghost" style="width:100%;margin-bottom:8px;margin-top:6px" onclick="copyPrevWeek('${wk}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Copier la semaine précédente</button>`;
   h+=`<button class="btn ghost" style="width:100%" onclick="planningPDF('${wk}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg> Semaine complète en PDF</button>`;
-  if(isBoss()) h+=`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="planningHoursPDF('${wk}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg> Planning + heures pointées (PDF)</button>`;
+  if(isBoss()) h+=`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="planningHoursPDF('${wk}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg> Planning + heures pointées (PDF)</button>`;
   h+=`<p class="note" style="margin-top:8px;font-size:11px">${canEdit?'Choisis un jour en haut, puis touche une personne pour planifier sa journée (chantier, RDV, fin, ou repos).':'Choisis un jour pour voir ton planning. Seuls le chef et le patron peuvent le modifier.'}</p>`;
   return h;
 }
@@ -2679,7 +2679,7 @@ function viewMessagerie(){
   h+=`<div class="chat-conv" onclick="openConv('group')"><div class="av" style="background:var(--acc);color:var(--accText)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="meta"><b>Toute l'équipe</b><div class="last">${gLast?esc((gLast.nom?gLast.nom.split(' ')[0]+' : ':'')+chatPreview(gLast)):'Démarre la conversation de groupe'}</div></div>${gUn?`<span class="cb">${gUn}</span>`:''}</div>`;
   const others=Object.keys(TEAM).filter(u=>u!==me).map(u=>({u,...TEAM[u],last:chatLast('dm:'+u),un:chatUnreadKey('dm:'+u)}));
   others.sort((a,b)=>((b.last&&b.last.ts)||0)-((a.last&&a.last.ts)||0));
-  if(!others.length){ h+=`<p class="note" style="margin-top:12px;text-align:center">Aucun autre membre dans l'équipe pour l'instant. Invite ton équipe depuis l'onglet 👥 Équipe.</p>`; }
+  if(!others.length){ h+=`<p class="note" style="margin-top:8px;text-align:center">Aucun autre membre dans l'équipe pour l'instant. Invite ton équipe depuis l'onglet 👥 Équipe.</p>`; }
   others.forEach(m=>{ h+=`<div class="chat-conv" onclick="openConv('dm:${m.u}')">${avatarTag(m,'av')}<div class="meta"><b>${esc(m.nom||'?')}</b><div class="last">${m.last?esc((m.last.from===me?'Vous : ':'')+chatPreview(m.last)):'Aucun message'}</div></div>${m.un?`<span class="cb">${m.un}</span>`:''}</div>`; });
   h+=`</div>`;
   return h;
@@ -2865,7 +2865,7 @@ function viewDashboard(){
   </div>
   <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
     <p class="note" style="margin-top:0">Le chiffre d'affaires, les devis, les factures, les clients et les paramètres sont désormais réunis dans l'Espace Facturation.</p>
-    <button class="btn primary" style="width:100%;margin-top:8px" onclick="openFactu()">${icone('receipt')} Ouvrir l'Espace Facturation</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="openFactu()">${icone('receipt')} Ouvrir l'Espace Facturation</button>
   </div>
   ${laborCard(all,eur)}
   <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Vue d'ensemble</h2></div>`;
@@ -3023,7 +3023,7 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEtapesManager()">${icone('flag')} Étapes de chantier</button></div>`;
     if(tab==='apparence') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Apparence</h2></div>
       <p class="tag" style="margin-bottom:8px">Couleur de l’app</p>${themeSwatches(40)}
-      <button class="btn ghost" style="width:100%;margin-top:12px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
       <div class="row" style="margin-top:10px"><button class="btn ${pointageOn()?'primary':'ghost'}" onclick="setPointage(true)">Pointage activé</button><button class="btn ${!pointageOn()?'primary':'ghost'}" onclick="setPointage(false)">Désactivé</button></div>
@@ -3083,7 +3083,7 @@ function factuResume(){
   h+=ereportingCard(all);
   h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Accès rapide</h2></div>
     <div class="row"><button class="btn ghost" onclick="setFTab('devis')">${icone('file')} Devis</button><button class="btn ghost" onclick="setFTab('factures')">${icone('receipt')} Factures</button></div>
-    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="setFTab('params')">${icone('settings')} Paramètres de facturation</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="setFTab('params')">${icone('settings')} Paramètres de facturation</button>
     <p class="note" style="margin-top:8px;font-size:11px">Pour créer un devis ou une facture : ouvre un chantier, puis la carte « Devis / Facture ».</p>
   </div>`;
   return h;
@@ -3126,7 +3126,7 @@ function factuFactures(){
   else {
     h+=`<input id="fq_factures" placeholder="Rechercher (n°, client, chantier)…" oninput="factuFilter('factures')" style="width:100%;margin:2px 0 10px">`;
     h+=`<div id="list_factures">`+facts.map(factuDocRow).join('')+`</div>`;
-    h+=`<p class="note" style="margin-top:10px;font-size:11px">${icone('download')} = télécharger la facture électronique Factur-X (PDF avec XML intégré).</p>`;
+    h+=`<p class="note" style="margin-top:8px;font-size:11px">${icone('download')} = télécharger la facture électronique Factur-X (PDF avec XML intégré).</p>`;
   }
   h+=`</div>`;
   return h;
@@ -3164,7 +3164,7 @@ function factuParams(){
     <div class="task-row"><span style="flex:1">SIREN</span><b>${esc(cfg.siren||'—')}</b></div>
     <div class="task-row"><span style="flex:1">TVA</span><b>${esc(tvaTxt)}</b></div>
     <div class="task-row"><span style="flex:1">Préfixe devis / facture</span><b>${esc(devisPrefix())} / ${esc(factPrefix())}</b></div>
-    <button class="btn primary" style="width:100%;margin-top:12px" onclick="openFacturationSettings()">${icone('settings')} Modifier les paramètres de facturation</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="openFacturationSettings()">${icone('settings')} Modifier les paramètres de facturation</button>
   </div>
   <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>
     <button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button>
@@ -3296,12 +3296,12 @@ function openFrais(){
   openModal(`<div class="grabber"></div>
     <h2 style="margin:0 0 12px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Nouvelle note de frais</h2>
     <label>Chantier concerné</label><select id="fr_chantier">${opts}</select>
-    <label style="margin-top:8px">Montant (€)</label><input id="fr_montant" type="number" inputmode="decimal" step="0.01" min="0" placeholder="ex: 42.90">
-    <label style="margin-top:8px">Description</label><input id="fr_desc" placeholder="ex: Carburant, péage, petit matériel…">
+    <label style="margin-top:10px">Montant (€)</label><input id="fr_montant" type="number" inputmode="decimal" step="0.01" min="0" placeholder="ex: 42.90">
+    <label style="margin-top:10px">Description</label><input id="fr_desc" placeholder="ex: Carburant, péage, petit matériel…">
     <input type="file" id="fr_file" accept="image/*" style="display:none" onchange="fraisAddPhoto(this)">
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="document.getElementById('fr_file').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Photo du justificatif (optionnel)</button>
     <div id="fr_prev" style="margin-top:10px"></div>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveFraisEntry()">Enregistrer</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveFraisEntry()">Enregistrer</button>`);
   setTimeout(()=>{const e=document.getElementById('fr_montant');e&&e.focus();},50);
 }
 function fraisAddPhoto(input){ const f=input.files&&input.files[0]; if(!f) return; input.value=''; compresse900(f,url=>{ window._fraisPhoto=url; const box=document.getElementById('fr_prev'); if(box) box.innerHTML=`<img src="${url}" style="max-height:150px;border:1px solid var(--line);border-radius:10px"> <button class="linkbtn" style="color:var(--danger)" onclick="window._fraisPhoto='';document.getElementById('fr_prev').innerHTML='';">Retirer</button>`; }); }
@@ -3354,9 +3354,9 @@ function openAvis(preselectId){
   openModal(`<div class="grabber"></div>
     <h2 style="margin:0 0 12px">Nouvel avis client</h2>
     <label>Chantier</label><select id="avis_chantier">${opts}</select>
-    <label style="margin-top:8px">Note</label><div id="avis_stars">${avisStarsInput(0)}</div>
-    <label style="margin-top:8px">Commentaire (optionnel)</label><textarea id="avis_com" rows="3" placeholder="ex: Client très satisfait, ponctualité appréciée." style="width:100%;resize:vertical"></textarea>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveAvis()">Enregistrer</button>`);
+    <label style="margin-top:10px">Note</label><div id="avis_stars">${avisStarsInput(0)}</div>
+    <label style="margin-top:10px">Commentaire (optionnel)</label><textarea id="avis_com" rows="3" placeholder="ex: Client très satisfait, ponctualité appréciée." style="width:100%;resize:vertical"></textarea>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveAvis()">Enregistrer</button>`);
 }
 function saveAvis(){
   const id=(document.getElementById('avis_chantier')||{}).value; const c=CHANTIERS[id]; if(!c){ toast("Choisis un chantier."); return; }
@@ -3395,7 +3395,7 @@ function viewIdentite(){
   let h=`<div class="card" style="text-align:center">
     <div class="prof-avatar" style="margin:0 auto 10px;background:var(--card2)">${logoHTML()}</div>
     <h2 style="margin:0">${esc(coName())}</h2>
-    ${coSlogan()?`<p class="note" style="margin:4px 0 0">${esc(coSlogan())}</p>`:''}
+    ${coSlogan()?`<p class="note" style="margin:8px 0 0">${esc(coSlogan())}</p>`:''}
   </div>`;
   const details=[
     row('SIREN', CONFIG_DB.siren),
@@ -3407,7 +3407,7 @@ function viewIdentite(){
   ].join('');
   h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('id')||icone('shield')} Coordonnées & mentions légales</h2></div>
     ${details||`<p class="note" style="margin:0">Aucune information renseignée pour l'instant.</p>`}
-    <button class="btn ghost" style="width:100%;margin-top:12px" onclick="openFacturationSettings()">${icone('edit')} Modifier</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFacturationSettings()">${icone('edit')} Modifier</button>
     <p class="note" style="margin:8px 0 0;font-size:11px">Ces informations apparaissent sur tes devis et factures.</p></div>`;
   return h;
 }
@@ -3444,8 +3444,8 @@ function viewAccesClients(){
     const c=x.c; const code=c.clientCode||'';
     h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(c.nom)}</h2></div>
       <div class="task-row"><span style="flex:1">${esc(clientFull(c))}</span>${code?`<b class="tag" style="color:var(--acc2);letter-spacing:2px;font-family:'Archivo'">${esc(code)}</b>`:`<span class="tag" style="color:var(--warn)">Aucun code</span>`}</div>
-      ${code?`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="shareCode('${esc(code)}','${esc(c.nom)}')">${icone('key')} Partager le code</button>`
-            :`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="genClientCode('${x.id}')">${icone('key')} Générer un code</button>`}
+      ${code?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="shareCode('${esc(code)}','${esc(c.nom)}')">${icone('key')} Partager le code</button>`
+            :`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="genClientCode('${x.id}')">${icone('key')} Générer un code</button>`}
     </div>`;
   });
   return h;
@@ -3556,9 +3556,9 @@ function openEreportingExport(){
     <h2 style="margin:0 0 4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Export e-reporting</h2>
     <p class="note" style="margin:0 0 12px">Montants facturés regroupés par mois, prêts à transmettre à ta plateforme agréée ou à donner à ton comptable.</p>
     ${body}
-    ${rows.length?`<button class="btn primary" style="width:100%;margin-top:12px" onclick="copyEreporting()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Copier le récap (Excel / comptable)</button>`:''}
+    ${rows.length?`<button class="btn primary" style="width:100%;margin-top:10px" onclick="copyEreporting()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Copier le récap (Excel / comptable)</button>`:''}
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeModal()">Fermer</button>
-    <p class="note" style="margin-top:10px;font-size:11px">Récap indicatif pour t'aider à préparer ta déclaration de TVA et ton e-reporting. BatiSuivi n'est pas une plateforme agréée : la transmission officielle à l'administration passe par la plateforme agréée de ton choix. ${isFranchiseTva()?'TVA non applicable (franchise en base, art. 293 B CGI).':('TVA estimée à '+tvaPct()+'%.')}</p>`);
+    <p class="note" style="margin-top:8px;font-size:11px">Récap indicatif pour t'aider à préparer ta déclaration de TVA et ton e-reporting. BatiSuivi n'est pas une plateforme agréée : la transmission officielle à l'administration passe par la plateforme agréée de ton choix. ${isFranchiseTva()?'TVA non applicable (franchise en base, art. 293 B CGI).':('TVA estimée à '+tvaPct()+'%.')}</p>`);
 }
 function copyEreporting(){
   const rows=ereportingRows(Object.values(CHANTIERS));
@@ -3799,21 +3799,21 @@ function openFacturationSettings(){
     <label>Facturation dans l'app</label>
     <div class="row" style="gap:6px"><button class="btn ${factuOn()?'primary':'ghost'} mini" onclick="setFactuOn(true)">Activée</button><button class="btn ${!factuOn()?'primary':'ghost'} mini" onclick="setFactuOn(false)">Désactivée</button></div>
     <p class="note" style="font-size:11px;margin-top:4px">Désactive si ton client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
-    <div class="row" style="margin-top:12px"><div><label>Préfixe devis</label><input id="fs_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
+    <div class="row" style="margin-top:10px"><div><label>Préfixe devis</label><input id="fs_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
       <div><label>Prochain n° devis</label><input id="fs_devnum" type="number" min="1" value="${(CONFIG_DB.devisCounter||0)+1}"></div></div>
-    <div class="row" style="margin-top:8px"><div><label>Préfixe facture</label><input id="fs_factpre" type="text" value="${factPrefix()}" maxlength="6"></div>
+    <div class="row" style="margin-top:10px"><div><label>Préfixe facture</label><input id="fs_factpre" type="text" value="${factPrefix()}" maxlength="6"></div>
       <div><label>Prochain n° de facture</label><input id="fs_fact" type="number" min="1" value="${(CONFIG_DB.factCounter||0)+1}"></div></div>
     <p class="note" style="font-size:11px;margin-top:8px">Aperçu — prochain devis : <b>${esc(apDev)}</b> · prochaine facture : <b>${esc(apFact)}</b></p>
-    <label style="margin-top:14px;display:block">Identité légale (pour la facture électronique)</label>
-    <div class="row" style="margin-top:4px"><div><label>SIREN</label><input id="fs_siren" type="text" inputmode="numeric" value="${esc(CONFIG_DB.siren||'')}" placeholder="9 chiffres" maxlength="11"></div>
+    <label style="margin-top:10px;display:block">Identité légale (pour la facture électronique)</label>
+    <div class="row" style="margin-top:10px"><div><label>SIREN</label><input id="fs_siren" type="text" inputmode="numeric" value="${esc(CONFIG_DB.siren||'')}" placeholder="9 chiffres" maxlength="11"></div>
       <div><label>N° TVA intracom.</label><input id="fs_tva" type="text" value="${esc(CONFIG_DB.tvaIntra||'')}" placeholder="FR…" maxlength="15"></div></div>
-    <div class="row" style="margin-top:8px"><div><label>Taux de TVA (%)</label><input id="fs_taux" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(String(tvaRate()))}" placeholder="20"></div><div></div></div>
+    <div class="row" style="margin-top:10px"><div><label>Taux de TVA (%)</label><input id="fs_taux" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(String(tvaRate()))}" placeholder="20"></div><div></div></div>
     <p class="note" style="font-size:11px;margin-top:4px">Taux appliqué à tes devis et factures. Mets <b>0</b> si tu n'es pas assujetti à la TVA (franchise en base, art. 293 B du CGI) : la mention « TVA non applicable » s'affichera automatiquement.</p>
     <div style="margin-top:8px"><label>Adresse de l'entreprise</label><input id="fs_adr" type="text" value="${esc(CONFIG_DB.adr||'')}" placeholder="N° et rue"></div>
-    <div class="row" style="margin-top:8px"><div><label>Code postal</label><input id="fs_cp" type="text" inputmode="numeric" value="${esc(CONFIG_DB.cp||'')}" maxlength="5"></div>
+    <div class="row" style="margin-top:10px"><div><label>Code postal</label><input id="fs_cp" type="text" inputmode="numeric" value="${esc(CONFIG_DB.cp||'')}" maxlength="5"></div>
       <div><label>Ville</label><input id="fs_ville" type="text" value="${esc(CONFIG_DB.ville||'')}"></div></div>
     <p class="note" style="font-size:11px;margin-top:4px">Obligatoires pour générer une facture électronique conforme (format Factur-X) à destination des professionnels.</p>
-    <button class="btn ghost" style="width:100%;margin-top:12px" onclick="openEreportingExport()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Récap & export e-reporting (HT + TVA par mois)</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Récap & export e-reporting (HT + TVA par mois)</button>
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3M6 16a4 4 0 0 1-2-4 4 4 0 0 1 4-4h8a4 4 0 0 1 4 4 4 4 0 0 1-2 4"/></svg> Facturation électronique — test plateforme agréée</button>
     <div class="row" style="margin-top:14px"><button class="btn ghost" style="flex:1" onclick="closeModal()">Annuler</button><button class="btn primary" style="flex:2" onclick="saveFacturationSettings()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button></div>`);
 }
@@ -3855,14 +3855,14 @@ function openPaTest(){
       <option value="imaginer">IMAGINE'R — 0225:432429819</option>
       <option value="urbat">URBAT PROMOTION — 0225:352588727</option>
     </select>
-    <button class="btn primary" style="width:100%;margin-top:8px" onclick="facturXTestPdf()">Télécharger le Factur-X de test</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="facturXTestPdf()">Télécharger le Factur-X de test</button>
 
     <h3 style="font-size:14px;margin:18px 0 6px">② Inscrire l'artisan de test (par API)</h3>
     <div class="row"><div><label>SIREN (Hérault)</label><input id="pa_siren" type="text" inputmode="numeric" maxlength="11" placeholder="9 chiffres, dépt 34"></div>
       <div><label>E-mail responsable</label><input id="pa_email" type="email" placeholder="test@exemple.fr"></div></div>
     <div style="margin-top:8px"><label>Raison sociale</label><input id="pa_rs" type="text" placeholder="ex : ARTISAN TEST SARL"></div>
     <div style="margin-top:8px"><label>Nom commercial <span class="tag">(facultatif)</span></label><input id="pa_nc" type="text" placeholder="vide = même que raison sociale"></div>
-    <div class="row" style="margin-top:8px"><div><label>Prénom responsable</label><input id="pa_prenom" type="text" placeholder="ex : Jean"></div>
+    <div class="row" style="margin-top:10px"><div><label>Prénom responsable</label><input id="pa_prenom" type="text" placeholder="ex : Jean"></div>
       <div><label>Nom responsable</label><input id="pa_nom" type="text" placeholder="ex : Dupont"></div></div>
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="paEnroll()">Inscrire l'artisan de test</button>
     <p class="note" style="font-size:11px;margin-top:6px">L'inscription enchaîne plusieurs étapes (dont le provisionnement, qui se fait en arrière-plan). Le résultat détaillé s'affiche en bas.</p>
@@ -3870,7 +3870,7 @@ function openPaTest(){
     <h3 style="font-size:14px;margin:18px 0 6px">③ Vérifier / suivre</h3>
     <button class="btn ghost" style="width:100%" onclick="paInfo()">Voir l'état d'inscription</button>
     <div style="margin-top:8px"><label>flowId d'une facture envoyée</label><input id="pa_flowid" type="text" placeholder="colle un flowId ici"></div>
-    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="paStatus()">Suivre ce flux</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="paStatus()">Suivre ce flux</button>
 
     <div id="pa_result" style="margin-top:12px"></div>
     <div class="row" style="margin-top:14px"><button class="btn ghost" style="width:100%" onclick="closeModal()">Fermer</button></div>`);
@@ -3958,7 +3958,7 @@ function addNoteFrais(){
         <img src="${_pendingNote.url}" style="width:100%;border-radius:12px;max-height:240px;object-fit:cover">
         <label>Montant (€) — optionnel</label><input id="nf_montant" type="number" inputmode="decimal" step="0.01" placeholder="ex: 78.50">
         <label>Description</label><textarea id="nf_desc" placeholder="ex: Plein gasoil camion"></textarea>
-        <button class="btn primary" style="width:100%;margin-top:12px" onclick="saveNoteFraisPhoto()">Envoyer au patron</button>`);
+        <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveNoteFraisPhoto()">Envoyer au patron</button>`);
     }; img.src=e.target.result; }; r.readAsDataURL(f); };
   inp.click();
 }
@@ -3995,7 +3995,7 @@ function openMemberNotes(u){
       <img src="${n.url}" style="width:100%;border-radius:10px" onclick="viewPhoto('${n.url}')">
       <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 2px"><b>${n.montant?eurFmt(n.montant):'<span class="note">Montant non précisé</span>'}</b><span class="tag">${frDateTime(n.ts)}</span></div>
       ${n.desc?`<p style="margin:2px 0 0">${esc(n.desc)}</p>`:''}
-      <button class="btn danger mini" style="width:100%;margin-top:8px" onclick="delNoteFrais('${u}','${n.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer</button>
+      <button class="btn danger mini" style="width:100%;margin-top:10px" onclick="delNoteFrais('${u}','${n.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer</button>
     </div>`).join(''):`<p class="note">Aucune note de frais.</p>`}`);
 }
 function delNoteFrais(u,k){ if(!confirm("Supprimer cette note de frais ?")) return; if(NOTES_FRAIS[u]) delete NOTES_FRAIS[u][k]; saveNoteFrais(u); openMemberNotes(u); }
@@ -4031,7 +4031,7 @@ function startCrop(dataURL,mode){
     openModal(`<div class="grabber"></div><h2 style="margin-bottom:4px;text-align:center">${isIcon?'Cadre l\'icône':(isLogo?'Cadre ton logo':'Cadre ta photo')}</h2>
       <p class="note" style="text-align:center">${isIcon?'Remplis bien le carré (zoome/glisse) pour une icône pleine.':'Glisse pour déplacer, le curseur pour zoomer.'}</p>
       <div class="crop-stage${sq?' sq':''}" id="cropStage"><img id="cropImg" src="${dataURL}"><div class="crop-ring"></div></div>
-      <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1" style="width:100%;margin-top:6px">
+      <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1" style="width:100%;margin-top:10px">
       <div class="row" style="margin-top:12px"><button class="btn ghost" onclick="closeModal()">Annuler</button>
         <button class="btn primary" onclick="${isIcon?'saveCroppedIcon()':(isLogo?'saveCroppedLogo()':'saveCroppedPhoto()')}">Enregistrer</button></div>`);
     setTimeout(bindCrop,60);
@@ -4123,7 +4123,7 @@ function devisCard(id,c){
       <button class="btn primary" onclick="publishFacture('${id}','full')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Facturer (100%)</button>
       <button class="btn ghost" onclick="publishFactureAcompte('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 7a7 7 0 1 0 0 10"/><path d="M3 11h9M3 15h7"/></svg> Acompte %</button></div>`;
     h=factuOn()?h:'';
-    { const r=resteAPayer(c); if(r.paye>0){ h+=`<div class="task-row" style="border-top:2px solid var(--line);margin-top:4px"><b style="flex:1">Déjà facturé</b><b>${r.paye.toFixed(2)} €</b></div><div class="task-row"><b style="flex:1">Reste à payer</b><b style="color:var(--acc2)">${r.reste.toFixed(2)} €</b></div>`; if(r.reste>0){ h+=`<button class="btn primary" style="width:100%;margin-top:8px" onclick="publishFactureSolde('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Facturer le solde (${r.reste.toFixed(2)} €)</button>`; } } }
+    { const r=resteAPayer(c); if(r.paye>0){ h+=`<div class="task-row" style="border-top:2px solid var(--line);margin-top:4px"><b style="flex:1">Déjà facturé</b><b>${r.paye.toFixed(2)} €</b></div><div class="task-row"><b style="flex:1">Reste à payer</b><b style="color:var(--acc2)">${r.reste.toFixed(2)} €</b></div>`; if(r.reste>0){ h+=`<button class="btn primary" style="width:100%;margin-top:10px" onclick="publishFactureSolde('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Facturer le solde (${r.reste.toFixed(2)} €)</button>`; } } }
   }
   // documents déjà publiés au client
   const pub=c.published?Object.keys(c.published):[];
@@ -4144,7 +4144,7 @@ function addLigne(id){
     <label>Description</label><input id="dl_desc" placeholder="ex: Pose carrelage 20m²">
     <div class="row"><div><label>Quantité</label><input id="dl_qty" type="number" value="1" min="0" step="0.5"></div>
       <div><label>Prix unitaire (€ HT)</label><input id="dl_pu" type="number" value="0" min="0" step="0.01"></div></div>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveLigne('${id}')">Ajouter</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveLigne('${id}')">Ajouter</button>`);
 }
 function saveLigne(id){
   const desc=val('dl_desc'); const qty=parseFloat(document.getElementById('dl_qty').value)||0; const pu=parseFloat(document.getElementById('dl_pu').value)||0;
@@ -4219,14 +4219,14 @@ function openCRVocal(id){
       <button id="cr_mic" class="btn primary" style="width:100%" onclick="crToggleMic()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Démarrer la dictée</button>
       <p id="cr_status" class="note" style="text-align:center;margin:6px 0 4px">Appuie, puis parle : décris ce que tu as fait, ce qui manque, les soucis…</p>
     ` : `<p class="note" style="color:#c0392b">La dictée vocale n'est pas dispo sur ce navigateur. Tape ton texte ci-dessous, puis structure-le.</p>`}
-    <label style="margin-top:6px">Ce que tu dis (modifiable)</label>
+    <label style="margin-top:10px">Ce que tu dis (modifiable)</label>
     <textarea id="cr_raw" rows="4" placeholder="Ex : J'ai posé les Placo de la chambre 2, il manque deux plaques à commander…"></textarea>
-    <button id="cr_struct" class="btn" style="width:100%;margin-top:8px" onclick="crStructurer('${id}')">✨ Structurer avec l'IA</button>
+    <button id="cr_struct" class="btn" style="width:100%;margin-top:10px" onclick="crStructurer('${id}')">✨ Structurer avec l'IA</button>
     <div id="cr_fields" style="margin-top:12px">
       <label><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Tâches réalisées</label><textarea id="cr_taches" rows="2"></textarea>
-      <label style="margin-top:6px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Matériaux manquants</label><textarea id="cr_materiaux" rows="2"></textarea>
-      <label style="margin-top:6px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Problèmes</label><textarea id="cr_problemes" rows="2"></textarea>
-      <label style="margin-top:6px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Notes</label><textarea id="cr_notes" rows="2"></textarea>
+      <label style="margin-top:10px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Matériaux manquants</label><textarea id="cr_materiaux" rows="2"></textarea>
+      <label style="margin-top:10px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Problèmes</label><textarea id="cr_problemes" rows="2"></textarea>
+      <label style="margin-top:10px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Notes</label><textarea id="cr_notes" rows="2"></textarea>
     </div>
     <div class="row" style="margin-top:12px">
       <button class="btn ghost" style="flex:1" onclick="closeModal()">Annuler</button>
@@ -4520,7 +4520,7 @@ function openPlanEditor(id,k){
       <img id="plan_img" src="${p.img}" style="width:100%;display:block" alt="plan">
       ${pins.map((pin,i)=>`<span data-i="${i}" style="position:absolute;left:${pin.x}%;top:${pin.y}%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:var(--acc2);color:var(--accText);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);cursor:pointer" onclick="event.stopPropagation();editPin('${id}','${k}',${i})">${i+1}</span>`).join('')}
     </div>
-    <button class="btn ghost" id="plan_addbtn" style="width:100%;margin-top:12px" onclick="planTogglePlace('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Poser une épingle</button>`);
+    <button class="btn ghost" id="plan_addbtn" style="width:100%;margin-top:10px" onclick="planTogglePlace('${id}','${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Poser une épingle</button>`);
   setTimeout(()=>{ const st=document.getElementById('plan_stage'); if(st){ st.onclick=ev=>planStageTap(ev,id,k); } },60);
 }
 function planTogglePlace(id,k){ _planPlacing=!_planPlacing; const b=document.getElementById('plan_addbtn'); const hint=document.getElementById('plan_hint'); if(b){ b.className='btn '+(_planPlacing?'primary':'ghost'); b.style.width='100%'; } if(hint) hint.textContent=_planPlacing?"Touche l'image à l'endroit voulu pour poser l'épingle.":"Touche une épingle pour voir sa note. Bouton ci-dessous pour en poser une nouvelle."; }
@@ -4577,7 +4577,7 @@ function openJournal(id){
     <input type="file" id="jrn_file" accept="image/*" style="display:none" onchange="journalAddPhoto(this)">
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="document.getElementById('jrn_file').click()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Ajouter une photo</button>
     <div id="jrn_prev" class="photo-grid" style="margin-top:10px"></div>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveJournalEntry('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveJournalEntry('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button>`);
   setTimeout(()=>{const e=document.getElementById('jrn_txt');e&&e.focus();},50);
 }
 function journalAddPhoto(input){ const f=input.files&&input.files[0]; if(!f) return; input.value='';
@@ -4606,7 +4606,7 @@ function rentabiliteCard(id,c){
   if(heures<=0 && mat<=0){
     return `<div class="card">${head}
       <div class="task-row"><span style="flex:1">Montant devisé</span><b>${eurFmt(devise)}</b></div>
-      <p class="note" style="margin:10px 0 0">Aucune heure pointée pour l'instant : le coût réel ne peut pas encore être calculé. La marge s'affichera dès que l'équipe aura pointé des heures sur ce chantier.</p>
+      <p class="note" style="margin:8px 0 0">Aucune heure pointée pour l'instant : le coût réel ne peut pas encore être calculé. La marge s'affichera dès que l'équipe aura pointé des heures sur ce chantier.</p>
     </div>`;
   }
   const marge=devise-reel; const pct=devise>0?(marge/devise*100):0;
@@ -4641,7 +4641,7 @@ function receptionCard(id,c){
   if(r.signature){ h+=`<div class="task-row"><span style="flex:1">Signature client</span><b style="color:var(--ok)">${esc(r.signedBy||'client')}</b></div>
     <img src="${r.signature}" alt="signature" style="max-height:70px;margin:6px 0;background:#fff;border:1px solid var(--line);border-radius:8px">
     <p class="note" style="margin:0 0 4px;font-size:11px">Signé le ${frSignAt(r.signedAt)}</p>`; }
-  else { h+=`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="receptionSign('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/></svg> Faire signer le client</button>`; }
+  else { h+=`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="receptionSign('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18z"/></svg> Faire signer le client</button>`; }
   if(r.withReserves){
     h+=`<div class="section-title"><h2 style="font-size:14px">Réserves ${reserves.length?`<span class="tag">${leve}/${reserves.length} levées</span>`:''}</h2><button class="btn ghost mini" onclick="addReserve('${id}')">+</button></div>`;
     if(!reserves.length) h+=`<p class="note">Aucune réserve listée. Ajoute chaque défaut à corriger (précis et localisé).</p>`;
@@ -4650,14 +4650,14 @@ function receptionCard(id,c){
       <span style="flex:1"><b>${esc(x.desc||'')}</b>${x.zone?`<div class="tag">📍 ${esc(x.zone)}</div>`:''}${x.delai&&x.statut!=='done'?`<div class="tag">à lever avant le ${frDateFR(x.delai)}</div>`:''}${x.statut==='done'&&x.doneAt?`<div class="tag" style="color:var(--ok)">levée le ${frDateFR(x.doneAt)}</div>`:''}</span>
       <button class="iconbtn" onclick="editReserve('${id}','${x.k}')">✎</button>
       <button class="iconbtn danger" onclick="delReserve('${id}','${x.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`; });
-    h+=`<p class="note" style="margin-top:10px;font-size:11px">Retenue de garantie 5 % du TTC : <b>${eurF2(ret)}</b> — libérée à la levée des réserves (ou après 1 an).</p>`;
+    h+=`<p class="note" style="margin-top:8px;font-size:11px">Retenue de garantie 5 % du TTC : <b>${eurF2(ret)}</b> — libérée à la levée des réserves (ou après 1 an).</p>`;
   }
   h+=`<div class="section-title"><h2 style="font-size:14px">Garanties légales</h2></div>
     <div class="task-row"><span style="flex:1">Parfait achèvement (1 an)</span><b>${g.gpaTxt}</b></div>
     <div class="task-row"><span style="flex:1">Biennale (2 ans)</span><b>${g.bieTxt}</b></div>
     <div class="task-row"><span style="flex:1">Décennale (10 ans)</span><b>${g.decTxt}</b></div>
-    <button class="btn primary" style="width:100%;margin-top:12px" onclick="receptionPV('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6"/></svg> Télécharger le PV de réception</button>
-    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="annulerReception('${id}')">Annuler la réception</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="receptionPV('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6"/></svg> Télécharger le PV de réception</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="annulerReception('${id}')">Annuler la réception</button>
   </div>`;
   return h;
 }
@@ -4670,7 +4670,7 @@ function openReception(id){
     <div class="row"><button type="button" class="btn ${r.withReserves?'ghost':'primary'}" id="rec_sr" onclick="recSetRes(false)">Sans réserve</button>
       <button type="button" class="btn ${r.withReserves?'primary':'ghost'}" id="rec_ar" onclick="recSetRes(true)">Avec réserves</button></div>
     <input type="hidden" id="rec_wr" value="${r.withReserves?'1':'0'}">
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveReception('${id}')">Valider la réception</button>`);
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveReception('${id}')">Valider la réception</button>`);
 }
 function recSetRes(v){ const hid=document.getElementById('rec_wr'); if(hid) hid.value=v?'1':'0'; const a=document.getElementById('rec_ar'), s=document.getElementById('rec_sr'); if(a)a.className='btn '+(v?'primary':'ghost'); if(s)s.className='btn '+(v?'ghost':'primary'); }
 function saveReception(id){
@@ -4685,9 +4685,9 @@ function editReserve(id,rid){
   const c=CHANTIERS[id]; const x=(rid&&c.reception&&c.reception.reserves&&c.reception.reserves[rid])||{};
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:10px">${rid?'Modifier la réserve':'Nouvelle réserve'}</h2>
     <label>Description du défaut</label><input id="res_desc" value="${esc(x.desc||'')}" placeholder="ex: Prise de courant non fonctionnelle">
-    <label style="margin-top:8px">Localisation</label><input id="res_zone" value="${esc(x.zone||'')}" placeholder="ex: Salon, mur nord">
-    <label style="margin-top:8px">À lever avant le (optionnel)</label><input type="date" id="res_delai" value="${esc(x.delai||'')}">
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveReserve('${id}','${rid}')">Enregistrer</button>`);
+    <label style="margin-top:10px">Localisation</label><input id="res_zone" value="${esc(x.zone||'')}" placeholder="ex: Salon, mur nord">
+    <label style="margin-top:10px">À lever avant le (optionnel)</label><input type="date" id="res_delai" value="${esc(x.delai||'')}">
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveReserve('${id}','${rid}')">Enregistrer</button>`);
   setTimeout(()=>{const e=document.getElementById('res_desc'); if(e)e.focus();},60);
 }
 function saveReserve(id,rid){
@@ -4737,7 +4737,7 @@ function clotureCard(id,c){
     ${row(e.recu,'Réception prononcée','en attente')}
     ${row(reservesOkDisp,reservesLabel,reservesAttente)}
     ${row(e.factureOK,'Au moins une facture publiée','en attente')}
-    <button class="btn primary" style="width:100%;margin-top:12px" onclick="cloturerChantier('${id}')">Clôturer le chantier</button>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="cloturerChantier('${id}')">Clôturer le chantier</button>
   </div>`;
   return h;
 }
@@ -4865,7 +4865,7 @@ function openRolesManager(){
       ${d.builtin?'':`<button class="iconbtn danger" onclick="delRole('${k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`}
     </div></div>`;
   });
-  h+=`<button class="btn primary" style="width:100%;margin-top:6px" onclick="editRole('')">+ Ajouter un rôle</button>`;
+  h+=`<button class="btn primary" style="width:100%;margin-top:10px" onclick="editRole('')">+ Ajouter un rôle</button>`;
   openModal(h);
 }
 function editRole(k){
@@ -4880,7 +4880,7 @@ function editRole(k){
     <div id="role_perms">`;
   PERMS.forEach(([f,lb])=>{ h+=`<label class="perm-row"><input type="checkbox" class="perm-cb" data-f="${f}" ${curPerms[f]?'checked':''}><span>${esc(lb)}</span></label>`; });
   h+=`</div>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveRole('${k}',${isNew})">Enregistrer</button>`;
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveRole('${k}',${isNew})">Enregistrer</button>`;
   openModal(h);
 }
 function roleApplyNiveau(){ const nv=document.getElementById('role_niveau').value; const base=NIVEAU_PERMS[nv]||{}; document.querySelectorAll('#role_perms .perm-cb').forEach(cb=>{ cb.checked=!!base[cb.getAttribute('data-f')]; }); }
@@ -4913,7 +4913,7 @@ function openModelesManager(){
     <button class="pen" onclick="editModele('${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
     <button class="iconbtn danger" onclick="delModele('${k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
   </div></div>`; });
-  h+=`<button class="btn primary" style="width:100%;margin-top:6px" onclick="editModele('')">+ Nouveau modèle</button>`;
+  h+=`<button class="btn primary" style="width:100%;margin-top:10px" onclick="editModele('')">+ Nouveau modèle</button>`;
   openModal(h);
 }
 function editModele(k){
@@ -4924,7 +4924,7 @@ function editModele(k){
     <textarea id="mod_taches" rows="5" placeholder="Dépose ancien carrelage&#10;Plomberie&#10;Pose faïence&#10;Joints et finitions">${esc((t.taches||[]).join('\n'))}</textarea>
     <label style="margin-top:10px">Matériel (un par ligne)</label>
     <textarea id="mod_materiel" rows="4" placeholder="Faïence&#10;Colle&#10;Receveur">${esc((t.materiel||[]).join('\n'))}</textarea>
-    <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveModele('${k}')">Enregistrer</button>`;
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveModele('${k}')">Enregistrer</button>`;
   openModal(h);
 }
 function linesOf(id){ const e=document.getElementById(id); return e?e.value.split('\n').map(s=>s.trim()).filter(Boolean):[]; }
@@ -5001,7 +5001,7 @@ function openTeamStats(){
       <div class="kpi acc"><div class="big" style="font-size:18px">${r.cout>0?eurFmt(r.coutTot):'—'}</div><div class="lbl">Coût${r.cout>0?` (${r.cout}€/h)`:''}</div></div>
       <div class="kpi"><div class="big" style="font-size:18px">${eurFmt(r.frais)}</div><div class="lbl">Notes de frais</div></div></div>
   </div>`; });
-  h+=`<p class="note" style="margin-top:6px;font-size:11px">Le coût = heures pointées × coût horaire (à définir dans la fiche de chaque membre). Le pointage s'active dans le menu <svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>.</p>`;
+  h+=`<p class="note" style="margin-top:8px;font-size:11px">Le coût = heures pointées × coût horaire (à définir dans la fiche de chaque membre). Le pointage s'active dans le menu <svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>.</p>`;
   openModal(h);
 }
 
