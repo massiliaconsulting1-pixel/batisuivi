@@ -793,7 +793,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v120 · 03/07";
+const APP_VERSION="v121 · 03/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2958,11 +2958,15 @@ function renderAccueil(){
     <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Accueil</h2></div>
-  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:14px">${icone('calendar')} Aujourd'hui</h2></div>
-    <div class="kpis" style="margin-bottom:0;grid-template-columns:1fr 1fr 1fr">
-      <div class="kpi"><div class="big" style="font-size:22px">${actifs}</div><div class="lbl">En cours</div></div>
-      <div class="kpi"><div class="big" style="font-size:22px">${rdvJour}</div><div class="lbl">RDV du jour</div></div>
-      <div class="kpi"><div class="big" style="font-size:22px">${devAtt}</div><div class="lbl">Devis en attente</div></div>
+  <div class="card" style="position:relative;overflow:hidden">
+    <div style="position:absolute;width:180px;height:180px;right:-50px;top:-70px;border-radius:50%;background:radial-gradient(circle,var(--acc2),transparent 70%);opacity:.35;pointer-events:none"></div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700">Aujourd'hui</div>
+    <div style="font-family:'Sora',sans-serif;font-size:40px;font-weight:800;line-height:1;margin:6px 0 2px;background:linear-gradient(120deg,var(--txt),var(--acc));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">${actifs} chantier${actifs>1?'s':''}</div>
+    <div class="note" style="font-size:13px">en cours cette semaine</div>
+    <div style="display:flex;gap:8px;margin-top:14px;position:relative;z-index:1">
+      <div style="flex:1;min-width:0;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;padding:10px 11px"><div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700">${rdvJour}</div><div class="note" style="font-size:10.5px">RDV aujourd'hui</div></div>
+      <div style="flex:1;min-width:0;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;padding:10px 11px"><div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700">${devAtt}</div><div class="note" style="font-size:10.5px">Devis en attente</div></div>
+      <div style="flex:1;min-width:0;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;padding:10px 11px"><div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700">${Object.keys(TEAM).length}</div><div class="note" style="font-size:10.5px">Membres actifs</div></div>
     </div>
   </div>
   <div style="display:flex;flex-direction:column;gap:10px;padding:0">
