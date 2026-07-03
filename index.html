@@ -82,8 +82,8 @@ body[data-accent="violet"]{ --acc:#9b6bff; --acc2:#b48dff; --accText:#16042b; --
 body[data-accent="bleu"]{ --acc:#3d8bff; --acc2:#5fa3ff; --accText:#04101f; --glow:61,139,255; }
 /* Peau premium : surfaces FIXES quel que soit le thème → le sélecteur ne change QUE l'accent.
    (Un vrai mode clair pourra être ajouté plus tard en neutralisant cette règle.) */
-body[data-theme]{ --bg:#0A1220; --bg2:#0B1A2A; --card:rgba(255,255,255,.055); --card2:rgba(255,255,255,.09);
-  --line:rgba(255,255,255,.11); --txt:#EAF3F6; --muted:#96AAB8; --shadow:0 18px 40px -18px rgba(0,0,0,.55); }
+body[data-theme]{ --card:rgba(255,255,255,.055); --card2:rgba(255,255,255,.09);
+  --line:rgba(255,255,255,.11); --txt:#EAF3F6; --shadow:0 18px 40px -18px rgba(0,0,0,.55); }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;color:var(--txt);font-family:'Manrope',system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
@@ -796,7 +796,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v124 · 04/07";
+const APP_VERSION="v125 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
