@@ -234,8 +234,12 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
   opacity:0;transition:.3s;z-index:300;box-shadow:var(--shadow);max-width:90%;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .install-banner{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:300;
-  background:var(--card2);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+  background:rgba(15,25,42,.95);border:1px solid rgba(255,255,255,.14);border-radius:18px;box-shadow:0 24px 60px -18px rgba(0,0,0,.75);
+  backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);
   padding:16px 16px 14px;max-width:480px;margin:0 auto;transform:translateY(140%);opacity:0;transition:.35s}
+.install-banner .ib-steps ol{margin:4px 0 0;padding-left:20px}
+.install-banner .ib-steps li{font-size:12.5px;line-height:1.55;color:var(--txt);margin:2px 0}
+.install-banner .ib-steps .plat{font-size:12.5px;font-weight:700;color:var(--txt);margin-top:9px}
 .install-banner.show{transform:translateY(0);opacity:1}
 .install-banner .ib-row{display:flex;gap:13px;align-items:flex-start}
 .install-banner .ib-logo{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,var(--acc2),var(--acc));overflow:hidden}
@@ -554,7 +558,7 @@ function _hexRgb(h){ h=(h||'').replace('#',''); if(h.length===3) h=h.split('').m
 function _lighten(h,amt){ const {r,g,b}=_hexRgb(h); const L=v=>Math.round(v+(255-v)*amt); const x=v=>('0'+v.toString(16)).slice(-2); return '#'+x(L(r))+x(L(g))+x(L(b)); }
 function _darken(h,k){ const {r,g,b}=_hexRgb(h); const x=v=>('0'+Math.max(5,Math.round(v*k)).toString(16)).slice(-2); return '#'+x(r)+x(g)+x(b); }
 function clearCustomAccent(){ const s=document.body.style; ['--acc','--acc2','--accText','--glow','--bg','--bg2','--card','--card2','--line','--txt','--muted','--shadow'].forEach(v=>s.removeProperty(v)); }
-function appMode(){ return lsGet('batisuivi_mode','sombre')==='clair'?'clair':'sombre'; }
+function appMode(){ return 'sombre'; } /* mode clair abandonné : l'app est forcée en sombre (setMode/applyLightVars restent en sommeil, jamais appelés) */
 function setMode(m){ lsSet('batisuivi_mode', m==='clair'?'clair':'sombre'); applyTheme(); render(); }
 /* Mode clair : dérive des surfaces CLAIRES depuis l'accent (fond pâle, texte foncé, cartes claires). L'accent reste identique. */
 function applyLightVars(){ try{
@@ -811,7 +815,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v126 · 04/07";
+const APP_VERSION="v129 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1876,7 +1880,7 @@ function chCard(c){
 }
 function viewArchivedList(){
   const list=myArchived().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  let h=`<button class="backbtn" onclick="closeArchived()"><span class="ar"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span> Retour aux chantiers</button>`;
+  let h='';
   if(!list.length){ h+=`<div class="card empty">Aucun chantier archivé.</div>`; return h; }
   list.forEach(c=>{
     const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
@@ -1900,7 +1904,7 @@ function chListHTML(){
   if(q) list=list.filter(c=>((c.nom||'')+' '+clientFull(c)+' '+adresseFull(c)).toLowerCase().includes(q));
   if(CH_FILTER) list=list.filter(c=>(c.etape||ETAPES[0])===CH_FILTER);
   if(!list.length) return `<div class="card empty">Aucun chantier ne correspond à ta recherche.</div>`;
-  let h=perm('suppr_chantier')?`<p class="note" style="margin:-2px 0 10px;font-size:11px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Glisse un chantier vers la gauche pour l'archiver ou le supprimer.</p>`:'';
+  let h='';
   list.forEach(c=>{ h+=chCard(c); });
   return h;
 }
@@ -1909,7 +1913,7 @@ function viewChantiersList(){
   if(CLIENTS_VIEW) return viewClientsList();
   const all=myChantiers(); const nArch=myArchived().length;
   let h='';
-  if(isChef()) h+=`<div class="row" style="margin-bottom:12px"><button class="btn ghost" onclick="openClients()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M14 9h5M14 13h4M5 16h7"/></svg> Annuaire clients</button>${nArch?`<button class="btn ghost" onclick="openArchived()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archivés (${nArch})</button>`:''}</div>`;
+  if(isChef() && nArch) h+=`<div class="row" style="margin-bottom:12px"><button class="btn ghost" onclick="openArchived()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archivés (${nArch})</button></div>`;
   else if(nArch) h+=`<button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="openArchived()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Chantiers archivés (${nArch})</button>`;
   if(!all.length){ h+=`<div class="card empty">${isChef()?"Aucun chantier. Touche le bouton + en bas à droite pour en créer un.":"Aucun chantier ne t'est assigné pour l'instant."}</div>`; return h; }
   const chips=['Tous',...ETAPES];
@@ -2048,7 +2052,6 @@ function viewChantier(id){
 
   ${plansCard(id,c)}
 
-  ${isChef()? projectionCard(id,c):''}
 
   ${isChef()?`<div class="card">
     <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Équipe assignée</h2><button class="btn ghost mini" onclick="assignMembers('${id}')">Gérer</button></div>
@@ -2068,8 +2071,12 @@ function viewChantier(id){
     <div class="chat-bar" style="background:transparent;padding:6px 0 0"><input id="tm_msg_${id}" placeholder="Répondre au client…" onkeydown="if(event.key==='Enter'){event.preventDefault();teamSendMsg('${id}');}"><button class="btn primary" onclick="teamSendMsg('${id}')">Envoyer</button></div>
   </div>
 
-  ${iaOn()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openCRVocal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Compte-rendu vocal (IA)</button>`:''}
-  ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Compte-rendu du chantier (PDF)</button>`:''}
+  ${(iaOn()||isChef())?`<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Compte-rendu de chantier</h2></div>
+    ${iaOn()?`<button class="btn ghost" style="width:100%" onclick="openCRVocal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Compte-rendu vocal (IA)</button>`:''}
+    ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Voir / imprimer le compte-rendu</button>`:''}
+    ${isChef()?`<button class="btn primary" style="width:100%;margin-top:10px" onclick="chantierReportShare('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg> Partager le compte-rendu au client</button>`:''}
+  </div>`:''}
 
   ${(isChef()&&!c.archived)? clotureCard(id,c):''}
 
@@ -2160,7 +2167,7 @@ function projectionCard(id,c){
     <div id="proj_result_${id}" style="margin-top:10px"></div>`;
   if(projs.length){
     h+=`<div class="section-title"><h2 style="font-size:14px">Rendus enregistrés</h2></div>`;
-    projs.forEach(p=>{ h+=`<div style="margin-bottom:10px"><img src="${p.result}" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="tag">${frSignAt(p.ts)}${p.by?(' · '+esc(p.by)):''}<button class="iconbtn danger" style="float:right" onclick="delProjection('${id}','${p.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div></div>`; });
+    projs.forEach(p=>{ h+=`<div style="margin-bottom:10px"><img src="${p.result}" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="tag" style="display:flex;align-items:center;gap:8px">${frSignAt(p.ts)}${p.by?(' · '+esc(p.by)):''}<span style="flex:1"></span><button class="iconbtn" title="Télécharger" onclick="projDownloadSaved('${id}','${p.k}')">${icone('download')}</button><button class="iconbtn danger" onclick="delProjection('${id}','${p.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div></div>`; });
   }
   h+=`</div>`;
   return h;
@@ -2180,11 +2187,26 @@ function projGenerate(id){
     if(!out){ if(res) res.innerHTML='<p class="note" style="margin:0;color:var(--danger)">❌ Aucun rendu reçu. Réessaie.</p>'; return; }
     const url=(String(out).indexOf('data:')===0)?out:('data:image/png;base64,'+out);
     _projLast[id]=url;
-    if(res) res.innerHTML='<img src="'+url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"><button class="btn primary" style="width:100%;margin-top:10px" onclick="projSave(\''+id+'\')">💾 Enregistrer ce rendu</button>';
+    if(res) res.innerHTML='<img src="'+url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost" style="flex:1" onclick="projDownload(\''+id+'\')">⬇️ Télécharger</button><button class="btn primary" style="flex:2" onclick="projSave(\''+id+'\')">💾 Enregistrer</button></div>';
   }).catch(e=>{ if(res) res.innerHTML='<p class="note" style="margin:0;color:var(--danger)">❌ '+esc((e&&e.message)||'Erreur pendant la génération')+'</p>'; });
 }
 function projSave(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Rien à enregistrer"); return; } _projCompress(url,small=>{ if(!small){ toast("Souci à l'enregistrement"); return; } const c=CHANTIERS[id]; if(!c.projections)c.projections={}; c.projections[uid()]={result:small,ts:Date.now(),by:ME?ME.nom:''}; saveChantier(id); toast("Rendu enregistré ✅"); render(); }); }
 function delProjection(id,k){ if(!confirm("Supprimer ce rendu ?")) return; delete CHANTIERS[id].projections[k]; saveChantier(id); render(); }
+function projDownload(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Génère d'abord un rendu"); return; } const a=document.createElement('a'); a.href=url; a.download='rendu_'+((CHANTIERS[id]&&CHANTIERS[id].nom)||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.png'; document.body.appendChild(a); a.click(); a.remove(); }
+function projDownloadSaved(id,k){ const p=CHANTIERS[id]&&CHANTIERS[id].projections&&CHANTIERS[id].projections[k]; if(!p||!p.result) return; const a=document.createElement('a'); a.href=p.result; a.download='rendu_'+((CHANTIERS[id]&&CHANTIERS[id].nom)||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
+let PROJ_CHANTIER='';
+function setProjChantier(id){ PROJ_CHANTIER=id; render(); }
+function viewProjection(){
+  if(!isChef()) return `<div class="card"><p class="note" style="margin:0">Réservé au patron ou au chef.</p></div>`;
+  const chs=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived);
+  if(!chs.length) return `<div class="card"><p class="note" style="margin:0">Crée d'abord un chantier pour générer une projection.</p></div>`;
+  const sel=(PROJ_CHANTIER && CHANTIERS[PROJ_CHANTIER] && !CHANTIERS[PROJ_CHANTIER].archived)?PROJ_CHANTIER:chs[0];
+  PROJ_CHANTIER=sel;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('eye')} Projection / Rendu IA</h2></div>
+    <label>Chantier concerné</label><select onchange="setProjChantier(this.value)">${chs.map(id=>`<option value="${id}" ${id===sel?'selected':''}>${esc(CHANTIERS[id].nom||'Chantier')}</option>`).join('')}</select></div>`;
+  h+=projectionCard(sel, CHANTIERS[sel]);
+  return h;
+}
 
 function addPhoto(id,input){ const f=input.files&&input.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); const url=cv.toDataURL('image/jpeg',0.7); const c=CHANTIERS[id]; if(!c.photos)c.photos={}; const pid=uid(); c.photos[pid]={url,ts:Date.now(),by:ME?ME.nom:''}; saveChantier(id); render(); }; img.src=e.target.result; }; r.readAsDataURL(f); }
@@ -2905,10 +2927,6 @@ function viewDashboard(){
     <div class="kpi ok"><div class="big">${termines}</div><div class="lbl">Terminés</div></div>
     <div class="kpi warn"><div class="big">${retard}</div><div class="lbl">En retard</div></div>
   </div>
-  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
-    <p class="note" style="margin-top:0">Le chiffre d'affaires, les devis, les factures, les clients et les paramètres sont désormais réunis dans l'Espace Facturation.</p>
-    <button class="btn primary" style="width:100%;margin-top:10px" onclick="openFactu()">${icone('receipt')} Ouvrir l'Espace Facturation</button>
-  </div>
   ${laborCard(all,eur)}
   <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Vue d'ensemble</h2></div>`;
   if(!all.length){ h+=`<p class="note">Aucun chantier pour l'instant.</p>`; }
@@ -2928,13 +2946,24 @@ function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi 
 
 /* ====================== ESPACE FACTURATION (mini-app plein écran) ====================== */
 let FACTU_OPEN=false, FTAB='resume';
+let FDEVIS_SUB='now', FFACT_TYPE='pro', FFACT_SUB='now';
+function setFDevisSub(s){ FDEVIS_SUB=s; render(); }
+function setFFactType(t){ FFACT_TYPE=t; render(); }
+function setFFactSub(s){ FFACT_SUB=s; render(); }
+function moisFr(m){ return ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][m]||''; }
+function docEnCours(d){ const c=CHANTIERS[d.id]; return !!(c && !c.archived && c.etape!==ETAPES[ETAPES.length-1]); }
+function groupByMonthHTML(list){
+  const groups={};
+  list.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).forEach(d=>{ const dt=new Date(d.ts||0); const key=dt.getFullYear()+'-'+String(dt.getMonth()).padStart(2,'0'); (groups[key]||(groups[key]=[])).push(d); });
+  return Object.keys(groups).sort((a,b)=>a<b?1:-1).map(k=>{ const items=groups[k]; const dt=new Date(items[0].ts||0); return `<div class="section-title"><h2 style="font-size:13px">${moisFr(dt.getMonth())} ${dt.getFullYear()}</h2></div>`+items.map(factuDocRow).join(''); }).join('');
+}
 let HUB=null, HTAB='';
 const HUBS={
   dashboard:{title:'Tableau de bord',icon:'chart',tabs:[['vue','chart',"Vue d'ensemble"]]},
   chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','users','Clients'],['modeles','layers','Modèles'],['carte','map-pin','Carte']]},
-  equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['vehicules','truck','Véhicules'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
+  equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
   planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
-  ia:{title:'IA',icon:'robot',tabs:[['assistant','robot','Assistant'],['projection','eye','Projection'],['cr','mic','C.-rendus'],['devisia','file','Devis IA'],['redaction','edit','Rédaction']]},
+  ia:{title:'IA',icon:'robot',tabs:[['assistant','robot','Assistant'],['projection','eye','Projection'],['devisia','file','Devis IA'],['redaction','edit','Rédaction']]},
   params:{title:'Paramètres',icon:'settings',tabs:[['entreprise','id','Entreprise'],['factu','receipt','Facturation'],['roles','shield','Rôles'],['apparence','palette','Apparence'],['systeme','settings','Système']]}
 };
 function openFactu(){ if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; } HUB='facturation'; closeModal(); render(); toTop(); }
@@ -2998,8 +3027,10 @@ function renderAccueil(){
 function renderHub(){
   const cfg=HUBS[HUB]; if(!cfg){ HUB=null; return renderAccueil(); }
   if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]) return renderBossChantier();
-  navEl.classList.remove('hidden'); navEl.classList.add('compact');
-  navEl.innerHTML=cfg.tabs.map(([t,ic,lb])=>`<button class="${HTAB===t?'on':''}" onclick="setHTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join('');
+  const hideNav = (HUB==='dashboard') || (HUB==='ia' && HTAB==='assistant' && CHAT_OPEN==='ai');
+  if(hideNav){ navEl.classList.add('hidden'); }
+  else { navEl.classList.remove('hidden'); navEl.classList.add('compact');
+    navEl.innerHTML=cfg.tabs.map(([t,ic,lb])=>`<button class="${HTAB===t?'on':''}" onclick="setHTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join(''); }
   const lbl=(cfg.tabs.find(t=>t[0]===HTAB)||[])[2]||cfg.title;
   app.innerHTML=`
   <div class="top"><div class="brand" style="min-width:0">
@@ -3023,7 +3054,7 @@ function renderBossChantier(){
 function hubFab(){
   const plus=`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
   if(HUB==='chantiers' && HTAB==='liste') return `<button class="fab" onclick="newChantier()" aria-label="Nouveau chantier">${plus}</button>`;
-  if(HUB==='equipe' && HTAB==='vehicules') return `<button class="fab" onclick="newVehicule()" aria-label="Nouveau véhicule">${plus}</button>`;
+  if(HUB==='equipe' && HTAB==='membres' && EQ_SUB==='vehicules') return `<button class="fab" onclick="newVehicule()" aria-label="Nouveau véhicule">${plus}</button>`;
   return '';
 }
 function hubPlaceholder(title,desc,extra){ return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${esc(title)}</h2></div><p class="note" style="margin:0">${esc(desc)}</p>${extra||''}<p class="tag" style="margin-top:10px">🚧 En construction — bientôt disponible</p></div>`; }
@@ -3059,7 +3090,7 @@ function hubBody(hub,tab){
   }
   if(hub==='ia'){
     if(tab==='assistant'){ if(CHAT_OPEN==='ai') return '<div class="chat-full">'+chatThreadView()+'</div>'; return hubReady('Assistant IA','Pose tes questions sur tes chantiers, le bâtiment, l’organisation, tes devis. Réponses en quelques secondes.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openConv('ai')">${icone('robot')} Ouvrir l’assistant</button>`); }
-    if(tab==='projection') return hubReady('Projection / Rendu IA','Depuis une photo de l’existant (et une photo d’inspiration), l’IA génère un rendu projeté photoréaliste. Ça se passe dans chaque fiche chantier, carte « Projection — rendu IA ».',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="goHub('chantiers')">${icone('building')} Aller aux chantiers</button>`);
+    if(tab==='projection') return viewProjection();
     if(tab==='cr') return hubReady('Comptes-rendus vocaux','L’équipe dicte, l’IA structure le compte-rendu (travaux réalisés, matériaux, problèmes, notes). Ça se fait dans chaque fiche chantier, bouton « Compte-rendu vocal ».',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="goHub('chantiers')">${icone('building')} Aller aux chantiers</button>`);
     if(tab==='devisia') return viewDevisIA();
     if(tab==='redaction') return viewRedaction();
@@ -3076,8 +3107,6 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEtapesManager()">${icone('flag')} Étapes de chantier</button></div>`;
     if(tab==='apparence') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Apparence</h2></div>
       <p class="tag" style="margin-bottom:8px">Couleur de l’app</p>${themeSwatches(40)}
-      <p class="tag" style="margin:12px 0 8px">Ambiance</p>
-      <div class="row" style="gap:6px"><button class="btn ${appMode()==='clair'?'primary':'ghost'}" style="flex:1" onclick="setMode('clair')">☀️ Clair</button><button class="btn ${appMode()==='sombre'?'primary':'ghost'}" style="flex:1" onclick="setMode('sombre')">🌙 Sombre</button></div>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
@@ -3136,11 +3165,6 @@ function factuResume(){
   </div>`;
   h+=caChartCard(all,eurF);
   h+=ereportingCard(all);
-  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Accès rapide</h2></div>
-    <div class="row"><button class="btn ghost" onclick="setFTab('devis')">${icone('file')} Devis</button><button class="btn ghost" onclick="setFTab('factures')">${icone('receipt')} Factures</button></div>
-    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="setFTab('params')">${icone('settings')} Paramètres de facturation</button>
-    <p class="note" style="margin-top:8px;font-size:11px">Pour créer un devis ou une facture : ouvre un chantier, puis la carte « Devis / Facture ».</p>
-  </div>`;
   return h;
 }
 
@@ -3154,7 +3178,7 @@ function factuDocRow(d){
     <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾':'📄'} ${esc(d.num||'')}</b>
       <div class="tag">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''} · ${eurF(tot)} HT ${status}</div></div>
     <button class="iconbtn" title="Voir / imprimer" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">${icone('eye')}</button>
-    ${d.type==='facture'?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
+    ${(d.type==='facture' && (CHANTIERS[d.id]||{}).clientType==='pro')?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
     <button class="iconbtn danger" title="Supprimer" onclick="delFactuDoc('${d.id}','${d.pid}')">${icone('trash')}</button>
   </div>`;
 }
@@ -3163,26 +3187,34 @@ function delFactuDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi
 
 function factuDevis(){
   const devs=factuAllDocs().filter(d=>d.type!=='facture');
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Devis (${devs.length})</h2></div>`;
-  if(!devs.length){ h+=`<p class="note">Aucun devis publié. Ouvre un chantier, ajoute des lignes, puis « Publier le devis ».</p>`; }
-  else {
-    h+=`<input id="fq_devis" placeholder="Rechercher (n°, client, chantier)…" oninput="factuFilter('devis')" style="width:100%;margin:2px 0 10px">`;
-    h+=`<div id="list_devis">`+devs.map(factuDocRow).join('')+`</div>`;
+  const sub=FDEVIS_SUB;
+  const now=devs.filter(docEnCours);
+  const past=devs.filter(d=>d.signature);
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Devis</h2></div>
+    <div class="row" style="gap:6px"><button class="btn ${sub==='now'?'primary':'ghost'}" style="flex:1" onclick="setFDevisSub('now')">En ce moment</button><button class="btn ${sub==='past'?'primary':'ghost'}" style="flex:1" onclick="setFDevisSub('past')">Passés</button></div>`;
+  if(sub==='now'){
+    if(!now.length) h+=`<p class="note" style="margin-top:10px">Aucun devis en cours. Ouvre un chantier, ajoute des lignes, puis « Publier le devis ».</p>`;
+    else h+=`<div style="margin-top:10px">`+now.map(factuDocRow).join('')+`</div>`;
+  } else {
+    if(!past.length) h+=`<p class="note" style="margin-top:10px">Aucun devis signé pour l'instant.</p>`;
+    else h+=`<div style="margin-top:10px">`+groupByMonthHTML(past)+`</div>`;
   }
   h+=`</div>`;
   return h;
 }
 function factuFactures(){
   const facts=factuAllDocs().filter(d=>d.type==='facture');
-  const tot=facts.reduce((s,d)=>s+docTotal(d),0);
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Factures (${facts.length})</h2></div>`;
-  if(facts.length) h+=`<p class="note" style="margin-top:0">Total facturé : <b style="color:var(--acc2)">${eurF2(tot)} HT</b></p>`;
-  if(!facts.length){ h+=`<p class="note">Aucune facture publiée. Ouvre un chantier, puis « Facturer ».</p>`; }
-  else {
-    h+=`<input id="fq_factures" placeholder="Rechercher (n°, client, chantier)…" oninput="factuFilter('factures')" style="width:100%;margin:2px 0 10px">`;
-    h+=`<div id="list_factures">`+facts.map(factuDocRow).join('')+`</div>`;
-    h+=`<p class="note" style="margin-top:8px;font-size:11px">${icone('download')} = télécharger la facture électronique Factur-X (PDF avec XML intégré).</p>`;
-  }
+  const type=FFACT_TYPE, sub=FFACT_SUB;
+  const isPro=d=>((CHANTIERS[d.id]||{}).clientType==='pro');
+  const byType=facts.filter(d=> type==='pro'? isPro(d) : !isPro(d));
+  const rows = sub==='now' ? byType.filter(docEnCours) : byType.filter(d=>!docEnCours(d));
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Factures</h2></div>
+    <div class="row" style="gap:6px"><button class="btn ${type==='pro'?'primary':'ghost'}" style="flex:1" onclick="setFFactType('pro')">Pros</button><button class="btn ${type==='part'?'primary':'ghost'}" style="flex:1" onclick="setFFactType('part')">Particuliers</button></div>
+    <div class="row" style="gap:6px;margin-top:8px"><button class="btn ${sub==='now'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('now')">En ce moment</button><button class="btn ${sub==='past'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('past')">Passées</button></div>`;
+  if(!rows.length) h+=`<p class="note" style="margin-top:10px">Aucune facture ${sub==='now'?'en cours':'passée'} pour ce type de client.</p>`;
+  else if(sub==='now') h+=`<div style="margin-top:10px">`+rows.map(factuDocRow).join('')+`</div>`;
+  else h+=`<div style="margin-top:10px">`+groupByMonthHTML(rows)+`</div>`;
+  if(type==='pro') h+=`<p class="note" style="margin-top:8px;font-size:11px">${icone('download')} = facture électronique Factur-X (clients pros).</p>`;
   h+=`</div>`;
   return h;
 }
@@ -3334,13 +3366,23 @@ function viewFrais(){
     <div class="kpis"><div class="kpi acc"><div class="big" style="font-size:22px">${eurFmt(total)}</div><div class="lbl">Total des frais</div></div><div class="kpi"><div class="big" style="font-size:22px">${notes.length}</div><div class="lbl">Note${notes.length>1?'s':''}</div></div></div>
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFrais()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter une note de frais</button></div>`;
   if(!notes.length){ h+=`<div class="card"><p class="note" style="margin:0">Aucune note de frais pour l'instant.</p></div>`; return h; }
-  notes.forEach(n=>{
-    h+=`<div class="card"><div class="task-row" style="padding-top:0">
-      <div style="flex:1;min-width:0"><b style="font-size:16px">${eurFmt(parseFloat(n.montant)||0)}</b>${n.desc?`<div style="margin-top:2px">${esc(n.desc)}</div>`:''}
-        <div class="tag" style="margin-top:2px">${esc(n.nomChantier)}${n.by?' · '+esc(n.by):''} · ${frDateTime(n.ts)}</div></div>
-      <button class="iconbtn danger" onclick="delFrais('${n.id}','${n.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>
-      ${n.photo?`<img src="${n.photo}" alt="justificatif" style="max-height:160px;border:1px solid var(--line);border-radius:10px;margin-top:6px">`:''}
-    </div>`;
+  const num=v=>parseFloat(v)||0;
+  const years={};
+  notes.forEach(n=>{ const dt=new Date(n.ts||0); const y=dt.getFullYear(), m=dt.getMonth(); if(!years[y])years[y]={}; if(!years[y][m])years[y][m]=[]; years[y][m].push(n); });
+  Object.keys(years).sort((a,b)=>b-a).forEach(y=>{
+    h+=`<div class="section-title"><h2 style="font-size:16px">${y}</h2></div>`;
+    const months=years[y];
+    Object.keys(months).sort((a,b)=>b-a).forEach(m=>{
+      const list=months[m]; const monTot=list.reduce((s,n)=>s+num(n.montant),0);
+      const byMember={}; list.forEach(n=>{ const nm=n.by||'—'; byMember[nm]=(byMember[nm]||0)+num(n.montant); });
+      h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:14px">${moisFr(+m)} ${y}</h2><b class="tag" style="color:var(--acc2)">${eurFmt(monTot)}</b></div>`;
+      list.forEach(n=>{
+        h+=`<div class="task-row" style="align-items:flex-start"><div style="flex:1;min-width:0"><b>${eurFmt(num(n.montant))}</b>${n.by?` · ${esc(n.by)}`:''}${n.desc?`<div style="margin-top:1px">${esc(n.desc)}</div>`:''}<div class="tag">${esc(n.nomChantier)} · ${frDateTime(n.ts)}</div>${n.photo?`<img src="${n.photo}" alt="justificatif" style="max-height:120px;border:1px solid var(--line);border-radius:10px;margin-top:6px;display:block">`:''}</div>
+          <button class="iconbtn danger" onclick="delFrais('${n.id}','${n.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`;
+      });
+      h+=`<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px">`+Object.keys(byMember).sort((a,b)=>byMember[b]-byMember[a]).map(nm=>`<div class="task-row"><span style="flex:1" class="note">Total ${esc(nm)}</span><b>${eurFmt(byMember[nm])}</b></div>`).join('')+`</div>`;
+      h+=`</div>`;
+    });
   });
   return h;
 }
@@ -3426,8 +3468,7 @@ function delAvis(id){ if(!confirm("Supprimer cet avis ?")) return; const c=CHANT
 function openMapsChantier(id){ const c=CHANTIERS[id]; if(!c) return; const a=adresseFull(c); if(!a){ toast("Pas d'adresse pour ce chantier"); return; } window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a),'_blank'); }
 function viewCarte(){
   const all=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]})).filter(x=>!x.c.archived && adresseFull(x.c));
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('map-pin')} Carte des chantiers</h2></div>
-    <p class="note" style="margin:0">Tes chantiers avec une adresse, regroupés par ville. Touche une ligne pour ouvrir le chantier, ou « Itinéraire » pour l'ouvrir dans Google Maps.</p></div>`;
+  let h='';
   if(!all.length){ h+=`<div class="card"><p class="note" style="margin:0">Aucun chantier avec une adresse renseignée.</p></div>`; return h; }
   const groupes={};
   all.forEach(x=>{ const v=(x.c.ville||'').trim()||'Autres'; if(!groupes[v]) groupes[v]=[]; groupes[v].push(x); });
@@ -3831,11 +3872,7 @@ function openMenu(){
     <p class="note" style="margin-bottom:8px">Envoie une photo (ticket, péage, matériel…) visible uniquement par le patron.</p>
     <button class="btn ghost" style="width:100%" onclick="addNoteFrais()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Envoyer une note de frais</button>
 
-    <button id="bigTextBtn" class="btn ghost" style="width:100%;margin-top:20px" onclick="toggleBigText()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h9v2M8.5 5v13M6.5 18h4"/><path d="M14 13v-1h6v1M17 12v6M15.5 18h3"/></svg> Gros texte : ${bigText()?'activé':'désactivé'}</button>
-    ${perm('gerer_reglages')?`<button class="btn primary" style="width:100%;margin-top:20px" onclick="openFactu()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Espace Facturation</button>`:''}
-    ${perm('gerer_reglages')?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openFacturationSettings()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Paramètres de facturation</button>`:''}
-    ${perm('gerer_reglages')?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="exportData()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Exporter / sauvegarder les données</button>`:''}
-    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openHelp()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/><path d="M12 17h.01"/></svg> Guide d'utilisation</button>
+    <button class="btn ghost" style="width:100%;margin-top:20px" onclick="openHelp()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/><path d="M12 17h.01"/></svg> Guide d'utilisation</button>
     <button class="btn danger" style="width:100%;margin-top:10px" onclick="teamSignOut()">${DEV_ACCESS?'↩ Revenir à l\'espace dev':'Se déconnecter'}</button>
     <p class="note" style="text-align:center;margin-top:10px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p>`);
 }
@@ -4131,7 +4168,7 @@ function saveCroppedIcon(){
 }
 function removeMyPhoto(){ const u=myUid(); if(TEAM[u]){ delete TEAM[u].photo; saveTeam(u); } if(ME) delete ME.photo; toast("Photo retirée"); render(); }
 
-function setTheme(t){ lsSet(LS_THEME,t); applyTheme(); const team=!!document.getElementById('menuModalMark'); const client=!!document.getElementById('clientMenuMark'); render(); if(team) openMenu(); else if(client) openClientMenu(); }
+function setTheme(t){ lsSet(LS_THEME,t); applyTheme(); const m=document.getElementById('modal'); const modalOpen=!!(m && !m.classList.contains('hidden')); const team=modalOpen && !!document.getElementById('menuModalMark'); const client=modalOpen && !!document.getElementById('clientMenuMark'); render(); if(team) openMenu(); else if(client) openClientMenu(); }
 /* sélecteur de couleur : ligne principale + sous-ligne blanc/noir mélangés à une couleur */
 function themeSwatches(sz){ sz=sz||40;
   const cur=myTheme()||''; const dot=cur.indexOf('.'); const base=dot>0?cur.slice(0,dot):cur; const acc=dot>0?cur.slice(dot+1):'';
@@ -4442,6 +4479,50 @@ function chantierReportPDF(id){
    <p class="muted" style="margin-top:30px;border-top:1px solid #eee;padding-top:14px">${esc(coName())} · ${esc(contactInfo().tel)} · ${esc(contactInfo().email)}</p>
    </body></html>`);
   w.document.close();
+}
+async function chantierReportShare(id){
+  const c=CHANTIERS[id]; if(!c) return;
+  let PL; try{ toast("Génération du compte-rendu…"); PL=await loadPdfLib(); }catch(e){ toast("PDF indisponible hors ligne"); return; }
+  try{
+    const {PDFDocument,StandardFonts,rgb}=PL;
+    const doc=await PDFDocument.create(); let page=doc.addPage([595.28,841.89]);
+    const font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
+    const dark=rgb(0.1,0.1,0.1), grey=rgb(0.4,0.4,0.4), acc=rgb(0.23,0.51,0.96); const M=50; let y=800;
+    const t=(s,x,yy,f,sz,col)=>page.drawText(String(s==null?'':s).replace(/[^\x00-\xFF]/g,''),{x,y:yy,size:sz||10,font:f||font,color:col||dark});
+    const line=(s,f,sz,col)=>{ if(y<70){ page=doc.addPage([595.28,841.89]); y=800; } t(s,M,y,f,sz,col); y-=(sz||10)+6; };
+    t(coName(),M,y,bold,15); y-=16;
+    if(CONFIG_DB.adr){ t(CONFIG_DB.adr,M,y,font,9,grey); y-=11; }
+    const cpv=[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).join(' '); if(cpv){ t(cpv,M,y,font,9,grey); y-=11; }
+    y-=14; t('COMPTE-RENDU DE CHANTIER',M,y,bold,14,acc); y-=24;
+    line('Chantier : '+(c.nom||''),bold,11);
+    line('Client : '+(clientFull(c)||''),font,10);
+    const adr=adresseFull(c); if(adr) line('Adresse : '+adr,font,10);
+    line('Periode : '+frDate(c.dateDebut)+' -> '+frDate(c.dateFin),font,10);
+    const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
+    line('Avancement : '+pct+'% ('+(c.etape||ETAPES[0])+')',bold,11); y-=4;
+    const crs=c.crs?Object.values(c.crs).sort((a,b)=>b.ts-a.ts):[];
+    if(crs.length){ line('Comptes-rendus :',bold,11);
+      crs.forEach(r=>{ line('  '+frDateTime(r.ts)+(r.by?(' - '+r.by):''),font,9,grey);
+        if(r.taches_realisees) line('    Travaux : '+r.taches_realisees,font,9);
+        if(r.materiaux_manquants) line('    Materiaux : '+r.materiaux_manquants,font,9);
+        if(r.problemes) line('    Problemes : '+r.problemes,font,9);
+        if(r.notes) line('    Notes : '+r.notes,font,9); }); y-=4; }
+    const taches=c.taches?Object.values(c.taches):[]; const tDone=taches.filter(x=>x.done).length;
+    if(taches.length){ line('Taches : '+tDone+'/'+taches.length+' terminees',bold,11); taches.forEach(tk=>line('  '+(tk.done?'[x] ':'[ ] ')+(tk.label||''),font,9)); y-=4; }
+    const mats=c.materiel?Object.values(c.materiel):[];
+    if(mats.length){ line('Materiel :',bold,11); mats.forEach(m=>line('  - '+(m.label||'')+(m.qty?(' ('+m.qty+')'):''),font,9)); y-=4; }
+    if(c.pointages){ const rows=[]; Object.keys(c.pointages).forEach(u=>{ const ms=totalHeures(c.pointages[u]); if(ms>0){ rows.push('  '+((TEAM[u]||{}).nom||'?')+' : '+fmtDur(ms)); } });
+      if(rows.length){ line('Heures pointees :',bold,11); rows.forEach(r=>line(r,font,9)); y-=4; } }
+    line('Edite le '+frDate(todayISO()),font,9,grey);
+    const bytes=await doc.save();
+    let bin=''; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+    const dataUrl='data:application/pdf;base64,'+btoa(bin);
+    if(!c.docs) c.docs={};
+    c.docs[uid()]={nom:'Compte-rendu '+(c.nom||'chantier')+' ('+frDate(todayISO())+')', url:dataUrl, ts:Date.now()};
+    saveChantier(id);
+    toast("Compte-rendu partagé au client ✅"); render();
+    try{ if(navigator.canShare){ const file=new File([bytes],'compte-rendu.pdf',{type:'application/pdf'}); if(navigator.canShare({files:[file]})) navigator.share({files:[file],title:'Compte-rendu de chantier'}).catch(()=>{}); } }catch(_){ }
+  }catch(e){ toast("Souci à la génération du compte-rendu"); }
 }
 function genDoc(id,type){ openDocWindow(docSnapshot(id,type)); }
 function publishDoc(id,type){
@@ -4786,7 +4867,7 @@ function clotureCard(id,c){
   const reservesLabel=e.reserves.length?`Réserves levées (${e.reserves.filter(x=>x.statut==='done').length}/${e.reserves.length})`:'Réserves levées';
   const reservesAttente=e.reserves.length?'en attente':'aucune réserve';
   const reservesOkDisp=e.reserves.length?e.reservesOK:true;
-  let h=`<div class="card" style="margin-top:10px">
+  let h=`<div class="card">
     <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Clôture du chantier</h2></div>
     <p class="note" style="margin:0 0 10px">Vérifie que tout est en ordre avant de clôturer. La clôture archive le chantier et génère un récap PDF.</p>
     ${row(e.recu,'Réception prononcée','en attente')}
@@ -5069,15 +5150,16 @@ function maybeInstall(){
     const ua=navigator.userAgent||''; const iOS=/iPhone|iPad|iPod/.test(ua); const And=/Android/.test(ua);
     if(!iOS && !And) return;
     if(document.getElementById('installBanner')) return;
-    const steps = iOS
-      ? `Touche le bouton <b>Partager</b> <svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> en bas de Safari, puis <b>« Sur l'écran d'accueil »</b> <svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>.`
-      : `Ouvre le menu <b>⋮</b> de ton navigateur, puis <b>« Ajouter à l'écran d'accueil »</b>.`;
+    const steps = `<div class="plat">📱 iPhone (Safari)</div>
+      <ol><li>Touche le bouton <b>Partager</b> en bas de Safari</li><li>Choisis <b>« Sur l'écran d'accueil »</b></li><li>Touche <b>Ajouter</b></li></ol>
+      <div class="plat">🤖 Android (Chrome)</div>
+      <ol><li>Ouvre le menu <b>⋮</b> en haut à droite</li><li>Choisis <b>« Ajouter à l'écran d'accueil »</b></li><li>Touche <b>Ajouter</b></li></ol>`;
     const el=document.createElement('div'); el.id='installBanner'; el.className='install-banner';
     el.innerHTML=`<button class="ib-close" onclick="dismissInstall()"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
       <div class="ib-row"><div class="ib-logo">${logoHTML()}</div>
         <div class="ib-txt"><b>Installe ${esc(coName())} 📲</b>
         <p>Pour une meilleure expérience (plein écran, accès rapide), ajoute l'app à ton écran d'accueil.</p>
-        <p class="ib-steps">${steps}</p></div></div>
+        <div class="ib-steps">${steps}</div></div></div>
       <button class="btn primary ib-ok" onclick="dismissInstall()">J'ai compris 👍</button>`;
     document.body.appendChild(el); requestAnimationFrame(()=>el.classList.add('show'));
   }catch(e){}
