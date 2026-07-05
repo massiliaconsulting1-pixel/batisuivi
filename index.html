@@ -558,7 +558,7 @@ function _hexRgb(h){ h=(h||'').replace('#',''); if(h.length===3) h=h.split('').m
 function _lighten(h,amt){ const {r,g,b}=_hexRgb(h); const L=v=>Math.round(v+(255-v)*amt); const x=v=>('0'+v.toString(16)).slice(-2); return '#'+x(L(r))+x(L(g))+x(L(b)); }
 function _darken(h,k){ const {r,g,b}=_hexRgb(h); const x=v=>('0'+Math.max(5,Math.round(v*k)).toString(16)).slice(-2); return '#'+x(r)+x(g)+x(b); }
 function clearCustomAccent(){ const s=document.body.style; ['--acc','--acc2','--accText','--glow','--bg','--bg2','--card','--card2','--line','--txt','--muted','--shadow'].forEach(v=>s.removeProperty(v)); }
-function appMode(){ return 'sombre'; } /* mode clair abandonné : l'app est forcée en sombre (setMode/applyLightVars restent en sommeil, jamais appelés) */
+function appMode(){ return lsGet('batisuivi_mode','sombre')==='clair'?'clair':'sombre'; }
 function setMode(m){ lsSet('batisuivi_mode', m==='clair'?'clair':'sombre'); applyTheme(); render(); }
 /* Mode clair : dérive des surfaces CLAIRES depuis l'accent (fond pâle, texte foncé, cartes claires). L'accent reste identique. */
 function applyLightVars(){ try{
@@ -815,7 +815,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v129 · 04/07";
+const APP_VERSION="v130 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1637,7 +1637,7 @@ function renderClientDashboard(){
   const etapeIdx=ETAPES.indexOf(ch.etape||ETAPES[0]);
   const pct=Math.round((etapeIdx/(ETAPES.length-1))*100);
   const photos=ch.photos?Object.keys(ch.photos).map(k=>({k,...ch.photos[k]})).sort((a,b)=>b.ts-a.ts):[];
-  const docs=ch.docs?Object.values(ch.docs):[];
+  const docs=ch.docs?Object.keys(ch.docs).map(k=>Object.assign({k:k},ch.docs[k])):[];
   const pubDocs=ch.published?Object.keys(ch.published).map(pid=>({pid,...ch.published[pid]})).sort((a,b)=>(b.ts||0)-(a.ts||0)):[];
   const msgs=ch.messages?Object.keys(ch.messages).map(k=>({k,...ch.messages[k]})).filter(m=>!m.deleted).sort((a,b)=>a.ts-b.ts):[];
   app.innerHTML=`
@@ -1672,7 +1672,7 @@ function renderClientDashboard(){
         <button class="btn ghost mini" onclick="clientOpenDoc(CLIENT.chantierId,'${d.pid}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> PDF</button></div>
       ${d.type==='devis'&&!d.signature?`<button class="btn primary" style="width:100%;margin-top:10px" onclick="clientSignDoc('${d.pid}')">✍️ Signer le devis (bon pour accord)</button>`:''}
     </div>`).join('')}
-    ${docs.map(d=>`<div class="task-row"><span>📎 ${esc(d.nom)}</span><a class="linkbtn" style="margin-left:auto" href="${d.url}" target="_blank">Ouvrir</a></div>`).join('')}</div>`:''}
+    ${docs.map(d=>`<div class="task-row"><span>📎 ${esc(d.nom)}</span><button class="btn ghost mini" style="margin-left:auto" onclick="clientOpenReport('${d.k}')">Ouvrir</button></div>`).join('')}</div>`:''}
 
   ${(()=>{ const crs=ch.crs?Object.keys(ch.crs).map(k=>({k,...ch.crs[k]})).filter(r=>r.published).sort((a,b)=>b.ts-a.ts):[]; if(!crs.length) return ''; return `<div class="card"><div class="section-title" style="margin-top:0"><h2><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Comptes-rendus</h2><span class="tag">${crs.length}</span></div>${crs.map(r=>`<div style="border-bottom:1px solid var(--line);padding:10px 0"><div style="display:flex;align-items:center;gap:8px"><b style="font-size:13px;flex:1">${frDateTime(r.ts)}</b><button class="btn ghost mini" onclick="crReportPDF(CLIENT.chantierId,'${r.k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> PDF</button></div>${r.taches_realisees?('<div style="margin-top:4px"><b><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Travaux réalisés</b><br>'+esc(r.taches_realisees)+'</div>'):''}${r.materiaux_manquants?('<div style="margin-top:4px"><b><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Matériaux à prévoir</b><br>'+esc(r.materiaux_manquants)+'</div>'):''}${r.problemes?('<div style="margin-top:4px"><b><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Points d\'attention</b><br>'+esc(r.problemes)+'</div>'):''}${r.notes?('<div style="margin-top:4px"><b><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Notes</b><br>'+esc(r.notes)+'</div>'):''}</div>`).join('')}</div>`; })()}
 
@@ -2076,6 +2076,7 @@ function viewChantier(id){
     ${iaOn()?`<button class="btn ghost" style="width:100%" onclick="openCRVocal('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3"/></svg> Compte-rendu vocal (IA)</button>`:''}
     ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Voir / imprimer le compte-rendu</button>`:''}
     ${isChef()?`<button class="btn primary" style="width:100%;margin-top:10px" onclick="chantierReportShare('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg> Partager le compte-rendu au client</button>`:''}
+    ${(isChef()&&c.docs&&Object.keys(c.docs).length)?`<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><p class="tag" style="margin:0 0 6px">Partagés au client</p>`+Object.keys(c.docs).map(k=>`<div class="task-row"><span style="flex:1;font-size:12px">📎 ${esc(c.docs[k].nom||'Compte-rendu')}</span><button class="iconbtn" title="Ouvrir" onclick="clientOpenReportById('${id}','${k}')">${icone('eye')}</button><button class="iconbtn danger" title="Retirer du client" onclick="delSharedDoc('${id}','${k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`).join('')+`</div>`:''}
   </div>`:''}
 
   ${(isChef()&&!c.archived)? clotureCard(id,c):''}
@@ -2190,22 +2191,16 @@ function projGenerate(id){
     if(res) res.innerHTML='<img src="'+url+'" style="width:100%;border-radius:10px;border:1px solid var(--line)"><div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost" style="flex:1" onclick="projDownload(\''+id+'\')">⬇️ Télécharger</button><button class="btn primary" style="flex:2" onclick="projSave(\''+id+'\')">💾 Enregistrer</button></div>';
   }).catch(e=>{ if(res) res.innerHTML='<p class="note" style="margin:0;color:var(--danger)">❌ '+esc((e&&e.message)||'Erreur pendant la génération')+'</p>'; });
 }
-function projSave(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Rien à enregistrer"); return; } _projCompress(url,small=>{ if(!small){ toast("Souci à l'enregistrement"); return; } const c=CHANTIERS[id]; if(!c.projections)c.projections={}; c.projections[uid()]={result:small,ts:Date.now(),by:ME?ME.nom:''}; saveChantier(id); toast("Rendu enregistré ✅"); render(); }); }
-function delProjection(id,k){ if(!confirm("Supprimer ce rendu ?")) return; delete CHANTIERS[id].projections[k]; saveChantier(id); render(); }
+function projSave(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Rien à enregistrer"); return; } _projCompress(url,small=>{ if(!small){ toast("Souci à l'enregistrement"); return; } const store=_projStore(id); if(!store){ toast("Erreur"); return; } store[uid()]={result:small,ts:Date.now(),by:ME?ME.nom:''}; _projPersist(id); toast("Rendu enregistré ✅"); render(); }); }
+function delProjection(id,k){ if(!confirm("Supprimer ce rendu ?")) return; const store=_projStore(id); if(store&&store[k]){ delete store[k]; _projPersist(id); render(); } }
 function projDownload(id){ const url=_projLast&&_projLast[id]; if(!url){ toast("Génère d'abord un rendu"); return; } const a=document.createElement('a'); a.href=url; a.download='rendu_'+((CHANTIERS[id]&&CHANTIERS[id].nom)||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.png'; document.body.appendChild(a); a.click(); a.remove(); }
-function projDownloadSaved(id,k){ const p=CHANTIERS[id]&&CHANTIERS[id].projections&&CHANTIERS[id].projections[k]; if(!p||!p.result) return; const a=document.createElement('a'); a.href=p.result; a.download='rendu_'+((CHANTIERS[id]&&CHANTIERS[id].nom)||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
-let PROJ_CHANTIER='';
-function setProjChantier(id){ PROJ_CHANTIER=id; render(); }
+function projDownloadSaved(id,k){ const store=_projStore(id); const p=store&&store[k]; if(!p||!p.result) return; const a=document.createElement('a'); a.href=p.result; a.download='rendu_'+((CHANTIERS[id]&&CHANTIERS[id].nom)||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
+let IA_PROJ = (function(){ try{ var v=lsGet('batisuivi_iaproj',{}); return (v&&typeof v==='object')?v:{}; }catch(_){ return {}; } })();
+function _projStore(id){ return id==='ia' ? IA_PROJ : (CHANTIERS[id] ? (CHANTIERS[id].projections||(CHANTIERS[id].projections={})) : null); }
+function _projPersist(id){ if(id==='ia'){ try{ lsSet('batisuivi_iaproj', IA_PROJ); }catch(_){ } } else if(CHANTIERS[id]){ saveChantier(id); } }
 function viewProjection(){
   if(!isChef()) return `<div class="card"><p class="note" style="margin:0">Réservé au patron ou au chef.</p></div>`;
-  const chs=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived);
-  if(!chs.length) return `<div class="card"><p class="note" style="margin:0">Crée d'abord un chantier pour générer une projection.</p></div>`;
-  const sel=(PROJ_CHANTIER && CHANTIERS[PROJ_CHANTIER] && !CHANTIERS[PROJ_CHANTIER].archived)?PROJ_CHANTIER:chs[0];
-  PROJ_CHANTIER=sel;
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('eye')} Projection / Rendu IA</h2></div>
-    <label>Chantier concerné</label><select onchange="setProjChantier(this.value)">${chs.map(id=>`<option value="${id}" ${id===sel?'selected':''}>${esc(CHANTIERS[id].nom||'Chantier')}</option>`).join('')}</select></div>`;
-  h+=projectionCard(sel, CHANTIERS[sel]);
-  return h;
+  return projectionCard('ia', {projections: IA_PROJ});
 }
 
 function addPhoto(id,input){ const f=input.files&&input.files[0]; if(!f) return;
@@ -2349,11 +2344,6 @@ function viewEquipe(){
       ${isBoss()&&niveauOf(m.role)!=='boss'?`<button class="iconbtn danger" onclick="event.stopPropagation();removeMember('${m.u}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}</div>`;
   });
   h+=`</div>`;
-  if(isBoss()){
-    h+=`<div class="row" style="margin-bottom:12px"><button class="btn ghost" onclick="openTeamStats()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg> Statistiques</button><button class="btn ghost" onclick="openRolesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Rôles</button></div>`;
-    h+=`<button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="openModelesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Modèles de chantier</button>`;
-    h+=`<button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="openEtapesManager()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg> Étapes d'avancement</button>`;
-  }
   if(isBoss()) h+=`<p class="note" style="margin:-4px 0 12px;font-size:11px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Touche un membre pour voir ses notes de frais. La pastille rouge indique le nombre de photos reçues.</p>`;
   if(isBoss()){
     h+=`<details class="acc"><summary><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> Inviter dans l'équipe</summary><div class="acc-body">
@@ -3107,6 +3097,8 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEtapesManager()">${icone('flag')} Étapes de chantier</button></div>`;
     if(tab==='apparence') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Apparence</h2></div>
       <p class="tag" style="margin-bottom:8px">Couleur de l’app</p>${themeSwatches(40)}
+      <p class="tag" style="margin:14px 0 8px">Ambiance</p>
+      <div class="row"><button class="btn ${appMode()!=='clair'?'primary':'ghost'}" onclick="setMode('sombre')">🌙 Sombre</button><button class="btn ${appMode()==='clair'?'primary':'ghost'}" onclick="setMode('clair')">☀️ Clair</button></div>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
@@ -4480,6 +4472,19 @@ function chantierReportPDF(id){
    </body></html>`);
   w.document.close();
 }
+function _openPdfDataUrl(dataUrl, filename){
+  try{
+    const b64=String(dataUrl).split(',').pop(); const bin=atob(b64); const len=bin.length; const arr=new Uint8Array(len);
+    for(let i=0;i<len;i++) arr[i]=bin.charCodeAt(i);
+    const blob=new Blob([arr],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    const w=window.open(url,'_blank');
+    if(!w){ const a=document.createElement('a'); a.href=url; a.download=filename||'document.pdf'; document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_){ } }, 60000);
+  }catch(e){ toast("Impossible d'ouvrir le document"); }
+}
+function clientOpenReport(k){ try{ const c=CHANTIERS[CLIENT.chantierId]; const d=c&&c.docs&&c.docs[k]; if(d&&d.url) _openPdfDataUrl(d.url,(d.nom||'compte-rendu')+'.pdf'); }catch(_){ } }
+function clientOpenReportById(id,k){ const c=CHANTIERS[id]; const d=c&&c.docs&&c.docs[k]; if(d&&d.url) _openPdfDataUrl(d.url,(d.nom||'compte-rendu')+'.pdf'); }
+function delSharedDoc(id,k){ const c=CHANTIERS[id]; if(!c||!c.docs||!c.docs[k]) return; if(!confirm("Retirer ce compte-rendu de l'espace client ?")) return; delete c.docs[k]; saveChantier(id); render(); toast("Retiré de l'espace client"); }
 async function chantierReportShare(id){
   const c=CHANTIERS[id]; if(!c) return;
   let PL; try{ toast("Génération du compte-rendu…"); PL=await loadPdfLib(); }catch(e){ toast("PDF indisponible hors ligne"); return; }
