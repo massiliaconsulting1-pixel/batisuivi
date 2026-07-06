@@ -140,6 +140,9 @@ input,select,textarea{font-family:'Manrope',sans-serif}
 .iosl:before{content:"";position:absolute;height:26px;width:26px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.22s;box-shadow:0 1px 3px rgba(0,0,0,.35)}
 .iosw input:checked + .iosl{background:#34c759;opacity:1}
 .iosw input:checked + .iosl:before{transform:translateX(20px)}
+.cli-wrap{position:relative;overflow:hidden;border-radius:14px;margin-bottom:10px;background:var(--danger)}
+.cli-wrap .cli-del{position:absolute;left:0;top:0;bottom:0;width:120px;color:#fff;font-weight:800;font-size:13px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.cli-wrap .cli-row{position:relative;z-index:1;transition:transform .2s ease;will-change:transform}
 
 /* ---- cartes ---- */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}
@@ -830,7 +833,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v139 · 06/07";
+const APP_VERSION="v140 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2965,7 +2968,7 @@ function groupByMonthHTML(list){
 let HUB=null, HTAB='';
 const HUBS={
   dashboard:{title:'Tableau de bord',icon:'chart',tabs:[['vue','chart',"Vue d'ensemble"]]},
-  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','users','Clients'],['modeles','layers','Modèles'],['carte','map-pin','Carte']]},
+  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','users','Clients'],['carte','map-pin','Carte']]},
   equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['messagerie','message','Messages'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
   planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
   ia:{title:'IA',icon:'robot',tabs:[['assistant','robot','Assistant'],['projection','eye','Projection'],['devisia','file','Devis IA'],['redaction','edit','Rédaction']]},
@@ -2981,12 +2984,17 @@ function setHTab(t){ HTAB=t; CUR_CHANTIER=null; render(); toTop(); }
 
 /* Geste : glisser du bord gauche vers la droite => revenir à l'Accueil (patron) */
 let _swipeInit=false, _swX=0, _swY=0, _swT=0;
+let _cliEl=null,_cliX=0,_cliY=0,_cliMove=false,_cliOpen=null;
+function delClientRow(btn){ const row=btn.parentElement.querySelector('.cli-row'); const key=row&&row.getAttribute('data-key'); if(!key) return; if(!confirm("Retirer ce client de l'annuaire ? (ses chantiers ne sont pas supprimes)")) return; if(!CONFIG_DB.clientsMasques)CONFIG_DB.clientsMasques={}; CONFIG_DB.clientsMasques[key]=true; saveConfigDB(); toast('Client retire de l\'annuaire'); render(); }
 function initSwipeBack(){
   if(_swipeInit) return; _swipeInit=true;
   document.addEventListener('touchstart',function(e){ if(!e.touches||e.touches.length!==1) return; const t=e.touches[0]; _swX=t.clientX; _swY=t.clientY; _swT=Date.now(); },{passive:true});
   document.addEventListener('touchend',function(e){ const t=e.changedTouches&&e.changedTouches[0]; if(!t) return; const dx=t.clientX-_swX, dy=t.clientY-_swY, dt=Date.now()-_swT;
     if(_swX<=42 && dx>80 && Math.abs(dy)<60 && dt<700){ if(isBoss() && !EMP_PREVIEW && (CUR_CHANTIER||HUB)){ goHome(); } }
   },{passive:true});
+  document.addEventListener('touchstart',function(e){ const row=e.target.closest&&e.target.closest('.cli-row'); if(_cliOpen&&_cliOpen!==row){ _cliOpen.style.transform=''; _cliOpen=null; } if(!row||!e.touches||e.touches.length!==1) return; _cliEl=row; _cliX=e.touches[0].clientX; _cliY=e.touches[0].clientY; _cliMove=false; },{passive:true});
+  document.addEventListener('touchmove',function(e){ if(!_cliEl||!e.touches||!e.touches.length) return; const dx=e.touches[0].clientX-_cliX, dy=e.touches[0].clientY-_cliY; if(!_cliMove && Math.abs(dx)<Math.abs(dy)){ _cliEl.style.transform=''; _cliEl=null; return; } if(dx>0){ _cliMove=true; _cliEl.style.transform='translateX('+Math.min(dx,120)+'px)'; } },{passive:true});
+  document.addEventListener('touchend',function(e){ if(!_cliEl) return; const el=_cliEl; _cliEl=null; const m=(el.style.transform||'').match(/translateX\((\d+)/); const v=m?parseInt(m[1]):0; if(v>60){ el.style.transform='translateX(120px)'; _cliOpen=el; } else { el.style.transform=''; if(_cliOpen===el)_cliOpen=null; } },{passive:true});
 }
 
 function renderAccueil(){
@@ -3043,7 +3051,7 @@ function renderHub(){
     <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${icone(cfg.icon,'22px')}</div>
     <div class="bn"><b>${esc(cfg.title)}</b><small>${esc(coName())}</small></div></div>
-    <button class="burger" onclick="openHubGuide(HUB)" aria-label="Guide"><span></span><span></span><span></span></button></div>
+    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>${esc(lbl)}</h2></div>
   ${hubBody(HUB,HTAB)}
   ${hubFab()}`;
@@ -3073,7 +3081,6 @@ function hubBody(hub,tab){
     if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='clients'){ ARCH_VIEW=false; CLIENTS_VIEW=false; if(CHAT_OPEN) return '<div class="chat-full">'+chatThreadView()+'</div>'; const _cs=CLIENTS_SUB||'annuaire'; const _ch=`<div class="row" style="margin-bottom:12px;gap:6px"><button class="btn ${_cs==='annuaire'?'primary':'ghost'}" style="flex:1" onclick="setClientsSub('annuaire')">${icone('users')} Annuaire</button><button class="btn ${_cs==='messagerie'?'primary':'ghost'}" style="flex:1" onclick="setClientsSub('messagerie')">${icone('message')} Messagerie</button></div>`; return _ch+(_cs==='messagerie'?messagerieClients():factuClients()); }
-    if(tab==='modeles') return hubReady('Modèles de chantier','Crée des modèles réutilisables (étapes + lignes de devis pré-remplies) pour démarrer un chantier en un clic.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Gérer les modèles</button>`);
     if(tab==='carte') return viewCarte();
   }
   if(hub==='equipe'){
@@ -3233,21 +3240,22 @@ function factuClients(){
     const name=pro?((c.clientSociete||'').trim()||clientFull(c)):clientFull(c);
     if(!name||name==='—') return;
     const key=(pro?'pro:':'part:')+name.toLowerCase();
-    if(!map[key]) map[key]={name,pro,siren:c.clientSiren||'',tel:c.clientTel||'',email:c.clientEmail||'',adresse:adresseFull(c),nb:0,fact:0};
+    if(!map[key]) map[key]={key,name,pro,siren:c.clientSiren||'',tel:c.clientTel||'',email:c.clientEmail||'',adresse:adresseFull(c),nb:0,fact:0};
     map[key].nb++;
     if(!map[key].tel&&c.clientTel)map[key].tel=c.clientTel;
     if(!map[key].email&&c.clientEmail)map[key].email=c.clientEmail;
     if(!map[key].siren&&c.clientSiren)map[key].siren=c.clientSiren;
     if(c.published) Object.values(c.published).forEach(d=>{ if(d.type==='facture') map[key].fact+=docTotal(d); });
   });
-  const clients=Object.values(map).sort((a,b)=>b.fact-a.fact);
+  const hidden=CONFIG_DB.clientsMasques||{};
+  const clients=Object.values(map).filter(cl=>!hidden[cl.key]).sort((a,b)=>b.fact-a.fact);
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('users')} Clients (${clients.length})</h2></div>`;
   if(!clients.length){ h+=`<p class="note">Aucun client pour l'instant. Les clients apparaissent ici dès que tu crées des chantiers.</p>`; }
-  else clients.forEach(cl=>{ h+=`<div class="member-row">
+  else clients.forEach(cl=>{ h+=`<div class="cli-wrap"><button class="cli-del" onclick="delClientRow(this)">🗑 Supprimer</button><div class="cli-row member-row" data-key="${esc(cl.key)}">
     <div style="flex:1;min-width:0"><b>${esc(cl.name)} <span class="pill">${cl.pro?'Pro':'Particulier'}</span></b>
       <div class="tag">${cl.pro&&cl.siren?('SIREN '+esc(cl.siren)+' · '):''}${cl.nb} chantier${cl.nb>1?'s':''} · ${eurF(cl.fact)} facturé${cl.adresse?(' · '+esc(cl.adresse)):''}</div>
       ${(cl.tel||cl.email)?`<div class="tag">${cl.tel?esc(cl.tel):''}${cl.tel&&cl.email?' · ':''}${cl.email?esc(cl.email):''}</div>`:''}</div>
-  </div>`; });
+  </div></div>`; });
   h+=`</div>`;
   return h;
 }
@@ -3885,7 +3893,7 @@ function renderParamsPage(){
     <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${icone('settings','22px')}</div>
     <div class="bn"><b>Parametres</b><small>${esc(coName())}</small></div></div>
-    <button class="burger" onclick="openHubGuide('params')" aria-label="Guide"><span></span><span></span><span></span></button></div>
+    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Parametres</h2></div>
   ${sec('entreprise')}
   ${sec('factu')}
@@ -3908,6 +3916,7 @@ function openMenu(){
 
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
     ${themeSwatches(40)}
+    ${(HUB && typeof HUB_GUIDES!=='undefined' && HUB_GUIDES[HUB])?`<h3 style="font-size:14px;margin:20px 0 8px">${icone('help')} Guide - ${esc(HUB_GUIDES[HUB].t)}</h3>`+HUB_GUIDES[HUB].b.map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;align-items:flex-start"><span style="color:var(--acc);font-weight:800;line-height:1.4">&bull;</span><span style="flex:1;font-size:13px;line-height:1.45">${esc(x)}</span></div>`).join(''):''}
 
     
 
