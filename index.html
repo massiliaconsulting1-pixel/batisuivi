@@ -105,24 +105,33 @@ button{font-family:inherit}
 input,select,textarea{font-family:'Manrope',sans-serif}
 
 /* ---- boutons ---- */
-.btn{border:none;border-radius:13px;padding:14px 16px;font-weight:700;font-size:15px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
-.btn.primary{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accText);box-shadow:0 8px 24px -8px rgba(var(--glow),.5)}
-.btn.primary:active{transform:translateY(1px)}
-.btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
-.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
-.btn.ok{background:linear-gradient(180deg,#56e09a,var(--ok));color:#042113}
-.btn:disabled{opacity:.5}
-.mini{font-size:12px;padding:7px 11px;border-radius:9px}
-.linkbtn{background:var(--card2);border:1px solid var(--line);color:var(--acc2);font-weight:700;font-size:12.5px;cursor:pointer;padding:7px 12px;border-radius:9px;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:5px;text-align:center}
+.btn{border:none;border-radius:12px;padding:13px 18px;font-weight:700;font-size:14.5px;letter-spacing:.01em;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .16s cubic-bezier(.2,.7,.2,1),box-shadow .2s ease,background .2s ease,border-color .2s ease,opacity .2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accText);box-shadow:0 10px 26px -10px rgba(var(--glow),.6),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn.primary:hover{transform:translateY(-1px);box-shadow:0 14px 32px -10px rgba(var(--glow),.8),inset 0 1px 0 rgba(255,255,255,.35)}
+.btn.primary:active{transform:translateY(1px) scale(.99);box-shadow:0 6px 16px -8px rgba(var(--glow),.55)}
+.btn.ghost{background:var(--card2);color:var(--txt);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.btn.ghost:hover{background:var(--card);border-color:rgba(var(--glow),.45)}
+.btn.ghost:active{transform:translateY(1px) scale(.99)}
+.btn.danger{background:rgba(255,77,98,.12);color:var(--danger);border:1px solid rgba(255,77,98,.35)}
+.btn.danger:hover{background:rgba(255,77,98,.2);border-color:var(--danger)}
+.btn.danger:active{transform:translateY(1px) scale(.99)}
+.btn.ok{background:linear-gradient(135deg,#56e09a,var(--ok));color:#042113;box-shadow:0 10px 26px -10px rgba(52,211,153,.55),inset 0 1px 0 rgba(255,255,255,.3)}
+.btn:disabled{opacity:.45;pointer-events:none;box-shadow:none;transform:none}
+.mini{font-size:12px;padding:8px 12px;border-radius:10px}
+.linkbtn{background:var(--card2);border:1px solid var(--line);color:var(--acc2);font-weight:700;font-size:12.5px;cursor:pointer;padding:8px 13px;border-radius:10px;transition:.16s;display:inline-flex;align-items:center;justify-content:center;gap:5px;text-align:center}
+.linkbtn:hover{border-color:rgba(var(--glow),.45)}
 .linkbtn:active{transform:scale(.96)}
-.backbtn{background:var(--card2);border:1px solid var(--line);color:var(--txt);font-weight:700;font-size:13px;cursor:pointer;padding:8px 14px;border-radius:11px;display:inline-flex;align-items:center;gap:6px;transition:.15s;margin-bottom:4px}
+.backbtn{background:var(--card2);border:1px solid var(--line);color:var(--txt);font-weight:700;font-size:13px;cursor:pointer;padding:9px 15px;border-radius:12px;display:inline-flex;align-items:center;gap:6px;transition:.16s;margin-bottom:4px}
+.backbtn:hover{border-color:rgba(var(--glow),.45)}
 .backbtn:active{transform:scale(.97)}
 .backbtn .ar{color:var(--acc2);font-size:15px;line-height:1}
-.iconbtn{background:var(--card2);border:1px solid var(--line);color:var(--muted);width:30px;height:30px;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;flex:none;transition:.15s;padding:0}
+.iconbtn{background:var(--card2);border:1px solid var(--line);color:var(--muted);width:32px;height:32px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;flex:none;transition:.16s;padding:0}
+.iconbtn:hover{color:var(--txt);border-color:rgba(var(--glow),.45)}
 .iconbtn .x-ic{width:15px;height:15px;display:block}
 .iconbtn.danger .x-ic{width:17px;height:17px}
 .iconbtn:active{transform:scale(.92)}
 .iconbtn.danger{color:#fff;background:var(--danger);border-color:var(--danger);font-weight:800}
+.iconbtn.danger:hover{background:#e23a4f;border-color:#e23a4f}
 .iconbtn.danger:active{background:#e23a4f;border-color:#e23a4f}
 .iconbtn.edit{color:var(--acc2);font-size:17px}
 
@@ -815,7 +824,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v132 · 04/07";
+const APP_VERSION="v133 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
