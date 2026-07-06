@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v144 · 06/07";
+const APP_VERSION="v145 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -949,9 +949,12 @@ function renderDev(){
       </div>
       <label style="margin-top:10px">Facturation dans l'app</label>
       <div class="row" style="gap:6px"><button class="btn ${factuOn()?'primary':'ghost'} mini" onclick="devSetFactu(true)">Activée</button><button class="btn ${!factuOn()?'primary':'ghost'} mini" onclick="devSetFactu(false)">Désactivée</button></div>
-      <label style="margin-top:10px">Compte-rendu vocal (IA)</label>
+      <label style="margin-top:10px">Facturation électronique (Factur-X)</label>
+      <div class="row" style="gap:6px"><button class="btn ${facturXOn()?'primary':'ghost'} mini" onclick="devSetFacturX(true)">Activée</button><button class="btn ${!facturXOn()?'primary':'ghost'} mini" onclick="devSetFacturX(false)">Désactivée</button></div>
+      <p class="note" style="font-size:11px;margin-top:4px">Désactivée = seulement la facturation de confort (devis/factures), sans Factur-X ni e-reporting.</p>
+      <label style="margin-top:10px">Intelligence artificielle (tout l'IA)</label>
       <div class="row" style="gap:6px"><button class="btn ${iaOn()?'primary':'ghost'} mini" onclick="devSetIA(true)">Activée</button><button class="btn ${!iaOn()?'primary':'ghost'} mini" onclick="devSetIA(false)">Désactivée</button></div>
-      <p class="note" style="font-size:11px;margin-top:4px">Affiche ou masque le bouton 🎤 de dictée IA dans les chantiers (utile pour le Pack IA ou un client qui n'en veut pas).</p>
+      <p class="note" style="font-size:11px;margin-top:4px">Active ou désactive TOUTES les fonctions IA : assistant, projection, devis IA, rédaction et compte-rendu vocal.</p>
       <p class="note" style="font-size:11px;margin-top:4px">Désactive si le client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
       <div class="row" style="margin-top:10px"><div><label>Préfixe devis</label><input id="cfg_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
         <div><label>Prochain n° devis</label><input id="cfg_devnum" type="number" min="1" value="${(CONFIG_DB.devisCounter||0)+1}"></div></div>
@@ -997,6 +1000,7 @@ function devOpenAsBoss(){ ME={nom:'Accès dev',role:'boss',_dev:true}; if(!AUTH_
 function devSetPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); renderDev(); }
 function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
+function devSetFacturX(v){ CONFIG_DB.facturXOff=!v; saveConfigDB(); renderDev(); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
 function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } cfgRerender(); }
 function devColorPicker(){
@@ -3018,7 +3022,7 @@ function renderAccueil(){
     ['facturation','receipt','Facturation', devAtt?(devAtt+' devis en attente'):''],
     ['ia','robot','IA','Assistant, projection, rédaction'],
     ['params','settings','Paramètres','']
-  ];
+  ].filter(t=>(t[0]!=='ia'||iaOn())&&(t[0]!=='facturation'||factuOn()));
   app.innerHTML=`
   <div class="top"><div class="brand"><div class="logo">${logoHTML()}</div>
     <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
@@ -3121,8 +3125,7 @@ function hubBody(hub,tab){
     if(tab==='entreprise') return viewIdentite();
     if(tab==='factu') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
       <button class="btn ghost" style="width:100%" onclick="openFacturationSettings()">${icone('settings')} Préfixes, numéros, TVA</button>
-      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting</button>
-      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()">${icone('send')} Test plateforme agréée</button></div>`;
+      ${facturXOn()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting</button><button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPaTest()">${icone('send')} Test plateforme agréée</button>`:''}</div>`;
     if(tab==='roles') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('shield')} Équipe & rôles</h2></div>
       <button class="btn ghost" style="width:100%" onclick="openRolesManager()">${icone('shield')} Gérer les rôles & permissions</button>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openModelesManager()">${icone('layers')} Modèles de chantier</button>
@@ -3199,7 +3202,7 @@ function factuDocRow(d){
     <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾':'📄'} ${esc(d.num||'')}</b>
       <div class="tag">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''} · ${eurF(tot)} HT ${status}</div></div>
     <button class="iconbtn" title="Voir / imprimer" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">${icone('eye')}</button>
-    ${(d.type==='facture' && (CHANTIERS[d.id]||{}).clientType==='pro')?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
+    ${(facturXOn() && d.type==='facture' && (CHANTIERS[d.id]||{}).clientType==='pro')?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
     <button class="iconbtn danger" title="Supprimer" onclick="delFactuDoc('${d.id}','${d.pid}')">${icone('trash')}</button>
   </div>`;
 }
@@ -4644,7 +4647,8 @@ function publishDoc(id,type){
 function factPrefix(){ return (CONFIG_DB.factPrefix||'FACT').toUpperCase(); }
 function devisPrefix(){ return (CONFIG_DB.devisPrefix||'DEV').toUpperCase(); }
 function factuOn(){ return CONFIG_DB.factuOff!==true; } // facturation active par défaut
-function iaOn(){ return CONFIG_DB.iaOff!==true; } // IA (compte-rendu vocal) active par défaut
+function iaOn(){ return CONFIG_DB.iaOff!==true; } // IA (toutes les fonctions) active par défaut
+function facturXOn(){ return CONFIG_DB.facturXOff!==true; } // Factur-X / e-invoicing actif par défaut
 function nextFactureNum(){ const y=new Date().getFullYear(); CONFIG_DB.factCounter=(CONFIG_DB.factCounter||0)+1; saveConfigDB(); return factPrefix()+'-'+y+'-'+String(CONFIG_DB.factCounter).padStart(3,'0'); }
 function nextDevisNum(){ const y=new Date().getFullYear(); CONFIG_DB.devisCounter=(CONFIG_DB.devisCounter||0)+1; saveConfigDB(); return devisPrefix()+'-'+y+'-'+String(CONFIG_DB.devisCounter).padStart(3,'0'); }
 function publishFacture(id,mode,pct){
