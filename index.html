@@ -710,8 +710,11 @@ function isChef(){ return perm('gerer_chantiers'); }
 function saveRoles(){ saveConfigDB(); }
 
 /* ============== BOOT ============== */
+function registerSW(){ if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').catch(function(){}); }catch(_){ } } }
+function resetCache(){ if(!confirm("Vider le cache de l'app et recharger la derniere version ?")) return; try{ if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }); } if(window.caches){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); } }catch(_){ } setTimeout(function(){ location.reload(); }, 500); }
 function boot(){
   applyTheme();
+  registerSW();
   if(useFB){
     firebase.initializeApp(FIREBASE_CONFIG);
     // App Check (reCAPTCHA v3) : atteste que les requêtes viennent bien de l'app.
@@ -833,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v142 · 06/07";
+const APP_VERSION="v143 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -3129,6 +3132,7 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="resetCache()">Vider le cache &amp; recharger la derniere version</button>
       <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
   }
   return hubPlaceholder('Bientôt','Cette section arrive prochainement.');
