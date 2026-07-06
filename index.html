@@ -824,7 +824,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v135 · 04/07";
+const APP_VERSION="v136 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -3696,7 +3696,7 @@ function facturXXml(snap){
   if(adr) xml+=`<ram:LineOne>${X(adr)}</ram:LineOne>`;
   if(ville) xml+=`<ram:CityName>${X(ville)}</ram:CityName>`;
   xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
-  if(tvaId) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${X(tvaId)}</ram:ID></ram:SpecifiedTaxRegistration>`;
+  if(tvaId) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${X(tvaId)}</ram:ID></ram:SpecifiedTaxRegistration>`; else if(siren) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="FC">${X(siren)}</ram:ID></ram:SpecifiedTaxRegistration>`;
   xml+=`</ram:SellerTradeParty>\n      <ram:BuyerTradeParty><ram:Name>${X(snap.clientSociete||snap.client||'Client')}</ram:Name>`;
   const bSiren=(snap.clientType==='pro')?((snap.clientSiren||'').replace(/\s/g,'')):'';
   if(bSiren) xml+=`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${X(bSiren)}</ram:ID></ram:SpecifiedLegalOrganization>`;
@@ -3706,13 +3706,13 @@ function facturXXml(snap){
   if(bSiren) xml+=`<ram:URIUniversalCommunication><ram:URIID schemeID="0225">${X(bSiren)}</ram:URIID></ram:URIUniversalCommunication>`;
   xml+=`</ram:BuyerTradeParty>\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery><ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format="102">${ymd}</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent></ram:ApplicableHeaderTradeDelivery>\n`;
   xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
-  xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode><ram:BasisAmount>${fxAmt(ht)}</ram:BasisAmount><ram:CategoryCode>${fxCat()}</ram:CategoryCode>${isFranchiseTva()?'<ram:ExemptionReason>'+X(tvaMention())+'</ram:ExemptionReason>':''}<ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode>${isFranchiseTva()?'<ram:ExemptionReason>'+X(tvaMention())+'</ram:ExemptionReason>':''}<ram:BasisAmount>${fxAmt(ht)}</ram:BasisAmount><ram:CategoryCode>${fxCat()}</ram:CategoryCode><ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
   xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
   xml+=`</ram:ApplicableHeaderTradeSettlement>\n  </rsm:SupplyChainTradeTransaction>\n</rsm:CrossIndustryInvoice>\n`;
   return xml;
 }
 function facturXXmp(num){
-  return `<?xpacket begin="\ufeff" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:xmpmeta xmlns:x="adobe:ns:meta/">\n <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description>\n  <rdf:Description rdf:about="" xmlns:fx="urn:factur-x.eu:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:DocumentType>INVOICE</fx:DocumentType><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:Version>1.0</fx:Version><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n<?xpacket end="w"?>`;
+  return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>\n<x:xmpmeta xmlns:x="adobe:ns:meta/">\n <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description>\n  <rdf:Description rdf:about="" xmlns:fx="urn:factur-x.eu:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:DocumentType>INVOICE</fx:DocumentType><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:Version>1.0</fx:Version><fx:ConformanceLevel>EN 16931</fx:ConformanceLevel></rdf:Description>\n </rdf:RDF>\n</x:xmpmeta>\n<?xpacket end="w"?>`;
 }
 let _pdfLibLoading=null;
 function loadPdfLib(){
@@ -3791,6 +3791,7 @@ function _fxTestParty(role, p){
   if(p.ville) s+=`<ram:CityName>${X(p.ville)}</ram:CityName>`;
   s+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
   if(p.siren) s+=`<ram:URIUniversalCommunication><ram:URIID schemeID="0225">${X(p.siren)}</ram:URIID></ram:URIUniversalCommunication>`;
+  if(role==='SellerTradeParty' && p.siren) s+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="FC">${X(p.siren)}</ram:ID></ram:SpecifiedTaxRegistration>`;
   s+=`</ram:${role}>`;
   return s;
 }
@@ -3804,7 +3805,7 @@ function facturXTestXml(em, dest, inv){
   xml+=`  <rsm:ExchangedDocument><ram:ID>${X(inv.num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:IssueDateTime><ram:IncludedNote><ram:Content>Penalites de retard : en cas de retard de paiement, application de penalites au taux de 3 fois le taux d'interet legal.</ram:Content><ram:SubjectCode>PMD</ram:SubjectCode></ram:IncludedNote><ram:IncludedNote><ram:Content>Indemnite forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 euros (art. D441-5 du Code de commerce).</ram:Content><ram:SubjectCode>PMT</ram:SubjectCode></ram:IncludedNote><ram:IncludedNote><ram:Content>Escompte pour paiement anticipe : neant.</ram:Content><ram:SubjectCode>AAB</ram:SubjectCode></ram:IncludedNote></rsm:ExchangedDocument>\n`;
   xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      ${_fxTestParty('SellerTradeParty', em)}\n      ${_fxTestParty('BuyerTradeParty', dest)}\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery><ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent></ram:ApplicableHeaderTradeDelivery>\n`;
   xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
-  xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(inv.tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode><ram:BasisAmount>${fxAmt(inv.ht)}</ram:BasisAmount><ram:CategoryCode>${inv.cat}</ram:CategoryCode>${inv.cat==='E'?'<ram:ExemptionReason>TVA non applicable, art. 293 B du CGI</ram:ExemptionReason>':''}<ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(inv.tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode>${inv.cat==='E'?'<ram:ExemptionReason>TVA non applicable, art. 293 B du CGI</ram:ExemptionReason>':''}<ram:BasisAmount>${fxAmt(inv.ht)}</ram:BasisAmount><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
   xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(inv.ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(inv.ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(inv.tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(inv.ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(inv.ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
   xml+=`</ram:ApplicableHeaderTradeSettlement>\n  </rsm:SupplyChainTradeTransaction>\n</rsm:CrossIndustryInvoice>\n`;
   return xml;
