@@ -833,7 +833,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v141 · 06/07";
+const APP_VERSION="v142 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -877,6 +877,7 @@ function devAfterLogin(user){
   closeModal(); SCREEN='dev'; DEV_ACCESS=false; CUR_CHANTIER=null; render(); toTop();
 }
 function contactInfo(){ const o=(CONFIG_DB&&CONFIG_DB.contact)||{}; return { tel:(o.tel||CONFIG.TELEPHONE||''), email:(o.email||CONFIG.EMAIL||''), adresse:(o.adresse||CONFIG.ADRESSE_ENTREPRISE||''), horaires:(o.horaires||CONFIG.HORAIRES||'') }; }
+function cfgRerender(){ if(SCREEN==='dev') renderDev(); else render(); }
 function renderDev(){
   const chs=Object.keys(CHANTIERS).map(id=>({id,...CHANTIERS[id]}));
   const nbCh=chs.length, nbTeam=Object.keys(TEAM).length, nbVeh=Object.keys(VEHICULES).length;
@@ -994,7 +995,7 @@ function devSetPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); renderDev(); }
 function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
-function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } renderDev(); }
+function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } cfgRerender(); }
 function devColorPicker(){
   const cur=(CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT||'bleu'); const dot=cur.indexOf('.'); const base=dot>0?cur.slice(0,dot):cur; const acc=dot>0?cur.slice(dot+1):'';
   let h=`<div style="display:flex;gap:9px;flex-wrap:wrap">`;
@@ -1027,22 +1028,22 @@ function devToggleColor(id){
     if(sel.length<=1){ toast("Au moins une couleur doit rester disponible"); return; }
     sel.splice(i,1);
   } else { sel.push(id); }
-  CONFIG_DB.couleursActives=sel; saveConfigDB(); renderDev();
+  CONFIG_DB.couleursActives=sel; saveConfigDB(); cfgRerender();
 }
 function devSaveConfig(){
   if(!CONFIG_DB.contact) CONFIG_DB.contact={};
   CONFIG_DB.nom=val('cfg_nom')||CONFIG.NOM_ENTREPRISE; CONFIG_DB.slogan=val('cfg_slogan');
   CONFIG_DB.contact.tel=val('cfg_tel'); CONFIG_DB.contact.email=val('cfg_email'); CONFIG_DB.contact.adresse=val('cfg_adr'); CONFIG_DB.contact.horaires=val('cfg_hor');
-  const nextF=parseInt(document.getElementById('cfg_fact').value,10); if(!isNaN(nextF)&&nextF>0) CONFIG_DB.factCounter=nextF-1;
-  const nextD=parseInt(document.getElementById('cfg_devnum').value,10); if(!isNaN(nextD)&&nextD>0) CONFIG_DB.devisCounter=nextD-1;
+  const _fe=document.getElementById('cfg_fact'); if(_fe){ const nextF=parseInt(_fe.value,10); if(!isNaN(nextF)&&nextF>0) CONFIG_DB.factCounter=nextF-1; }
+  const _de=document.getElementById('cfg_devnum'); if(_de){ const nextD=parseInt(_de.value,10); if(!isNaN(nextD)&&nextD>0) CONFIG_DB.devisCounter=nextD-1; }
   const dp=(val('cfg_devpre')||'').trim().toUpperCase(); if(dp) CONFIG_DB.devisPrefix=dp;
   const fp=(val('cfg_factpre')||'').trim().toUpperCase(); if(fp) CONFIG_DB.factPrefix=fp;
   if(saveConfigDB()){ toast("Configuration enregistrée ✅"); }
-  renderDev();
+  cfgRerender();
 }
 function devUploadLogo(input){ const f=input.files&&input.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=e=>startCrop(e.target.result,'logo'); r.readAsDataURL(f); }
-function devRemoveLogo(){ CONFIG_DB.logo=''; saveConfigDB(); toast("Logo retiré"); renderDev(); }
+function devRemoveLogo(){ CONFIG_DB.logo=''; saveConfigDB(); toast("Logo retiré"); cfgRerender(); }
 function devUploadIcon(input){ const f=input.files&&input.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=e=>startCrop(e.target.result,'icon'); r.readAsDataURL(f); }
 function devRemoveIcon(){ CONFIG_DB.appIcon=''; saveConfigDB(); _iconCache={src:null,icon:null}; try{applyAppIcons();}catch(_){ } toast("Icône retirée"); renderDev(); }
@@ -3870,6 +3871,7 @@ async function facturXTestPdf(){
 
 /* ====================== MENU / RÉGLAGES ====================== */
 const HUB_GUIDES={
+  accueil:{t:'Accueil',b:['Ton resume du jour est en haut : chantiers en cours, RDV, devis en attente, membres.','Touche une tuile pour ouvrir un espace : Chantiers, Equipe, Planning, Facturation, IA, Parametres.','Chaque espace a son propre guide, dans ce menu.','Balaie du bord gauche vers la droite pour revenir a l accueil a tout moment.']},
   chantiers:{t:'Chantiers',b:['Cree un chantier avec le bouton +, puis ouvre-le pour tout gerer.','Dans la fiche : avancement, photos, taches, equipe, materiel, reception, rentabilite, cloture.','Onglet Clients : ton annuaire ou la messagerie avec le client.','Onglet Archives : les chantiers termines. Onglet Carte : leurs adresses.']},
   equipe:{t:'Equipe',b:['Membres : ajoute tes equipiers, leurs roles, vehicules et cout horaire.','Messages : discute avec ton equipe (groupe ou prive) et l assistant IA.','Pointage : active le suivi des heures avec l interrupteur, puis retrouve les heures par personne.','Frais : les notes de frais de l equipe. Stats : les statistiques.']},
   planning:{t:'Planning',b:['Calendrier : la vue mensuelle. Aujourd hui : ce qui se passe ce jour.','RDV : les rendez-vous clients a venir. Echeances : les chantiers en retard ou proches de la fin.','Charge : qui est sur quels chantiers, et qui est libre.']},
@@ -3886,6 +3888,38 @@ function pointageSwitchCard(){
   const on=pointageOn();
   return `<div class="card" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><b style="font-size:14.5px">Pointage des heures</b><div class="note" style="font-size:12px">${on?'Active - les equipes peuvent pointer leurs heures.':'Desactive.'}</div></div><label class="iosw"><input type="checkbox" ${on?'checked':''} onchange="setPointage(this.checked)"><span class="iosl"></span></label></div>`;
 }
+function bossClientPreview(){
+  const chs=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived).map(id=>Object.assign({id:id},CHANTIERS[id])).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('eye')} Apercu cote client</h2></div><p class="note" style="margin:0 0 8px">Vois exactement ce que voit le client d'un chantier.</p>`;
+  if(!chs.length){ h+=`<p class="note" style="margin:0">Aucun chantier pour l'instant.</p>`; }
+  else chs.forEach(c=>{ h+=`<div class="task-row"><div style="flex:1;min-width:0"><b>${esc(c.nom||'Chantier')}</b><div class="tag">${esc(clientFull(c)||'')}${c.clientCode?(' \u00b7 code '+esc(c.clientCode)):''}</div></div><button class="btn ghost mini" onclick="previewClientView('${c.id}')">Apercu</button></div>`; });
+  return h+`</div>`;
+}
+function bossEntrepriseConfig(){
+  const ci=contactInfo();
+  return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('id')} Configuration de l'entreprise</h2></div>
+    <p class="note" style="margin:0 0 8px">Identite et reglages affiches partout dans l'app. Tu modifies tout, puis tu enregistres.</p>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+      <div class="hero-logo" style="width:60px;height:60px;font-size:26px;margin:0">${coLogo()?`<img src="${coLogo()}" style="width:100%;height:100%;object-fit:contain">`:esc((coName()||'?').slice(0,1))}</div>
+      <div style="flex:1"><input type="file" id="cfg_logo_file" accept="image/*" style="display:none" onchange="devUploadLogo(this)">
+        <button class="btn ghost mini" onclick="document.getElementById('cfg_logo_file').click()">Changer le logo</button>
+        ${coLogo()?`<button class="btn ghost mini" style="margin-top:6px" onclick="devRemoveLogo()">Retirer</button>`:''}</div>
+    </div>
+    <label>Nom de l'entreprise</label><input id="cfg_nom" value="${esc(coName())}" placeholder="ex: Dupont Renovation">
+    <label>Slogan</label><input id="cfg_slogan" value="${esc(coSlogan())}" placeholder="ex: Votre chantier en toute confiance">
+    <p class="note" style="margin:14px 0 8px">Coordonnees affichees aux clients.</p>
+    <label>Telephone</label><input id="cfg_tel" value="${esc(ci.tel)}" placeholder="06 12 34 56 78">
+    <label>Email</label><input id="cfg_email" value="${esc(ci.email)}" placeholder="contact@entreprise.fr">
+    <label>Adresse</label><input id="cfg_adr" value="${esc(ci.adresse)}" placeholder="12 rue des Artisans, 21000 Dijon">
+    <label>Horaires</label><input id="cfg_hor" value="${esc(ci.horaires)}" placeholder="Lun-Ven : 8h-18h">
+    <label style="margin-top:12px">Couleur par defaut de l'app (pour tout le monde)</label>
+    ${devColorPicker()}
+    <label style="margin-top:12px">Couleurs proposees aux utilisateurs</label>
+    ${devColorAvailablePicker()}
+    <div style="display:flex;align-items:center;gap:12px;margin-top:14px"><div style="flex:1;min-width:0"><b style="font-size:14px">Pointage des heures</b><div class="note" style="font-size:12px">Suivi des heures des equipes.</div></div><label class="iosw"><input type="checkbox" ${pointageOn()?'checked':''} onchange="setPointage(this.checked)"><span class="iosl"></span></label></div>
+    <button class="btn primary" style="width:100%;margin-top:16px" onclick="devSaveConfig()">Enregistrer la configuration</button>
+  </div>`;
+}
 function renderParamsPage(){
   navEl.classList.add('hidden');
   const sec=t=>hubBody('params',t);
@@ -3897,7 +3931,8 @@ function renderParamsPage(){
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Parametres</h2></div>
   <div class="card"><div style="display:flex;align-items:center;gap:14px"><div class="prof-avatar" style="background:${(ME&&ME.photo)?'var(--bg2)':colorFor(ME&&ME.nom)}">${(ME&&ME.photo)?`<img src="${ME.photo}" alt="">`:esc(initials(ME&&ME.nom))}</div><div style="flex:1;min-width:0"><b style="font-family:'Sora';font-size:16px">${esc((ME&&ME.nom)||'')}</b><div class="note">${esc((ME&&ME.email)||'')} · ${roleLabel(ME&&ME.role)}</div></div></div><button class="btn ghost" style="width:100%;margin-top:12px" onclick="openPhotoPicker()">${(ME&&ME.photo)?'Changer ma photo':'Ajouter ma photo'}</button>${(ME&&ME.photo)?`<button class="linkbtn" style="display:block;margin:8px auto 0" onclick="removeMyPhoto()">Retirer ma photo</button>`:''}</div>
-  ${sec('entreprise')}
+  ${bossClientPreview()}
+  ${bossEntrepriseConfig()}
   ${sec('factu')}
   ${sec('roles')}
   ${sec('apparence')}
@@ -3906,6 +3941,7 @@ function renderParamsPage(){
   toTop();
 }
 function openMenu(){
+  const _hg=(typeof HUB_GUIDES!=='undefined')?(HUB?HUB_GUIDES[HUB]:HUB_GUIDES.accueil):null;
   const myPhoto=(ME&&ME.photo)?`<img src="${ME.photo}" alt="">`:esc(initials(ME&&ME.nom));
   openModal(`<div class="grabber"></div><span id="menuModalMark"></span>
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:4px">
@@ -3916,7 +3952,7 @@ function openMenu(){
 
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
     ${themeSwatches(40)}
-    ${(HUB && typeof HUB_GUIDES!=='undefined' && HUB_GUIDES[HUB])?`<h3 style="font-size:14px;margin:20px 0 8px">${icone('help')} Guide - ${esc(HUB_GUIDES[HUB].t)}</h3>`+HUB_GUIDES[HUB].b.map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;align-items:flex-start"><span style="color:var(--acc);font-weight:800;line-height:1.4">&bull;</span><span style="flex:1;font-size:13px;line-height:1.45">${esc(x)}</span></div>`).join(''):''}
+    ${_hg?`<h3 style="font-size:14px;margin:20px 0 8px">${icone('help')} Guide - ${esc(_hg.t)}</h3>`+_hg.b.map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;align-items:flex-start"><span style="color:var(--acc);font-weight:800;line-height:1.4">&bull;</span><span style="flex:1;font-size:13px;line-height:1.45">${esc(x)}</span></div>`).join(''):''}
     <button class="btn danger" style="width:100%;margin-top:10px" onclick="teamSignOut()">${DEV_ACCESS?'↩ Revenir à l\'espace dev':'Se déconnecter'}</button>
     <p class="note" style="text-align:center;margin-top:10px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p>`);
 }
