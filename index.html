@@ -134,6 +134,12 @@ input,select,textarea{font-family:'Manrope',sans-serif}
 .iconbtn.danger:hover{background:#e23a4f;border-color:#e23a4f}
 .iconbtn.danger:active{background:#e23a4f;border-color:#e23a4f}
 .iconbtn.edit{color:var(--acc2);font-size:17px}
+.iosw{position:relative;display:inline-block;width:50px;height:30px;flex:none}
+.iosw input{opacity:0;width:0;height:0;margin:0}
+.iosl{position:absolute;inset:0;background:#7a7a80;opacity:.5;border-radius:999px;transition:.22s;cursor:pointer}
+.iosl:before{content:"";position:absolute;height:26px;width:26px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.22s;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.iosw input:checked + .iosl{background:#34c759;opacity:1}
+.iosw input:checked + .iosl:before{transform:translateX(20px)}
 
 /* ---- cartes ---- */
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%)}
@@ -824,7 +830,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v138 · 04/07";
+const APP_VERSION="v139 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -3026,6 +3032,7 @@ function renderAccueil(){
 function renderHub(){
   const cfg=HUBS[HUB]; if(!cfg){ HUB=null; return renderAccueil(); }
   if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]) return renderBossChantier();
+  if(HUB==='params') return renderParamsPage();
   const hideNav = (HUB==='dashboard') || (HUB==='ia' && HTAB==='assistant' && CHAT_OPEN==='ai') || (CHAT_OPEN && ((HUB==='equipe'&&HTAB==='messagerie') || (HUB==='chantiers'&&HTAB==='clients'&&(CLIENTS_SUB||'annuaire')==='messagerie')));
   if(hideNav){ navEl.classList.add('hidden'); }
   else { navEl.classList.remove('hidden'); navEl.classList.add('compact');
@@ -3036,7 +3043,7 @@ function renderHub(){
     <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${icone(cfg.icon,'22px')}</div>
     <div class="bn"><b>${esc(cfg.title)}</b><small>${esc(coName())}</small></div></div>
-    <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
+    <button class="burger" onclick="openHubGuide(HUB)" aria-label="Guide"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>${esc(lbl)}</h2></div>
   ${hubBody(HUB,HTAB)}
   ${hubFab()}`;
@@ -3072,7 +3079,7 @@ function hubBody(hub,tab){
   if(hub==='equipe'){
     if(tab==='membres'||tab==='vehicules') return viewEquipeVeh();
     if(tab==='messagerie') return viewMessagerie(true);
-    if(tab==='pointage') return viewPointage();
+    if(tab==='pointage') return pointageSwitchCard()+viewPointage();
     if(tab==='frais') return viewFrais();
     if(tab==='stats') return hubReady('Statistiques équipe','Heures travaillées, coût de main d’œuvre et performance par membre.',`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openTeamStats()">${icone('chart')} Voir les statistiques</button>`);
   }
@@ -3112,7 +3119,6 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
-      <div class="row" style="margin-top:10px"><button class="btn ${pointageOn()?'primary':'ghost'}" onclick="setPointage(true)">Pointage activé</button><button class="btn ${!pointageOn()?'primary':'ghost'}" onclick="setPointage(false)">Désactivé</button></div>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openHelp()">${icone('help')} Guide d’utilisation</button>
       <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
   }
@@ -3854,6 +3860,41 @@ async function facturXTestPdf(){
 }
 
 /* ====================== MENU / RÉGLAGES ====================== */
+const HUB_GUIDES={
+  chantiers:{t:'Chantiers',b:['Cree un chantier avec le bouton +, puis ouvre-le pour tout gerer.','Dans la fiche : avancement, photos, taches, equipe, materiel, reception, rentabilite, cloture.','Onglet Clients : ton annuaire ou la messagerie avec le client.','Onglet Archives : les chantiers termines. Onglet Carte : leurs adresses.']},
+  equipe:{t:'Equipe',b:['Membres : ajoute tes equipiers, leurs roles, vehicules et cout horaire.','Messages : discute avec ton equipe (groupe ou prive) et l assistant IA.','Pointage : active le suivi des heures avec l interrupteur, puis retrouve les heures par personne.','Frais : les notes de frais de l equipe. Stats : les statistiques.']},
+  planning:{t:'Planning',b:['Calendrier : la vue mensuelle. Aujourd hui : ce qui se passe ce jour.','RDV : les rendez-vous clients a venir. Echeances : les chantiers en retard ou proches de la fin.','Charge : qui est sur quels chantiers, et qui est libre.']},
+  facturation:{t:'Facturation',b:['Devis : cree et suis tes devis (en cours / passes).','Factures : tes factures (Pros / Particuliers), avec la facture electronique pour les pros.','Clients : ton annuaire. Resume : la vue d ensemble.']},
+  ia:{t:'Intelligence artificielle',b:['Assistant : pose tes questions a l IA.','Projection : transforme une photo (existant + inspiration) en rendu.','Devis IA : propose des lignes de devis. Redaction : redige tes messages.']},
+  dashboard:{t:'Tableau de bord',b:['Ta vue d ensemble : chiffre d affaires, chantiers en cours, retards, cout main-d oeuvre.','Tout se met a jour automatiquement a partir de tes chantiers.']},
+  params:{t:'Parametres',b:['Entreprise : ton identite et ton logo.','Facturation : prefixes, numeros, TVA, plateforme agreee.','Roles : les permissions de chaque membre.','Apparence : couleur de l app et theme clair/sombre.']}
+};
+function openHubGuide(h){
+  const g=HUB_GUIDES[h]; if(!g){ openMenu(); return; }
+  openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('help')} Guide - ${esc(g.t)}</h2><p class="note" style="margin:0 0 12px">Comment utiliser cet espace :</p>`+g.b.map(x=>`<div style="display:flex;gap:10px;margin-bottom:10px"><span style="color:var(--acc);font-weight:800">&bull;</span><span style="flex:1;font-size:13.5px;line-height:1.5">${esc(x)}</span></div>`).join('')+`<button class="btn primary" style="width:100%;margin-top:6px" onclick="closeModal()">Compris</button>`);
+}
+function pointageSwitchCard(){
+  const on=pointageOn();
+  return `<div class="card" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><b style="font-size:14.5px">Pointage des heures</b><div class="note" style="font-size:12px">${on?'Active - les equipes peuvent pointer leurs heures.':'Desactive.'}</div></div><label class="iosw"><input type="checkbox" ${on?'checked':''} onchange="setPointage(this.checked)"><span class="iosl"></span></label></div>`;
+}
+function renderParamsPage(){
+  navEl.classList.add('hidden');
+  const sec=t=>hubBody('params',t);
+  app.innerHTML=`
+  <div class="top"><div class="brand" style="min-width:0">
+    <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <div class="logo">${icone('settings','22px')}</div>
+    <div class="bn"><b>Parametres</b><small>${esc(coName())}</small></div></div>
+    <button class="burger" onclick="openHubGuide('params')" aria-label="Guide"><span></span><span></span><span></span></button></div>
+  <div class="page-head"><h2>Parametres</h2></div>
+  ${sec('entreprise')}
+  ${sec('factu')}
+  ${sec('roles')}
+  ${sec('apparence')}
+  ${sec('systeme')}
+  <button class="btn danger" style="width:100%;margin-top:6px" onclick="teamSignOut()">${DEV_ACCESS?'Revenir a l\'espace dev':'Se deconnecter'}</button>`;
+  toTop();
+}
 function openMenu(){
   const myPhoto=(ME&&ME.photo)?`<img src="${ME.photo}" alt="">`:esc(initials(ME&&ME.nom));
   openModal(`<div class="grabber"></div><span id="menuModalMark"></span>
@@ -3868,10 +3909,7 @@ function openMenu(){
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
     ${themeSwatches(40)}
 
-    ${perm('gerer_reglages')?`<h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4"/><circle cx="12" cy="14" r="8"/><path d="M12 14V10"/></svg> Pointage horaire des équipes</h3>
-    <div class="row"><button class="btn ${pointageOn()?'primary':'ghost'}" onclick="setPointage(true)">Activé</button>
-      <button class="btn ${!pointageOn()?'primary':'ghost'}" onclick="setPointage(false)">Désactivé</button></div>
-    `:''}
+    
 
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Note de frais</h3>
     <p class="note" style="margin-bottom:8px">Envoie une photo (ticket, péage, matériel…) visible uniquement par le patron.</p>
@@ -4208,7 +4246,7 @@ function chantierHours(c){ if(!c.pointages) return 0; return Object.values(c.poi
 function memberHoursMs(u){ let ms=0; Object.values(CHANTIERS).forEach(c=>{ if(c.pointages&&c.pointages[u]) ms+=totalHeures(c.pointages[u]); }); return ms; }
 function memberCout(u){ const t=TEAM[u]||{}; const v=parseFloat(t.coutHoraire); return (!isNaN(v)&&v>0)?v:0; }
 function setMemberCout(u){ const e=document.getElementById('mc_'+u); if(!e||!TEAM[u])return; const v=parseFloat((e.value||'').toString().replace(',','.')); if(!isNaN(v)&&v>0) TEAM[u].coutHoraire=v; else delete TEAM[u].coutHoraire; saveTeam(u); toast("Coût horaire enregistré ✅"); openMemberNotes(u); }
-function setPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); toast(v?'Pointage activé':'Pointage désactivé'); const inMenu=menuOpen(); render(); if(inMenu) openMenu(); }
+function setPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); toast(v?'Pointage activé':'Pointage désactivé'); render(); }
 
 /* ---- devis / factures ---- */
 function devisCard(id,c){
