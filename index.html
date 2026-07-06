@@ -833,7 +833,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v140 · 06/07";
+const APP_VERSION="v141 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1781,6 +1781,8 @@ function myArchived(){
   if(!isChef()){ const u=AUTH_USER?AUTH_USER.uid:''; all=all.filter(c=>c.assignes && c.assignes[u]); }
   return all;
 }
+function clientMenu(btn){ const key=btn.parentElement.getAttribute('data-key'); if(!key) return; openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">Client</h2><p class="note" style="margin:0 0 12px">Que veux-tu faire ?</p><button class="btn danger" style="width:100%" onclick="closeModal();delClientKey(\'${encodeURIComponent(key)}\')">🗑 Retirer de l\'annuaire</button><button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeModal()">Annuler</button>`); }
+function delClientKey(k){ const key=decodeURIComponent(k); if(!confirm("Retirer ce client de l\'annuaire ? (ses chantiers ne sont pas supprimes)")) return; if(!CONFIG_DB.clientsMasques)CONFIG_DB.clientsMasques={}; CONFIG_DB.clientsMasques[key]=true; saveConfigDB(); toast('Client retire de l\'annuaire'); render(); }
 function chMenu(id){ const c=CHANTIERS[id]; if(!c) return; openModal(`<div class="grabber"></div>
   <h2 style="margin:0 0 4px">${esc(c.nom)}</h2>
   <p class="note" style="margin:0 0 12px">Que veux-tu faire avec ce chantier ?</p>
@@ -3126,7 +3128,6 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
-      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openHelp()">${icone('help')} Guide d’utilisation</button>
       <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
   }
   return hubPlaceholder('Bientôt','Cette section arrive prochainement.');
@@ -3251,11 +3252,11 @@ function factuClients(){
   const clients=Object.values(map).filter(cl=>!hidden[cl.key]).sort((a,b)=>b.fact-a.fact);
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('users')} Clients (${clients.length})</h2></div>`;
   if(!clients.length){ h+=`<p class="note">Aucun client pour l'instant. Les clients apparaissent ici dès que tu crées des chantiers.</p>`; }
-  else clients.forEach(cl=>{ h+=`<div class="cli-wrap"><button class="cli-del" onclick="delClientRow(this)">🗑 Supprimer</button><div class="cli-row member-row" data-key="${esc(cl.key)}">
+  else clients.forEach(cl=>{ h+=`<div class="member-row" data-key="${esc(cl.key)}" style="position:relative;padding-right:34px"><button class="ch-more" onclick="clientMenu(this)" aria-label="Options">⋯</button>
     <div style="flex:1;min-width:0"><b>${esc(cl.name)} <span class="pill">${cl.pro?'Pro':'Particulier'}</span></b>
       <div class="tag">${cl.pro&&cl.siren?('SIREN '+esc(cl.siren)+' · '):''}${cl.nb} chantier${cl.nb>1?'s':''} · ${eurF(cl.fact)} facturé${cl.adresse?(' · '+esc(cl.adresse)):''}</div>
       ${(cl.tel||cl.email)?`<div class="tag">${cl.tel?esc(cl.tel):''}${cl.tel&&cl.email?' · ':''}${cl.email?esc(cl.email):''}</div>`:''}</div>
-  </div></div>`; });
+  </div>`; });
   h+=`</div>`;
   return h;
 }
@@ -3895,6 +3896,7 @@ function renderParamsPage(){
     <div class="bn"><b>Parametres</b><small>${esc(coName())}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="page-head"><h2>Parametres</h2></div>
+  <div class="card"><div style="display:flex;align-items:center;gap:14px"><div class="prof-avatar" style="background:${(ME&&ME.photo)?'var(--bg2)':colorFor(ME&&ME.nom)}">${(ME&&ME.photo)?`<img src="${ME.photo}" alt="">`:esc(initials(ME&&ME.nom))}</div><div style="flex:1;min-width:0"><b style="font-family:'Sora';font-size:16px">${esc((ME&&ME.nom)||'')}</b><div class="note">${esc((ME&&ME.email)||'')} · ${roleLabel(ME&&ME.role)}</div></div></div><button class="btn ghost" style="width:100%;margin-top:12px" onclick="openPhotoPicker()">${(ME&&ME.photo)?'Changer ma photo':'Ajouter ma photo'}</button>${(ME&&ME.photo)?`<button class="linkbtn" style="display:block;margin:8px auto 0" onclick="removeMyPhoto()">Retirer ma photo</button>`:''}</div>
   ${sec('entreprise')}
   ${sec('factu')}
   ${sec('roles')}
@@ -3911,20 +3913,10 @@ function openMenu(){
       <div style="flex:1;min-width:0"><b style="font-family:'Sora';font-size:17px">${esc(ME.nom)}</b>
         <div class="note">${esc(ME.email||'')} · ${roleLabel(ME.role)}</div></div>
     </div>
-    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openPhotoPicker()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> ${(ME&&ME.photo)?'✎':'+'} ma photo</button>
-    ${(ME&&ME.photo)?`<button class="linkbtn" style="display:block;margin:8px auto 0" onclick="removeMyPhoto()">Retirer ma photo</button>`:''}
 
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
     ${themeSwatches(40)}
     ${(HUB && typeof HUB_GUIDES!=='undefined' && HUB_GUIDES[HUB])?`<h3 style="font-size:14px;margin:20px 0 8px">${icone('help')} Guide - ${esc(HUB_GUIDES[HUB].t)}</h3>`+HUB_GUIDES[HUB].b.map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;align-items:flex-start"><span style="color:var(--acc);font-weight:800;line-height:1.4">&bull;</span><span style="flex:1;font-size:13px;line-height:1.45">${esc(x)}</span></div>`).join(''):''}
-
-    
-
-    <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Note de frais</h3>
-    <p class="note" style="margin-bottom:8px">Envoie une photo (ticket, péage, matériel…) visible uniquement par le patron.</p>
-    <button class="btn ghost" style="width:100%" onclick="addNoteFrais()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Envoyer une note de frais</button>
-
-    <button class="btn ghost" style="width:100%;margin-top:20px" onclick="openHelp()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2 2-2 3"/><path d="M12 17h.01"/></svg> Guide d'utilisation</button>
     <button class="btn danger" style="width:100%;margin-top:10px" onclick="teamSignOut()">${DEV_ACCESS?'↩ Revenir à l\'espace dev':'Se déconnecter'}</button>
     <p class="note" style="text-align:center;margin-top:10px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p>`);
 }
