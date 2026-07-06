@@ -824,7 +824,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v133 · 04/07";
+const APP_VERSION="v134 · 04/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -4185,7 +4185,17 @@ function themeSwatches(sz){ sz=sz||40;
       return `<div onclick="setTheme('${val}')" style="cursor:pointer;flex:none" title="${baseLbl} ${albl}"><div style="width:${sz}px;height:${sz}px;border-radius:12px;background:${bg};border:3px solid ${on?'var(--txt)':'transparent'}"></div></div>`; }).join('');
     h+=`</div>`;
   }
-  h+=`<p class="tag" style="margin:14px 0 6px">Thème</p><div class="row" style="gap:8px"><button type="button" onclick="setMode('clair')" style="flex:1;background:#f5f7fb;color:#242a35;border:2px solid ${appMode()==='clair'?'var(--acc)':'transparent'};border-radius:12px;padding:11px;font:inherit;font-weight:700;cursor:pointer">Clair</button><button type="button" onclick="setMode('sombre')" style="flex:1;background:#0d1520;color:#e9eff6;border:2px solid ${appMode()==='sombre'?'var(--acc)':'transparent'};border-radius:12px;padding:11px;font:inherit;font-weight:700;cursor:pointer">Sombre</button></div>`;
+  h+=`<p class="tag" style="margin:16px 0 8px">Thème</p><div class="row" style="gap:10px">`
+    +`<button type="button" onclick="setMode('clair')" aria-label="Thème clair" style="flex:1;position:relative;border:2px solid ${appMode()==='clair'?'var(--acc)':'var(--line)'};border-radius:16px;padding:0;overflow:hidden;cursor:pointer;background:#eef1f6;font:inherit;transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .2s,border-color .2s;box-shadow:${appMode()==='clair'?'0 12px 26px -12px rgba(var(--glow),.7)':'none'}">`
+      +`<div style="height:48px;background:linear-gradient(135deg,#ffffff,#e6ebf3);padding:9px 11px;display:flex;flex-direction:column;justify-content:center;gap:6px"><div style="height:6px;width:62%;border-radius:3px;background:#c3ccdb"></div><div style="display:flex;gap:6px;align-items:center"><div style="height:6px;width:28%;border-radius:3px;background:#d7deea"></div><div style="height:11px;width:28px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc2))"></div></div></div>`
+      +`<div style="padding:8px;text-align:center;font-weight:700;font-size:13px;color:#2a3240;background:#f6f8fc">Clair</div>`
+      +`${appMode()==='clair'?`<span style="position:absolute;top:7px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:''}`
+    +`</button>`
+    +`<button type="button" onclick="setMode('sombre')" aria-label="Thème sombre" style="flex:1;position:relative;border:2px solid ${appMode()==='sombre'?'var(--acc)':'var(--line)'};border-radius:16px;padding:0;overflow:hidden;cursor:pointer;background:#0e1a2a;font:inherit;transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .2s,border-color .2s;box-shadow:${appMode()==='sombre'?'0 12px 26px -12px rgba(var(--glow),.7)':'none'}">`
+      +`<div style="height:48px;background:linear-gradient(135deg,#12263a,#0a1522);padding:9px 11px;display:flex;flex-direction:column;justify-content:center;gap:6px"><div style="height:6px;width:62%;border-radius:3px;background:rgba(255,255,255,.24)"></div><div style="display:flex;gap:6px;align-items:center"><div style="height:6px;width:28%;border-radius:3px;background:rgba(255,255,255,.13)"></div><div style="height:11px;width:28px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc2))"></div></div></div>`
+      +`<div style="padding:8px;text-align:center;font-weight:700;font-size:13px;color:#e8eef6;background:#0b1420">Sombre</div>`
+      +`${appMode()==='sombre'?`<span style="position:absolute;top:7px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:''}`
+    +`</button></div>`;
   return h;
 }
 function setDefaultColor(t){ CONFIG_DB.couleurDefaut=t; saveConfigDB(); toast("Couleur par défaut enregistrée"); }
