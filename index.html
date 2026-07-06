@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v145 · 06/07";
+const APP_VERSION="v146 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -949,12 +949,9 @@ function renderDev(){
       </div>
       <label style="margin-top:10px">Facturation dans l'app</label>
       <div class="row" style="gap:6px"><button class="btn ${factuOn()?'primary':'ghost'} mini" onclick="devSetFactu(true)">Activée</button><button class="btn ${!factuOn()?'primary':'ghost'} mini" onclick="devSetFactu(false)">Désactivée</button></div>
-      <label style="margin-top:10px">Facturation électronique (Factur-X)</label>
-      <div class="row" style="gap:6px"><button class="btn ${facturXOn()?'primary':'ghost'} mini" onclick="devSetFacturX(true)">Activée</button><button class="btn ${!facturXOn()?'primary':'ghost'} mini" onclick="devSetFacturX(false)">Désactivée</button></div>
-      <p class="note" style="font-size:11px;margin-top:4px">Désactivée = seulement la facturation de confort (devis/factures), sans Factur-X ni e-reporting.</p>
-      <label style="margin-top:10px">Intelligence artificielle (tout l'IA)</label>
-      <div class="row" style="gap:6px"><button class="btn ${iaOn()?'primary':'ghost'} mini" onclick="devSetIA(true)">Activée</button><button class="btn ${!iaOn()?'primary':'ghost'} mini" onclick="devSetIA(false)">Désactivée</button></div>
-      <p class="note" style="font-size:11px;margin-top:4px">Active ou désactive TOUTES les fonctions IA : assistant, projection, devis IA, rédaction et compte-rendu vocal.</p>
+      <label style="margin-top:10px">Abonnement du client</label>
+      <div class="row" style="gap:6px"><button class="btn mini" onclick="devSetPlan('basique')" style="flex:1;border:2px solid ${!isPremium()?'#b7bbc4':'var(--line)'};background:${!isPremium()?'linear-gradient(135deg,#eceef2,#c2c6cf)':'var(--card2)'};color:${!isPremium()?'#2a2e35':'var(--txt)'}">Basique (argent)</button><button class="btn mini" onclick="devSetPlan('premium')" style="flex:1;border:2px solid ${isPremium()?'#d4af37':'var(--line)'};background:${isPremium()?'linear-gradient(135deg,#f6d365,#d4af37)':'var(--card2)'};color:${isPremium()?'#3a2e00':'var(--txt)'}">Premium (or)</button></div>
+      <p class="note" style="font-size:11px;margin-top:4px">Premium = toute l'IA + facturation électronique (Factur-X). Basique = sans IA ni Factur-X (facturation de confort seulement). Ton choix s'applique automatiquement au patron.</p>
       <p class="note" style="font-size:11px;margin-top:4px">Désactive si le client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
       <div class="row" style="margin-top:10px"><div><label>Préfixe devis</label><input id="cfg_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
         <div><label>Prochain n° devis</label><input id="cfg_devnum" type="number" min="1" value="${(CONFIG_DB.devisCounter||0)+1}"></div></div>
@@ -1001,6 +998,7 @@ function devSetPointage(v){ CONFIG_DB.pointage=v; saveConfigDB(); renderDev(); }
 function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
 function devSetFacturX(v){ CONFIG_DB.facturXOff=!v; saveConfigDB(); renderDev(); }
+function devSetPlan(p){ CONFIG_DB.plan=p; saveConfigDB(); renderDev(); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
 function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } cfgRerender(); }
 function devColorPicker(){
@@ -3022,10 +3020,11 @@ function renderAccueil(){
     ['facturation','receipt','Facturation', devAtt?(devAtt+' devis en attente'):''],
     ['ia','robot','IA','Assistant, projection, rédaction'],
     ['params','settings','Paramètres','']
-  ].filter(t=>(t[0]!=='ia'||iaOn())&&(t[0]!=='facturation'||factuOn()));
+  ].filter(t=>(t[0]!=='facturation'||factuOn()));
+  const _prem=isPremium(); const _iaT=(!_prem)?tiles.find(function(t){return t[0]==='ia';}):null; const _mainTiles=(!_prem)?tiles.filter(function(t){return t[0]!=='ia';}):tiles;
   app.innerHTML=`
   <div class="top"><div class="brand"><div class="logo">${logoHTML()}</div>
-    <div class="bn"><b>${esc(coName())}</b><small>Bonjour ${esc(prenom)}</small></div></div>
+    <div class="bn"><div style="display:flex;align-items:center;gap:6px"><b>${esc(coName())}</b>${planTag()}</div><small>Bonjour ${esc(prenom)}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="card" style="position:relative;overflow:hidden;margin-top:4px">
     <div style="position:absolute;width:170px;height:170px;right:-50px;top:-70px;border-radius:50%;background:radial-gradient(circle,var(--acc2),transparent 70%);opacity:.35;pointer-events:none"></div>
@@ -3038,11 +3037,11 @@ function renderAccueil(){
     </div>
   </div>
   <div style="display:flex;flex-direction:column;gap:8px;padding:0">
-    ${tiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:11px 13px;cursor:pointer;color:var(--txt);font:inherit;text-align:left">
+    ${_mainTiles.map(([h,ic,lb,bdg])=>`<button onclick="goHub('${h}')" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:11px 13px;cursor:pointer;color:var(--txt);font:inherit;text-align:left">
       <span style="width:40px;height:40px;flex:0 0 40px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'22px')}</span>
       <span style="flex:1;min-width:0"><b style="font-size:15px;display:block">${lb}</b>${bdg?`<small class="note" style="font-size:11.5px">${esc(bdg)}</small>`:''}</span>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35;flex:0 0 18px"><path d="M9 18l6-6-6-6"/></svg>
-    </button>`).join('')}
+    </button>`).join('')}${(!_prem&&_iaT)?`<button onclick="toast('Reserve au Premium')" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:11px 13px;cursor:not-allowed;color:var(--muted);font:inherit;text-align:left;opacity:.7"><span style="width:40px;height:40px;flex:0 0 40px;border-radius:12px;background:var(--card2);color:var(--muted);display:flex;align-items:center;justify-content:center">${icone('robot','22px')}</span><span style="flex:1;min-width:0"><b style="font-size:15px;display:block;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2.5px">IA</b><small class="note" style="font-size:11.5px">Reserve a l'abonnement Premium</small></span><span style="flex:0 0 auto;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></button>`:''}
   </div>`;
   toTop();
 }
@@ -4647,8 +4646,10 @@ function publishDoc(id,type){
 function factPrefix(){ return (CONFIG_DB.factPrefix||'FACT').toUpperCase(); }
 function devisPrefix(){ return (CONFIG_DB.devisPrefix||'DEV').toUpperCase(); }
 function factuOn(){ return CONFIG_DB.factuOff!==true; } // facturation active par défaut
-function iaOn(){ return CONFIG_DB.iaOff!==true; } // IA (toutes les fonctions) active par défaut
-function facturXOn(){ return CONFIG_DB.facturXOff!==true; } // Factur-X / e-invoicing actif par défaut
+function isPremium(){ return (CONFIG_DB.plan||'premium')!=='basique'; }
+function planTag(){ const p=isPremium(); return `<span style="display:inline-block;vertical-align:middle;font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;${p?'background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00':'background:linear-gradient(135deg,#e9ebef,#b7bbc4);color:#2a2e35'}">${p?'PREMIUM':'BASIQUE'}</span>`; }
+function iaOn(){ return isPremium(); } // IA = abonnement Premium
+function facturXOn(){ return isPremium(); } // Factur-X = abonnement Premium
 function nextFactureNum(){ const y=new Date().getFullYear(); CONFIG_DB.factCounter=(CONFIG_DB.factCounter||0)+1; saveConfigDB(); return factPrefix()+'-'+y+'-'+String(CONFIG_DB.factCounter).padStart(3,'0'); }
 function nextDevisNum(){ const y=new Date().getFullYear(); CONFIG_DB.devisCounter=(CONFIG_DB.devisCounter||0)+1; saveConfigDB(); return devisPrefix()+'-'+y+'-'+String(CONFIG_DB.devisCounter).padStart(3,'0'); }
 function publishFacture(id,mode,pct){
