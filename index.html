@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v148 · 06/07";
+const APP_VERSION="v149 · 06/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -3042,7 +3042,7 @@ function renderAccueil(){
       <span style="width:40px;height:40px;flex:0 0 40px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:var(--accText);display:flex;align-items:center;justify-content:center">${icone(ic,'22px')}</span>
       <span style="flex:1;min-width:0"><b style="font-size:15px;display:block">${lb}</b>${bdg?`<small class="note" style="font-size:11.5px">${esc(bdg)}</small>`:''}</span>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.35;flex:0 0 18px"><path d="M9 18l6-6-6-6"/></svg>
-    </button>`).join('')}${(!_prem&&_iaT)?`<button onclick="toast('Reserve au Premium')" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:11px 13px;cursor:not-allowed;color:var(--muted);font:inherit;text-align:left;opacity:.7"><span style="width:40px;height:40px;flex:0 0 40px;border-radius:12px;background:var(--card2);color:var(--muted);display:flex;align-items:center;justify-content:center">${icone('robot','22px')}</span><span style="flex:1;min-width:0"><b style="font-size:15px;display:block;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2.5px">IA</b><small class="note" style="font-size:11.5px">Reserve a l'abonnement Premium</small></span><span style="flex:0 0 auto;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></button>`:''}
+    </button>`).join('')}${(!_prem&&_iaT)?`<button onclick="toast('Réservé au Premium')" style="display:flex;align-items:center;gap:12px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:11px 13px;cursor:not-allowed;color:var(--muted);font:inherit;text-align:left;opacity:.7"><span style="width:40px;height:40px;flex:0 0 40px;border-radius:12px;background:var(--card2);color:var(--muted);display:flex;align-items:center;justify-content:center">${icone('robot','22px')}</span><span style="flex:1;min-width:0"><b style="font-size:15px;display:block;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2.5px">IA</b><small class="note" style="font-size:11.5px">Réservé à l'abonnement Premium</small></span><span style="flex:0 0 auto;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></button>`:''}
   </div>`;
   toTop();
 }
@@ -3878,14 +3878,14 @@ async function facturXTestPdf(){
 
 /* ====================== MENU / RÉGLAGES ====================== */
 const HUB_GUIDES={
-  accueil:{t:'Accueil',b:['Ton resume du jour est en haut : chantiers en cours, RDV, devis en attente, membres.','Touche une tuile pour ouvrir un espace : Chantiers, Equipe, Planning, Facturation, IA, Parametres.','Chaque espace a son propre guide, dans ce menu.','Balaie du bord gauche vers la droite pour revenir a l accueil a tout moment.']},
-  chantiers:{t:'Chantiers',b:['Cree un chantier avec le bouton +, puis ouvre-le pour tout gerer.','Dans la fiche : avancement, photos, taches, equipe, materiel, reception, rentabilite, cloture.','Onglet Clients : ton annuaire ou la messagerie avec le client.','Onglet Archives : les chantiers termines. Onglet Carte : leurs adresses.']},
-  equipe:{t:'Equipe',b:['Membres : ajoute tes equipiers, leurs roles, vehicules et cout horaire.','Messages : discute avec ton equipe (groupe ou prive) et l assistant IA.','Pointage : active le suivi des heures avec l interrupteur, puis retrouve les heures par personne.','Frais : les notes de frais de l equipe. Stats : les statistiques.']},
-  planning:{t:'Planning',b:['Calendrier : la vue mensuelle. Aujourd hui : ce qui se passe ce jour.','RDV : les rendez-vous clients a venir. Echeances : les chantiers en retard ou proches de la fin.','Charge : qui est sur quels chantiers, et qui est libre.']},
-  facturation:{t:'Facturation',b:['Devis : cree et suis tes devis (en cours / passes).','Factures : tes factures (Pros / Particuliers), avec la facture electronique pour les pros.','Clients : ton annuaire. Resume : la vue d ensemble.']},
-  ia:{t:'Intelligence artificielle',b:['Assistant : pose tes questions a l IA.','Projection : transforme une photo (existant + inspiration) en rendu.','Devis IA : propose des lignes de devis. Redaction : redige tes messages.']},
-  dashboard:{t:'Tableau de bord',b:['Ta vue d ensemble : chiffre d affaires, chantiers en cours, retards, cout main-d oeuvre.','Tout se met a jour automatiquement a partir de tes chantiers.']},
-  params:{t:'Parametres',b:['Entreprise : ton identite et ton logo.','Facturation : prefixes, numeros, TVA, plateforme agreee.','Roles : les permissions de chaque membre.','Apparence : couleur de l app et theme clair/sombre.']}
+  accueil:{t:"Accueil",b:["Ton résumé du jour est en haut : chantiers en cours, RDV, devis en attente, membres.","Touche une tuile pour ouvrir un espace : Chantiers, Équipe, Planning, Facturation, IA, Paramètres.","Chaque espace a son propre guide, dans ce menu.","Balaie du bord gauche vers la droite pour revenir à l'accueil à tout moment."]},
+  chantiers:{t:"Chantiers",b:["Crée un chantier avec le bouton +, puis ouvre-le pour tout gérer.","Dans la fiche : avancement, photos, tâches, équipe, matériel, réception, rentabilité, clôture.","Onglet Clients : ton annuaire ou la messagerie avec le client.","Onglet Archivés : les chantiers terminés. Onglet Carte : leurs adresses."]},
+  equipe:{t:"Équipe",b:["Membres : ajoute tes équipiers, leurs rôles, véhicules et coût horaire.","Messages : discute avec ton équipe (groupe ou privé) et l'assistant IA.","Pointage : active le suivi des heures avec l'interrupteur, puis retrouve les heures par personne.","Frais : les notes de frais de l'équipe. Stats : les statistiques."]},
+  planning:{t:"Planning",b:["Calendrier : la vue mensuelle. Aujourd'hui : ce qui se passe ce jour.","RDV : les rendez-vous clients à venir. Échéances : les chantiers en retard ou proches de la fin.","Charge : qui est sur quels chantiers, et qui est libre."]},
+  facturation:{t:"Facturation",b:["Devis : crée et suis tes devis (en cours / passés).","Factures : tes factures (Pros / Particuliers), avec la facture électronique pour les pros.","Clients : ton annuaire. Résumé : la vue d'ensemble."]},
+  ia:{t:"Intelligence artificielle",b:["Assistant : pose tes questions à l'IA.","Projection : transforme une photo (existant + inspiration) en rendu.","Devis IA : propose des lignes de devis. Rédaction : rédige tes messages."]},
+  dashboard:{t:"Tableau de bord",b:["Ta vue d'ensemble : chiffre d'affaires, chantiers en cours, retards, coût main-d'œuvre.","Tout se met à jour automatiquement à partir de tes chantiers."]},
+  params:{t:"Paramètres",b:["Entreprise : ton identité et ton logo.","Facturation : préfixes, numéros, TVA, plateforme agréée.","Rôles : les permissions de chaque membre.","Apparence : couleur de l'app et thème clair/sombre."]}
 };
 function openHubGuide(h){
   const g=HUB_GUIDES[h]; if(!g){ openMenu(); return; }
@@ -3897,33 +3897,33 @@ function pointageSwitchCard(){
 }
 function bossClientPreview(){
   const chs=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived).map(id=>Object.assign({id:id},CHANTIERS[id])).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('eye')} Apercu cote client</h2></div><p class="note" style="margin:0 0 8px">Vois exactement ce que voit le client d'un chantier.</p>`;
+  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('eye')} Aperçu côté client</h2></div><p class="note" style="margin:0 0 8px">Vois exactement ce que voit le client d'un chantier.</p>`;
   if(!chs.length){ h+=`<p class="note" style="margin:0">Aucun chantier pour l'instant.</p>`; }
-  else chs.forEach(c=>{ h+=`<div class="task-row"><div style="flex:1;min-width:0"><b>${esc(c.nom||'Chantier')}</b><div class="tag">${esc(clientFull(c)||'')}${c.clientCode?(' \u00b7 code '+esc(c.clientCode)):''}</div></div><button class="btn ghost mini" onclick="previewClientView('${c.id}')">Apercu</button></div>`; });
+  else chs.forEach(c=>{ h+=`<div class="task-row"><div style="flex:1;min-width:0"><b>${esc(c.nom||'Chantier')}</b><div class="tag">${esc(clientFull(c)||'')}${c.clientCode?(' \u00b7 code '+esc(c.clientCode)):''}</div></div><button class="btn ghost mini" onclick="previewClientView('${c.id}')">Aperçu</button></div>`; });
   return h+`</div>`;
 }
 function bossEntrepriseConfig(){
   const ci=contactInfo();
   return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('id')} Configuration de l'entreprise</h2></div>
-    <p class="note" style="margin:0 0 8px">Identite et reglages affiches partout dans l'app. Tu modifies tout, puis tu enregistres.</p>
+    <p class="note" style="margin:0 0 8px">Identité et réglages affichés partout dans l'app. Tu modifies tout, puis tu enregistres.</p>
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
       <div class="hero-logo" style="width:60px;height:60px;font-size:26px;margin:0">${coLogo()?`<img src="${coLogo()}" style="width:100%;height:100%;object-fit:contain">`:esc((coName()||'?').slice(0,1))}</div>
       <div style="flex:1"><input type="file" id="cfg_logo_file" accept="image/*" style="display:none" onchange="devUploadLogo(this)">
         <button class="btn ghost mini" onclick="document.getElementById('cfg_logo_file').click()">Changer le logo</button>
         ${coLogo()?`<button class="btn ghost mini" style="margin-top:6px" onclick="devRemoveLogo()">Retirer</button>`:''}</div>
     </div>
-    <label>Nom de l'entreprise</label><input id="cfg_nom" value="${esc(coName())}" placeholder="ex: Dupont Renovation">
+    <label>Nom de l'entreprise</label><input id="cfg_nom" value="${esc(coName())}" placeholder="ex: Dupont Rénovation">
     <label>Slogan</label><input id="cfg_slogan" value="${esc(coSlogan())}" placeholder="ex: Votre chantier en toute confiance">
-    <p class="note" style="margin:14px 0 8px">Coordonnees affichees aux clients.</p>
-    <label>Telephone</label><input id="cfg_tel" value="${esc(ci.tel)}" placeholder="06 12 34 56 78">
+    <p class="note" style="margin:14px 0 8px">Coordonnées affichées aux clients.</p>
+    <label>Téléphone</label><input id="cfg_tel" value="${esc(ci.tel)}" placeholder="06 12 34 56 78">
     <label>Email</label><input id="cfg_email" value="${esc(ci.email)}" placeholder="contact@entreprise.fr">
     <label>Adresse</label><input id="cfg_adr" value="${esc(ci.adresse)}" placeholder="12 rue des Artisans, 21000 Dijon">
     <label>Horaires</label><input id="cfg_hor" value="${esc(ci.horaires)}" placeholder="Lun-Ven : 8h-18h">
-    <label style="margin-top:12px">Couleur par defaut de l'app (pour tout le monde)</label>
+    <label style="margin-top:12px">Couleur par défaut de l'app (pour tout le monde)</label>
     ${devColorPicker()}
-    <label style="margin-top:12px">Couleurs proposees aux utilisateurs</label>
+    <label style="margin-top:12px">Couleurs proposées aux utilisateurs</label>
     ${devColorAvailablePicker()}
-    <div style="display:flex;align-items:center;gap:12px;margin-top:14px"><div style="flex:1;min-width:0"><b style="font-size:14px">Pointage des heures</b><div class="note" style="font-size:12px">Suivi des heures des equipes.</div></div><label class="iosw"><input type="checkbox" ${pointageOn()?'checked':''} onchange="setPointage(this.checked)"><span class="iosl"></span></label></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:14px"><div style="flex:1;min-width:0"><b style="font-size:14px">Pointage des heures</b><div class="note" style="font-size:12px">Suivi des heures des équipes.</div></div><label class="iosw"><input type="checkbox" ${pointageOn()?'checked':''} onchange="setPointage(this.checked)"><span class="iosl"></span></label></div>
     <button class="btn primary" style="width:100%;margin-top:16px" onclick="devSaveConfig()">Enregistrer la configuration</button>
   </div>`;
 }
@@ -3934,9 +3934,9 @@ function renderParamsPage(){
   <div class="top"><div class="brand" style="min-width:0">
     <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${icone('settings','22px')}</div>
-    <div class="bn"><b>Parametres</b><small>${esc(coName())}</small></div></div>
+    <div class="bn"><b>Paramètres</b><small>${esc(coName())}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
-  <div class="page-head"><h2>Parametres</h2></div>
+  <div class="page-head"><h2>Paramètres</h2></div>
   <div class="card"><div style="display:flex;align-items:center;gap:14px"><div class="prof-avatar" style="background:${(ME&&ME.photo)?'var(--bg2)':colorFor(ME&&ME.nom)}">${(ME&&ME.photo)?`<img src="${ME.photo}" alt="">`:esc(initials(ME&&ME.nom))}</div><div style="flex:1;min-width:0"><b style="font-family:'Sora';font-size:16px">${esc((ME&&ME.nom)||'')}</b><div class="note">${esc((ME&&ME.email)||'')} · ${roleLabel(ME&&ME.role)}</div></div></div><button class="btn ghost" style="width:100%;margin-top:12px" onclick="openPhotoPicker()">${(ME&&ME.photo)?'Changer ma photo':'Ajouter ma photo'}</button>${(ME&&ME.photo)?`<button class="linkbtn" style="display:block;margin:8px auto 0" onclick="removeMyPhoto()">Retirer ma photo</button>`:''}</div>
   ${bossClientPreview()}
   ${bossEntrepriseConfig()}
@@ -3950,13 +3950,13 @@ function renderParamsPage(){
 function notifSeen(){ return (+lsGet('batisuivi_notif_seen',0))||0; }
 function markNotifSeen(){ lsSet('batisuivi_notif_seen', Date.now()); }
 function buildNotifs(){
-  var out=[]; var seen=notifSeen(); var now=Date.now(); var myn=(ME&&ME.nom)||'';
-  try{ var un=totalChatUnread(); if(un>0){ var lg=chatLast('group'); out.push({ts:(lg&&lg.ts)||now, ic:'message', nw:true, t:'Messages equipe', s:un+' message'+(un>1?'s':'')+' non lu'+(un>1?'s':''), go:"goHub('equipe');setHTab('messagerie')"}); } }catch(_){ }
-  try{ Object.keys(CHANTIERS).forEach(function(id){ var u=0; try{ u=chatUnreadKey('client:'+id); }catch(e){ u=0; } if(u>0){ var lc=chatLast('client:'+id); out.push({ts:(lc&&lc.ts)||now, ic:'message', nw:true, t:'Message client', s:((CHANTIERS[id]||{}).nom||'Chantier')+' - '+u+' non lu'+(u>1?'s':''), go:"goHub('chantiers')"}); } }); }catch(_){ }
+  var out=[]; var seen=notifSeen(); var now=Date.now(); var myn=(ME&&ME.nom)||''; var me=(typeof myUid==='function')?myUid():'';
+  try{ var un=totalChatUnread(); if(un>0){ var lg=chatLast('group'); var mts=(lg&&lg.ts)||now; out.push({ts:mts, ic:'message', nw:mts>seen, t:"Messages \u00e9quipe", s:un+" message"+(un>1?'s':'')+" non lu"+(un>1?'s':''), go:"goHub('equipe');setHTab('messagerie')"}); } }catch(_){ }
   Object.keys(CHANTIERS).forEach(function(id){ var c=CHANTIERS[id]; if(!c) return;
-    if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid]; if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; out.push({ts:ts, ic:'check', nw:ts>seen, t:'Devis signe', s:(c.nom||'Chantier')+' - '+(d.num||''), go:"goHub('facturation')"}); } }); }
-    if(c.frais){ Object.keys(c.frais).forEach(function(k){ var f=c.frais[k]; if(f&&f.by&&f.by!==myn){ out.push({ts:f.ts||0, ic:'receipt', nw:(f.ts||0)>seen, t:'Note de frais', s:(f.montant||0)+' EUR - '+f.by, go:"goHub('equipe');setHTab('frais')"}); } }); }
-    if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var days=Math.round((fin-now)/86400000); if(days<=7){ out.push({ts:fin, ic:'clock', nw:true, t:(days<0?'Chantier en retard':'Echeance proche'), s:(c.nom||'Chantier')+(days<0?(' - en retard de '+(-days)+' j'):(days===0?" - aujourd'hui":(' - dans '+days+' j'))), go:"goHub('planning');setHTab('echeances')"}); } } }
+    if(c.messages){ var seenC=((typeof MSG_SEEN!=='undefined'&&MSG_SEEN)?MSG_SEEN[id]:0)||0; var arr=Object.values(c.messages).filter(function(m){ return m&&m.from!==me&&m.from!=='patron'; }).sort(function(a,b){return (a.ts||0)-(b.ts||0);}); var unc=arr.filter(function(m){ return (m.ts||0)>seenC; }).length; if(unc>0){ var lts=arr.length?(arr[arr.length-1].ts||now):now; out.push({ts:lts, ic:'message', nw:lts>seen, t:"Message client", s:(c.nom||"Chantier")+" \u00b7 "+unc+" non lu"+(unc>1?'s':''), go:"goHub('chantiers')"}); } }
+    if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid]; if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; out.push({ts:ts, ic:'check', nw:ts>seen, t:"Devis sign\u00e9", s:(c.nom||"Chantier")+" \u00b7 "+(d.num||''), go:"goHub('facturation')"}); } }); }
+    if(c.frais){ Object.keys(c.frais).forEach(function(k){ var f=c.frais[k]; if(f&&f.by&&f.by!==myn){ out.push({ts:f.ts||0, ic:'receipt', nw:(f.ts||0)>seen, t:"Note de frais", s:(f.montant||0)+" \u20ac \u00b7 "+f.by, go:"goHub('equipe');setHTab('frais')"}); } }); }
+    if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var days=Math.round((fin-now)/86400000); if(days<=7){ out.push({ts:fin, ic:'clock', nw:false, t:(days<0?"Chantier en retard":"\u00c9ch\u00e9ance proche"), s:(c.nom||"Chantier")+(days<0?(" \u00b7 en retard de "+(-days)+" j"):(days===0?" \u00b7 aujourd'hui":(" \u00b7 dans "+days+" j"))), go:"goHub('planning');setHTab('echeances')"}); } } }
   });
   out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   return out;
@@ -4293,16 +4293,8 @@ function themeSwatches(sz){ sz=sz||40;
     h+=`</div>`;
   }
   h+=`<p class="tag" style="margin:16px 0 8px">Thème</p><div class="row" style="gap:10px">`
-    +`<button type="button" onclick="setMode('clair')" aria-label="Thème clair" style="flex:1;position:relative;border:2px solid ${appMode()==='clair'?'var(--acc)':'var(--line)'};border-radius:16px;padding:0;overflow:hidden;cursor:pointer;background:#eef1f6;font:inherit;transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .2s,border-color .2s;box-shadow:${appMode()==='clair'?'0 12px 26px -12px rgba(var(--glow),.7)':'none'}">`
-      +`<div style="height:48px;background:linear-gradient(135deg,#ffffff,#e6ebf3);padding:9px 11px;display:flex;flex-direction:column;justify-content:center;gap:6px"><div style="height:6px;width:62%;border-radius:3px;background:#c3ccdb"></div><div style="display:flex;gap:6px;align-items:center"><div style="height:6px;width:28%;border-radius:3px;background:#d7deea"></div><div style="height:11px;width:28px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc2))"></div></div></div>`
-      +`<div style="padding:8px;text-align:center;font-weight:700;font-size:13px;color:#2a3240;background:#f6f8fc">Clair</div>`
-      +`${appMode()==='clair'?`<span style="position:absolute;top:7px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:''}`
-    +`</button>`
-    +`<button type="button" onclick="setMode('sombre')" aria-label="Thème sombre" style="flex:1;position:relative;border:2px solid ${appMode()==='sombre'?'var(--acc)':'var(--line)'};border-radius:16px;padding:0;overflow:hidden;cursor:pointer;background:#0e1a2a;font:inherit;transition:transform .18s cubic-bezier(.2,.7,.2,1),box-shadow .2s,border-color .2s;box-shadow:${appMode()==='sombre'?'0 12px 26px -12px rgba(var(--glow),.7)':'none'}">`
-      +`<div style="height:48px;background:linear-gradient(135deg,#12263a,#0a1522);padding:9px 11px;display:flex;flex-direction:column;justify-content:center;gap:6px"><div style="height:6px;width:62%;border-radius:3px;background:rgba(255,255,255,.24)"></div><div style="display:flex;gap:6px;align-items:center"><div style="height:6px;width:28%;border-radius:3px;background:rgba(255,255,255,.13)"></div><div style="height:11px;width:28px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc2))"></div></div></div>`
-      +`<div style="padding:8px;text-align:center;font-weight:700;font-size:13px;color:#e8eef6;background:#0b1420">Sombre</div>`
-      +`${appMode()==='sombre'?`<span style="position:absolute;top:7px;right:7px;width:18px;height:18px;border-radius:50%;background:var(--acc);color:var(--accText);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:''}`
-    +`</button></div>`;
+    +`<button type="button" onclick="setMode('clair')" style="flex:1;display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:13px;border:2px solid ${appMode()==='clair'?'var(--acc)':'var(--line)'};background:var(--card2);color:var(--txt);font:inherit;font-weight:700;font-size:13.5px;cursor:pointer"><span style="width:22px;height:22px;flex:0 0 22px;border-radius:7px;background:linear-gradient(135deg,#ffffff,#e3e9f2);border:1px solid #d3d9e4"></span>Clair${appMode()==='clair'?`<span style="margin-left:auto;color:var(--acc);font-weight:800">\u2713</span>`:''}</button>`
+    +`<button type="button" onclick="setMode('sombre')" style="flex:1;display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:13px;border:2px solid ${appMode()==='sombre'?'var(--acc)':'var(--line)'};background:var(--card2);color:var(--txt);font:inherit;font-weight:700;font-size:13.5px;cursor:pointer"><span style="width:22px;height:22px;flex:0 0 22px;border-radius:7px;background:linear-gradient(135deg,#16293c,#0a1522);border:1px solid #26364a"></span>Sombre${appMode()==='sombre'?`<span style="margin-left:auto;color:var(--acc);font-weight:800">\u2713</span>`:''}</button></div>`;
   return h;
 }
 function setDefaultColor(t){ CONFIG_DB.couleurDefaut=t; saveConfigDB(); toast("Couleur par défaut enregistrée"); }
