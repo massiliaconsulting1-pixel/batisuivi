@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v150 · 07/07";
+const APP_VERSION="v151 · 07/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -3025,7 +3025,7 @@ function renderAccueil(){
   app.innerHTML=`
   <div class="top"><div class="brand"><div class="logo">${logoHTML()}</div>
     <div class="bn"><div style="display:flex;align-items:center;gap:6px"><b>${esc(coName())}</b>${planTag()}</div><small>Bonjour ${esc(prenom)}</small></div></div>
-    ${isPremium()?`<button class="iconbtn" style="margin-right:8px;position:relative;width:38px;height:38px;flex:none" onclick="openNotifs()" aria-label="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>${notifBadge()>0?`<span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1">${notifBadge()>9?'9+':notifBadge()}</span>`:''}</button>`:''}
+    ${isPremium()?`<button style="margin-right:2px;position:relative;width:38px;height:38px;flex:none;background:transparent;border:none;padding:0;color:var(--txt);cursor:pointer;display:inline-flex;align-items:center;justify-content:center" onclick="openNotifs()" aria-label="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>${notifBadge()>0?`<span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1">${notifBadge()>9?'9+':notifBadge()}</span>`:''}</button>`:''}
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   <div class="card" style="position:relative;overflow:hidden;margin-top:4px">
     <div style="position:absolute;width:170px;height:170px;right:-50px;top:-70px;border-radius:50%;background:radial-gradient(circle,var(--acc2),transparent 70%);opacity:.35;pointer-events:none"></div>
@@ -3949,24 +3949,32 @@ function renderParamsPage(){
 }
 function notifSeen(){ return (+lsGet('batisuivi_notif_seen',0))||0; }
 function markNotifSeen(){ lsSet('batisuivi_notif_seen', Date.now()); }
+function notifDismissed(){ try{ var v=lsGet('batisuivi_notif_dismissed',{}); return (v&&typeof v==='object')?v:{}; }catch(_){ return {}; } }
+var _NOTIF_LIST=[];
+function dismissNotifIdx(i){ var n=_NOTIF_LIST[i]; if(!n) return; try{ var d=notifDismissed(); d[n.key]=Math.max(d[n.key]||0, n.ts||0); lsSet('batisuivi_notif_dismissed', d); }catch(_){ } var el=document.getElementById('ntf_'+i); if(el){ el.style.transition='opacity .18s'; el.style.opacity='0'; setTimeout(function(){ if(el&&el.parentNode) el.parentNode.removeChild(el); },180); } }
 function buildNotifs(){
   var out=[]; var seen=notifSeen(); var now=Date.now(); var myn=(ME&&ME.nom)||''; var me=(typeof myUid==='function')?myUid():'';
-  try{ var un=totalChatUnread(); if(un>0){ var lg=chatLast('group'); var mts=(lg&&lg.ts)||now; out.push({ts:mts, ic:'message', nw:mts>seen, t:"Messages \u00e9quipe", s:un+" message"+(un>1?'s':'')+" non lu"+(un>1?'s':''), go:"goHub('equipe');setHTab('messagerie')"}); } }catch(_){ }
+  try{ var un=totalChatUnread(); if(un>0){ var lg=chatLast('group'); var mts=(lg&&lg.ts)||now; out.push({key:'msg:group', ts:mts, ic:'message', nw:mts>seen, t:"Messages \u00e9quipe", s:un+" message"+(un>1?'s':'')+" non lu"+(un>1?'s':''), go:"goHub('equipe');setHTab('messagerie')"}); } }catch(_){ }
   Object.keys(CHANTIERS).forEach(function(id){ var c=CHANTIERS[id]; if(!c) return;
-    if(c.messages){ var seenC=((typeof MSG_SEEN!=='undefined'&&MSG_SEEN)?MSG_SEEN[id]:0)||0; var arr=Object.values(c.messages).filter(function(m){ return m&&m.from!==me&&m.from!=='patron'; }).sort(function(a,b){return (a.ts||0)-(b.ts||0);}); var unc=arr.filter(function(m){ return (m.ts||0)>seenC; }).length; if(unc>0){ var lts=arr.length?(arr[arr.length-1].ts||now):now; out.push({ts:lts, ic:'message', nw:lts>seen, t:"Message client", s:(c.nom||"Chantier")+" \u00b7 "+unc+" non lu"+(unc>1?'s':''), go:"goHub('chantiers')"}); } }
-    if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid]; if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; out.push({ts:ts, ic:'check', nw:ts>seen, t:"Devis sign\u00e9", s:(c.nom||"Chantier")+" \u00b7 "+(d.num||''), go:"goHub('facturation')"}); } }); }
-    if(c.frais){ Object.keys(c.frais).forEach(function(k){ var f=c.frais[k]; if(f&&f.by&&f.by!==myn){ out.push({ts:f.ts||0, ic:'receipt', nw:(f.ts||0)>seen, t:"Note de frais", s:(f.montant||0)+" \u20ac \u00b7 "+f.by, go:"goHub('equipe');setHTab('frais')"}); } }); }
-    if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var days=Math.round((fin-now)/86400000); if(days<=7){ out.push({ts:fin, ic:'clock', nw:false, t:(days<0?"Chantier en retard":"\u00c9ch\u00e9ance proche"), s:(c.nom||"Chantier")+(days<0?(" \u00b7 en retard de "+(-days)+" j"):(days===0?" \u00b7 aujourd'hui":(" \u00b7 dans "+days+" j"))), go:"goHub('planning');setHTab('echeances')"}); } } }
+    if(c.messages){ var seenC=((typeof MSG_SEEN!=='undefined'&&MSG_SEEN)?MSG_SEEN[id]:0)||0; var arr=Object.values(c.messages).filter(function(m){ return m&&m.from!==me&&m.from!=='patron'; }).sort(function(a,b){return (a.ts||0)-(b.ts||0);}); var unc=arr.filter(function(m){ return (m.ts||0)>seenC; }).length; if(unc>0){ var lts=arr.length?(arr[arr.length-1].ts||now):now; out.push({key:'msgc:'+id, ts:lts, ic:'message', nw:lts>seen, t:"Message client", s:(c.nom||"Chantier")+" \u00b7 "+unc+" non lu"+(unc>1?'s':''), go:"goHub('chantiers')"}); } }
+    if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid]; if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; out.push({key:'devis:'+id+':'+pid, ts:ts, ic:'check', nw:ts>seen, t:"Devis sign\u00e9", s:(c.nom||"Chantier")+" \u00b7 "+(d.num||''), go:"goHub('facturation')"}); } }); }
+    if(c.frais){ Object.keys(c.frais).forEach(function(k){ var f=c.frais[k]; if(f&&f.by&&f.by!==myn){ out.push({key:'frais:'+id+':'+k, ts:f.ts||0, ic:'receipt', nw:(f.ts||0)>seen, t:"Note de frais", s:(f.montant||0)+" \u20ac \u00b7 "+f.by, go:"goHub('equipe');setHTab('frais')"}); } }); }
+    if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var days=Math.round((fin-now)/86400000); if(days<=7){ out.push({key:'deadline:'+id, ts:fin, ic:'clock', nw:false, t:(days<0?"Chantier en retard":"\u00c9ch\u00e9ance proche"), s:(c.nom||"Chantier")+(days<0?(" \u00b7 en retard de "+(-days)+" j"):(days===0?" \u00b7 aujourd'hui":(" \u00b7 dans "+days+" j"))), go:"goHub('planning');setHTab('echeances')"}); } } }
   });
+  var dis=notifDismissed();
+  out=out.filter(function(n){ return !(dis[n.key] && dis[n.key]>=(n.ts||0)); });
   out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   return out;
 }
 function notifBadge(){ try{ return buildNotifs().filter(function(n){ return n.nw; }).length; }catch(_){ return 0; } }
 function openNotifs(){
-  var l=buildNotifs(); markNotifSeen();
+  _NOTIF_LIST=buildNotifs(); markNotifSeen();
   var h='<div class="grabber"></div><h2 style="margin:0 0 12px">Notifications</h2>';
-  if(!l.length){ h+='<p class="note" style="margin:0">Rien de nouveau pour le moment.</p>'; }
-  else { h+=l.map(function(n){ return '<button onclick="closeModal();'+n.go+'" style="display:flex;align-items:flex-start;gap:11px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:10px 12px;margin-bottom:8px;cursor:pointer;color:var(--txt);font:inherit;text-align:left"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:var(--card2);color:var(--acc2);display:flex;align-items:center;justify-content:center">'+icone(n.ic,'18px')+'</span><span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block">'+esc(n.t)+'</b><small class="note" style="font-size:12px">'+esc(n.s)+'</small></span>'+(n.nw?'<span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:var(--acc);margin-top:4px"></span>':'')+'</button>'; }).join(''); }
+  if(!_NOTIF_LIST.length){ h+='<p class="note" style="margin:0">Rien de nouveau pour le moment.</p>'; }
+  else { h+=_NOTIF_LIST.map(function(n,i){ return '<div id="ntf_'+i+'" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+    +'<div onclick="closeModal();'+n.go+'" style="flex:1;min-width:0;display:flex;align-items:flex-start;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:10px 12px;cursor:pointer"><span style="width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:var(--card2);color:var(--acc2);display:flex;align-items:center;justify-content:center">'+icone(n.ic,'18px')+'</span><span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block">'+esc(n.t)+'</b><small class="note" style="font-size:12px">'+esc(n.s)+'</small></span>'+(n.nw?'<span style="flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:var(--acc);margin-top:4px"></span>':'')+'</div>'
+    +'<button onclick="dismissNotifIdx('+i+')" class="iconbtn" style="flex:0 0 auto" aria-label="Supprimer"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>'
+    +'</div>'; }).join(''); }
   openModal(h);
 }
 function openMenu(){
