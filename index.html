@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v153 · 07/07";
+const APP_VERSION="v154 · 07/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2177,7 +2177,7 @@ let _projImgs={}, _projLast={};
 function projectionCard(id,c){
   const projs=c.projections?Object.keys(c.projections).map(k=>Object.assign({k:k},c.projections[k])).sort((a,b)=>(b.ts||0)-(a.ts||0)):[];
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Projection — rendu IA</h2></div>
-    <p class="note" style="margin:0 0 10px;font-size:12px">Montre au client le résultat : une photo de l'existant + l'inspiration du client → un rendu généré. Chaque génération a un petit coût, elle ne se lance qu'au clic sur « Générer ».</p>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Montre au client le résultat : une photo de l'existant + l'inspiration du client → un rendu généré.</p>
     <div class="row" style="gap:8px">
       <div style="flex:1;min-width:0">
         <label style="font-size:12px">Photo actuelle (l'existant) *</label>
@@ -2192,7 +2192,7 @@ function projectionCard(id,c){
         <button class="btn ghost" style="width:100%" onclick="document.getElementById('proj_in_i_${id}').click()">📷 Choisir</button>
       </div>
     </div>
-    <label style="margin-top:10px;font-size:12px">Précisions (optionnel)</label>
+    <label style="margin-top:10px;font-size:12px">Précisions (obligatoire)</label>
     <input id="proj_txt_${id}" placeholder="Décris le résultat voulu : matériaux, couleurs, style, éclairage…">
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="projGenerate('${id}')">✨ Générer le rendu</button>
     <div id="proj_result_${id}" style="margin-top:10px"></div>`;
@@ -3140,6 +3140,8 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="downloadAllDocs('facture')">${icone('download')} Télécharger toutes les factures</button>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="downloadAllDocs('devis')">${icone('download')} Télécharger tous les devis</button>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="resetCache()">Vider le cache &amp; recharger la derniere version</button>
       <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
   }
@@ -4406,6 +4408,21 @@ function buildDocHTML(doc){
   ${doc.type==='devis'?`<p class="muted" style="margin-top:30px">Devis valable 30 jours. Bon pour accord (date + signature) :</p>${doc.signature?`<div style="margin-top:8px"><img src="${doc.signature}" style="max-height:90px;border:1px solid #eee;border-radius:8px;background:#fff"><div class="muted" style="margin-top:4px">Signé par ${esc(doc.signedBy||'')} le ${doc.signedAt?frSignAt(doc.signedAt):''}</div></div>`:`<div style="height:70px;border:1px dashed #ccc;border-radius:8px;margin-top:8px"></div>`}`:`<p class="muted" style="margin-top:30px">Facture payable à réception. Merci de votre confiance.</p>`}
   <div class="foot">${esc(coName())} · Document généré le ${doc.date}</div>
   </body></html>`;
+}
+function downloadAllDocs(type){
+  var docs=[];
+  Object.keys(CHANTIERS).forEach(function(id){ var c=CHANTIERS[id]; if(c&&c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid]; if(d&&d.type===type){ docs.push(d); } }); } });
+  if(!docs.length){ toast(type==='facture'?"Aucune facture a telecharger.":"Aucun devis a telecharger."); return; }
+  toast("Preparation... ("+docs.length+" "+(type==='facture'?'factures':'devis')+")");
+  var run=function(){
+    try{
+      var zip=new JSZip();
+      docs.forEach(function(d,i){ var num=String(d.num||('doc'+(i+1))).replace(/[^a-z0-9]+/gi,'_'); zip.file((type==='facture'?'Facture_':'Devis_')+num+'.html', buildDocHTML(d)); });
+      zip.generateAsync({type:'blob'}).then(function(blob){ var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=(type==='facture'?'Factures':'Devis')+'_'+(new Date().toISOString().slice(0,10))+'.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_){ } },30000); toast("Telechargement pret."); });
+    }catch(e){ toast("Erreur lors de la preparation."); }
+  };
+  if(window.JSZip){ run(); }
+  else { var sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; sc.onload=run; sc.onerror=function(){ toast("Impossible de charger l'outil de compression (verifie ta connexion)."); }; document.head.appendChild(sc); }
 }
 function openDocWindow(doc){
   const w=window.open('','_blank');
