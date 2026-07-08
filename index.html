@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v154 · 07/07";
+const APP_VERSION="v155 · 07/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2186,7 +2186,7 @@ function projectionCard(id,c){
         <button class="btn ghost" style="width:100%" onclick="document.getElementById('proj_in_a_${id}').click()">📷 Choisir</button>
       </div>
       <div style="flex:1;min-width:0">
-        <label style="font-size:12px">Inspiration du client</label>
+        <label style="font-size:12px">Inspiration du client (optionnel)</label>
         <div id="proj_prev_i_${id}" style="margin:4px 0"></div>
         <input type="file" accept="image/*" id="proj_in_i_${id}" style="display:none" onchange="projPick('${id}','i',this)">
         <button class="btn ghost" style="width:100%" onclick="document.getElementById('proj_in_i_${id}').click()">📷 Choisir</button>
@@ -2195,6 +2195,7 @@ function projectionCard(id,c){
     <label style="margin-top:10px;font-size:12px">Précisions (obligatoire)</label>
     <input id="proj_txt_${id}" placeholder="Décris le résultat voulu : matériaux, couleurs, style, éclairage…">
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="projGenerate('${id}')">✨ Générer le rendu</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="projReset('${id}')">↺ Réinitialiser (repartir de zéro)</button>
     <div id="proj_result_${id}" style="margin-top:10px"></div>`;
   if(projs.length){
     h+=`<div class="section-title"><h2 style="font-size:14px">Rendus enregistrés</h2></div>`;
@@ -2204,7 +2205,9 @@ function projectionCard(id,c){
   return h;
 }
 function _projCompress(dataUrl,cb){ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); cb(cv.toDataURL('image/jpeg',0.7)); }; img.onerror=()=>cb(null); img.src=dataUrl; }
-function projPick(id,slot,input){ const f=input.files&&input.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>{ _projCompress(e.target.result,url=>{ if(!url){ toast("Image illisible"); return; } if(!_projImgs[id])_projImgs[id]={}; _projImgs[id][slot]=url; const prev=document.getElementById('proj_prev_'+slot+'_'+id); if(prev) prev.innerHTML='<img src="'+url+'" style="width:100%;border-radius:8px;border:1px solid var(--line)">'; }); }; r.readAsDataURL(f); }
+function projPick(id,slot,input){ const f=input.files&&input.files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>{ _projCompress(e.target.result,url=>{ if(!url){ toast("Image illisible"); return; } if(!_projImgs[id])_projImgs[id]={}; _projImgs[id][slot]=url; const prev=document.getElementById('proj_prev_'+slot+'_'+id); if(prev) prev.innerHTML='<div style="position:relative"><img src="'+url+'" style="width:100%;border-radius:8px;border:1px solid var(--line);display:block"><button onclick="projClearImg(this)" data-pid="'+id+'" data-slot="'+slot+'" aria-label="Retirer" style="position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">\u2715</button></div>'; }); }; r.readAsDataURL(f); }
+function projClearImg(btn){ var id=btn.getAttribute('data-pid'), slot=btn.getAttribute('data-slot'); if(_projImgs[id]) delete _projImgs[id][slot]; var prev=document.getElementById('proj_prev_'+slot+'_'+id); if(prev) prev.innerHTML=''; var inp=document.getElementById('proj_in_'+slot+'_'+id); if(inp) inp.value=''; }
+function projReset(id){ delete _projImgs[id]; ['a','i'].forEach(function(sl){ var p=document.getElementById('proj_prev_'+sl+'_'+id); if(p)p.innerHTML=''; var inp=document.getElementById('proj_in_'+sl+'_'+id); if(inp)inp.value=''; }); var t=document.getElementById('proj_txt_'+id); if(t)t.value=''; var res=document.getElementById('proj_result_'+id); if(res)res.innerHTML=''; if(typeof _projLast==='object'&&_projLast) delete _projLast[id]; toast('Réinitialisé'); }
 function projGenerate(id){
   const imgs=_projImgs[id]||{};
   if(!imgs.a){ toast("Ajoute d'abord la photo actuelle"); return; }
