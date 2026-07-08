@@ -836,7 +836,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v152 · 07/07";
+const APP_VERSION="v153 · 07/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2193,7 +2193,7 @@ function projectionCard(id,c){
       </div>
     </div>
     <label style="margin-top:10px;font-size:12px">Précisions (optionnel)</label>
-    <input id="proj_txt_${id}" placeholder="ex: garder la fenêtre, sol parquet clair">
+    <input id="proj_txt_${id}" placeholder="Décris le résultat voulu : matériaux, couleurs, style, éclairage…">
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="projGenerate('${id}')">✨ Générer le rendu</button>
     <div id="proj_result_${id}" style="margin-top:10px"></div>`;
   if(projs.length){
@@ -2208,7 +2208,8 @@ function projPick(id,slot,input){ const f=input.files&&input.files[0]; if(!f) re
 function projGenerate(id){
   const imgs=_projImgs[id]||{};
   if(!imgs.a){ toast("Ajoute d'abord la photo actuelle"); return; }
-  const txt=(document.getElementById('proj_txt_'+id)||{}).value||'';
+  const txt=((document.getElementById('proj_txt_'+id)||{}).value||'').trim();
+  if(!txt){ toast("Décris ce que tu veux (pièce, matériaux, couleurs, style…) pour un beau rendu."); return; }
   const res=document.getElementById('proj_result_'+id);
   if(res) res.innerHTML='<p class="note" style="margin:0">⏳ Génération du rendu… (quelques secondes, ne ferme pas la page)</p>';
   const pa=imgs.a.split(',').pop(), pi=imgs.i?imgs.i.split(',').pop():null;
