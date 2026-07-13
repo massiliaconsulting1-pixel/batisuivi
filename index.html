@@ -970,7 +970,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v184 · 13/07";
+const APP_VERSION="v188 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1115,6 +1115,18 @@ function renderDev(){
       <button class="btn primary" style="width:100%;margin-top:10px" onclick="devLoadDemo()">Charger la démo</button>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="exportData()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Exporter / sauvegarder les données</button>
     </div>
+
+    ${diagCard()}
+
+    ${deployCard()}
+
+    ${devClientCard()}
+
+    ${annonceCard()}
+
+    ${packCard()}
+
+    ${iaUsageCard()}
 
     <div class="card">
       <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 21h13"/><path d="M3 17 12 8l5 5-6 6H6z"/></svg> Réinitialiser pour un nouveau client</h2></div>
@@ -1590,9 +1602,18 @@ function demoEnrichir(ids){
 }
 
 function devLoadDemo(){
+  if(instanceEnProd()){
+    dangerGuard("Charger la démo",
+      "🚨 <b>Cette instance contient de VRAIES données</b> (documents publiés, heures pointées ou fiche client remplie). Charger la démo <b>écrasera les chantiers et l'équipe de ce client</b>.",
+      "DEMO", devLoadDemoGo);
+    return;
+  }
+  devLoadDemoGo();
+}
+function devLoadDemoGo(){
   const _sel=Object.keys(DEMO_SEL).filter(k=>DEMO_SEL[k]);
   const _trades=_sel.length?_sel:Object.keys(DEMO_TRADES);
-  if((Object.keys(CHANTIERS).length||Object.keys(VEHICULES).length) && !confirm("Charger la démo ? Les chantiers et véhicules actuels seront remplacés.")) return;
+  if((Object.keys(CHANTIERS).length||Object.keys(VEHICULES).length) && !instanceEnProd() && !confirm("Charger la démo ? Les chantiers et véhicules actuels seront remplacés.")) return;
   CHANTIERS={};VEHICULES={};
   const iso=n=>new Date(Date.now()+n*864e5).toISOString().slice(0,10);
   const et=i=>ETAPES[i]||ETAPES[ETAPES.length-1];
@@ -1636,12 +1657,21 @@ function devLoadDemo(){
   render(); toTop();
 }
 function devClearChantiers(){
-  if(!confirm("Effacer TOUS les chantiers ? (l'équipe et les réglages sont conservés)")) return;
+  dangerGuard("Effacer tous les chantiers",
+    "Tous les chantiers de cette instance seront supprimés (avec leurs photos, devis, factures, pointages). L'équipe et les réglages sont conservés.",
+    "SUPPRIMER", devClearChantiersGo);
+}
+function devClearChantiersGo(){
   if(useFB) refChantiers().remove(); else { CHANTIERS={}; lsSet('batisuivi_chantiers',{}); }
+  CHANTIERS={};
   toast("Chantiers effacés"); render();
 }
 function devClearChantiersTeam(){
-  if(!confirm("Effacer les chantiers ET l'équipe ? (véhicules, planning, notes de frais et messagerie sont aussi effacés. Le logo, les couleurs et les réglages sont conservés.)")) return;
+  dangerGuard("Effacer chantiers et équipe",
+    "Chantiers, équipe, véhicules, planning, notes de frais et messagerie seront supprimés. Le logo, les couleurs et les réglages sont conservés.",
+    "SUPPRIMER", devClearChantiersTeamGo);
+}
+function devClearChantiersTeamGo(){
   if(useFB){
     ['chantiers','team','vehicules','planning','notesfrais','chat'].forEach(k=>{ db().ref('batisuivi/'+k).remove().catch(()=>{}); });
   } else {
@@ -1652,8 +1682,11 @@ function devClearChantiersTeam(){
   toast("Chantiers et équipe effacés ✅"); renderDev();
 }
 function devResetAll(){
-  if(!confirm("⚠️ Tout réinitialiser ? Chantiers, équipe ET réglages seront supprimés. Action irréversible.")) return;
-  if(!confirm("Dernière confirmation : on efface vraiment tout ?")) return;
+  dangerGuard("Tout réinitialiser",
+    "🚨 <b>TOUT</b> sera supprimé : chantiers, équipe, véhicules, planning, notes de frais, messagerie <b>ET tous les réglages</b> (logo, couleurs, identité, facturation, modèles). L'instance repart de zéro.",
+    "REINITIALISER", devResetAllGo);
+}
+function devResetAllGo(){
   if(useFB){
     // On supprime CHAQUE branche (la suppression de la racine 'batisuivi' est refusée par les règles)
     ['config','chantiers','team','vehicules','planning','notesfrais','chat','invites'].forEach(k=>{ db().ref('batisuivi/'+k).remove().catch(()=>{}); });
@@ -4674,6 +4707,7 @@ function dashRentaCard(){
 function viewDashToday(){
   const all=Object.values(CHANTIERS).filter(c=>!c.archived);
   const today=todayISO();
+  const _ban=annonceBanner();
   const docs=factuAllDocs();
   const devs=docs.filter(d=>d.type!=='facture' && d.type!=='avoir');
 
@@ -4696,7 +4730,7 @@ function viewDashToday(){
   const nbActions=aFacturer.length+retards.length+sansRep.length+chRetard.length+msgs.length+soldes.length;
   const argentDort=mtFacturer+mtRetard+mtSoldes;
 
-  let h=`<div class="card" style="position:relative;overflow:hidden">
+  let h=_ban+`<div class="card" style="position:relative;overflow:hidden">
     <div style="position:absolute;width:170px;height:170px;right:-55px;top:-75px;border-radius:50%;background:radial-gradient(circle,${nbActions?'var(--acc)':'var(--ok)'},transparent 70%);opacity:.3;pointer-events:none"></div>
     <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700;position:relative">À faire</div>
     <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;line-height:1.15;margin:4px 0 0;position:relative">${nbActions?(nbActions+' action'+(nbActions>1?'s':'')+' en attente'):'Tout est à jour ✅'}</div>
@@ -5006,6 +5040,7 @@ function renderAccueil(){
     <div class="bn"><div style="display:flex;align-items:center;gap:6px"><b>${esc(coName())}</b>${planTag()}</div><small>Bonjour ${esc(prenom)}</small></div></div>
     ${isPremium()?`<button style="margin-right:2px;position:relative;width:38px;height:38px;flex:none;background:transparent;border:none;padding:0;color:var(--txt);cursor:pointer;display:inline-flex;align-items:center;justify-content:center" onclick="openNotifs()" aria-label="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>${notifBadge()>0?`<span style="position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1">${notifBadge()>9?'9+':notifBadge()}</span>`:''}</button>`:''}
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
+  ${annonceBanner()}
   <div class="card" style="position:relative;overflow:hidden;margin-top:4px">
     <div style="position:absolute;width:170px;height:170px;right:-50px;top:-70px;border-radius:50%;background:radial-gradient(circle,var(--acc2),transparent 70%);opacity:.35;pointer-events:none"></div>
     <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700">Aujourd'hui</div>
@@ -5135,7 +5170,7 @@ function hubBody(hub,tab){
       <p class="note" style="margin:0 0 8px;font-size:12px">Affiche les prévisions sur le tableau de bord et dans le planning, pour chaque ville où tu as un chantier.</p>
       <div class="row" style="gap:6px"><button class="btn ${meteoOn()?'primary':'ghost'} mini" onclick="setMeteoOn(true)">Affichée</button><button class="btn ${!meteoOn()?'primary':'ghost'} mini" onclick="setMeteoOn(false)">Masquée</button></div>
       <p class="note" style="font-size:11px;margin-top:6px">Utile pour les métiers d'extérieur. Masque-la si tu travailles uniquement en intérieur.</p></div>`;
-    if(tab==='systeme') return aideCard()+backupCard()+iaUsageCard()+`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
+    if(tab==='systeme') return aideCard()+backupCard()+`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="resetCache()">${icone('undo','16px')} Vider le cache &amp; recharger la dernière version</button>
       <p class="note" style="font-size:11px;margin-top:6px">À faire si l'app semble bloquée sur une ancienne version.</p>
       <p class="note" style="text-align:center;margin-top:14px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
@@ -6796,33 +6831,516 @@ let IA_USAGE=null, IA_USAGE_BUSY=false;
 const IA_NOMS={ assistant:"Assistant (chat)", compteRendu:"Compte-rendu vocal", projection:"Projection (rendus)", lireTicket:"Lecture de tickets", devisPhoto:"Devis par photo" };
 function iaNom(k){ return IA_NOMS[k]||k; }
 function iaPlafond(){ const v=parseFloat(CONFIG_DB.iaPlafond); return (isNaN(v)||v<0)?0:v; }
+function isDevSpace(){ return (typeof SCREEN!=='undefined' && SCREEN==='dev'); }
+
+/* ============================================================
+ * DIAGNOSTIC D'INSTANCE (espace dev)
+ * Vérifie en un clic : base, règles de sécurité, Cloud Functions.
+ * ========================================================== */
+const DIAG_FONCTIONS=[
+  {k:'accesClient',           l:"accesClient (accès client)",        p:{action:'load', code:''}},
+  {k:'structurerCompteRendu', l:"structurerCompteRendu (dictée)",    p:{texte:''}},
+  {k:'assistantBatiSuivi',    l:"assistantBatiSuivi (assistant IA)", p:{messages:[]}},
+  {k:'projectionIA',          l:"projectionIA (rendus)",             p:{}},
+  {k:'lireTicket',            l:"lireTicket (tickets de frais)",     p:{image:''}},
+  {k:'devisPhoto',            l:"devisPhoto (devis par photo)",      p:{image:''}},
+  {k:'iaUsage',               l:"iaUsage (compteur IA)",             p:{}}
+];
+let DIAG=null, DIAG_BUSY=false;
+function diagCode(e){
+  let c=(e&&e.code)||'';
+  c=String(c).replace('functions/','');
+  return c||'inconnu';
+}
+async function diagPingFonction(f){
+  const t0=Date.now();
+  try{
+    const fn=firebase.app().functions('europe-west1').httpsCallable(f.k);
+    await fn(f.p);
+    return {k:f.k, l:f.l, lvl:'ok', ms:Date.now()-t0, msg:"répond correctement"};
+  }catch(e){
+    const ms=Date.now()-t0;
+    const c=diagCode(e);
+    if(c==='not-found'){
+      return {k:f.k, l:f.l, lvl:'danger', ms, msg:"NON DÉPLOYÉE — lance « firebase deploy --only functions »"};
+    }
+    if(c==='permission-denied'){
+      return {k:f.k, l:f.l, lvl:'warn', ms, msg:"403 — permission Cloud Run invoker manquante. Supprime cette fonction dans la console, puis redéploie-la."};
+    }
+    if(c==='internal' && ms<80){
+      return {k:f.k, l:f.l, lvl:'warn', ms, msg:"erreur immédiate (403 probable) — supprime et redéploie cette fonction"};
+    }
+    if(c==='unavailable'){
+      return {k:f.k, l:f.l, lvl:'warn', ms, msg:"injoignable — vérifie la région (europe-west1) et le réseau"};
+    }
+    if(c==='resource-exhausted'){
+      return {k:f.k, l:f.l, lvl:'warn', ms, msg:"déployée, mais le plafond IA du mois est atteint"};
+    }
+    /* invalid-argument / unauthenticated / failed-precondition = la fonction a bien répondu */
+    return {k:f.k, l:f.l, lvl:'ok', ms, msg:"déployée et joignable ("+c+")"};
+  }
+}
+async function diagRegles(){
+  /* On lit la base SANS être authentifié, via une 2e connexion Firebase anonyme. */
+  const out={lvl:'warn', msg:"non testé"};
+  try{
+    let probe;
+    try{ probe=firebase.app('probe'); }
+    catch(_){ probe=firebase.initializeApp(FIREBASE_CONFIG,'probe'); }
+    const db2=probe.database();
+    let ouverte=false, configLisible=false, iaProtege=true;
+    try{ await db2.ref('batisuivi/chantiers').limitToFirst(1).once('value'); ouverte=true; }catch(_){ ouverte=false; }
+    try{ await db2.ref('batisuivi/config').once('value'); configLisible=true; }catch(_){ configLisible=false; }
+    try{ await db2.ref('batisuivi/_ia').once('value'); iaProtege=false; }catch(_){ iaProtege=true; }
+    if(ouverte) return {lvl:'danger', msg:"🚨 BASE OUVERTE : les chantiers sont lisibles SANS authentification. Recolle les règles de sécurité immédiatement."};
+    if(!iaProtege) return {lvl:'danger', msg:"La branche privée _ia est lisible sans authentification. Vérifie tes règles."};
+    if(!configLisible) return {lvl:'warn', msg:"Base fermée ✓, mais 'config' n'est pas lisible publiquement : le branding et l'espace client peuvent mal s'afficher."};
+    return {lvl:'ok', msg:"Base fermée ✓ · config lisible (branding) ✓ · branche _ia protégée ✓"};
+  }catch(e){ out.msg="test impossible : "+((e&&e.message)||'erreur'); return out; }
+}
+async function lancerDiagnostic(){
+  if(DIAG_BUSY) return;
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  if(!useFB){ toast("Mode local : rien à diagnostiquer."); return; }
+  if(!(firebase.auth().currentUser)){ toast("Connecte-toi avec ton compte dev."); return; }
+  DIAG_BUSY=true; DIAG=null; renderDev();
+  const res={ ts:Date.now(), fonctions:[], regles:null };
+  try{
+    res.regles=await diagRegles();
+    for(let i=0;i<DIAG_FONCTIONS.length;i++){
+      res.fonctions.push(await diagPingFonction(DIAG_FONCTIONS[i]));
+    }
+  }catch(e){ toast("Diagnostic interrompu : "+((e&&e.message)||'erreur')); }
+  DIAG=res; DIAG_BUSY=false; renderDev();
+  const ko=res.fonctions.filter(f=>f.lvl!=='ok').length + ((res.regles&&res.regles.lvl!=='ok')?1:0);
+  toast(ko?("Diagnostic terminé — "+ko+" point(s) à corriger"):"Diagnostic terminé — tout est vert ✅");
+}
+function diagPastille(lvl){ return lvl==='ok'?'🟢':(lvl==='warn'?'🟠':'🔴'); }
+function diagCard(){
+  if(!isDevSpace()) return '';
+  const cfg=(typeof FIREBASE_CONFIG!=='undefined')?FIREBASE_CONFIG:{};
+  const iaOk=DIAG&&DIAG.fonctions.find(f=>f.k==='assistantBatiSuivi'&&f.lvl==='ok');
+  let h=`<div class="card" style="border-color:var(--acc2)">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">🩺 Santé de cette instance</h2></div>
+    <div class="task-row"><span style="flex:1">Base</span><b style="font-size:12.5px">${useFB?esc(cfg.projectId||'?'):'mode local'}</b></div>
+    <div class="task-row"><span style="flex:1">Région</span><b style="font-size:12.5px">${useFB?(String(cfg.databaseURL||'').indexOf('europe-west1')>=0?'europe-west1 ✓':'⚠️ pas europe-west1'):'—'}</b></div>
+    <div class="task-row"><span style="flex:1">Version de l'app</span><b style="font-size:12.5px">${esc(APP_VERSION)}</b></div>
+    <button class="btn primary" style="width:100%;margin-top:10px" ${DIAG_BUSY?'disabled style="opacity:.6;width:100%;margin-top:10px"':''} onclick="lancerDiagnostic()">${DIAG_BUSY?'⏳ Vérification en cours…':(DIAG?'↻ Relancer le diagnostic':'🩺 Vérifier cette instance')}</button>`;
+
+  if(DIAG){
+    const r=DIAG.regles||{};
+    h+=`<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
+      <p class="tag" style="margin:0 0 6px">Règles de sécurité</p>
+      <div class="member-row">
+        <span style="width:26px;flex:0 0 26px;font-size:15px;text-align:center">${diagPastille(r.lvl)}</span>
+        <span style="flex:1;min-width:0"><small style="font-size:12px;line-height:1.4;color:${r.lvl==='ok'?'var(--txt)':(r.lvl==='warn'?'var(--warn)':'var(--danger)')}">${esc(r.msg||'')}</small></span>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+      <p class="tag" style="margin:0 0 6px">Cloud Functions (${DIAG.fonctions.filter(f=>f.lvl==='ok').length}/${DIAG.fonctions.length} OK)</p>
+      ${DIAG.fonctions.map(f=>`<div class="member-row">
+        <span style="width:26px;flex:0 0 26px;font-size:15px;text-align:center">${diagPastille(f.lvl)}</span>
+        <span style="flex:1;min-width:0"><b style="font-size:12.5px;display:block">${esc(f.l)}</b>
+          <small class="note" style="font-size:11px;color:${f.lvl==='ok'?'var(--muted)':(f.lvl==='warn'?'var(--warn)':'var(--danger)')}">${esc(f.msg)} · ${f.ms} ms</small></span>
+      </div>`).join('')}
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+      <div class="member-row">
+        <span style="width:26px;flex:0 0 26px;font-size:15px;text-align:center">${iaOk?'🟢':'🟠'}</span>
+        <span style="flex:1;min-width:0"><b style="font-size:12.5px;display:block">Secret ANTHROPIC_API_KEY</b>
+          <small class="note" style="font-size:11px">${iaOk?"présent (les fonctions IA n'auraient pas pu être déployées sans lui)":"à vérifier : la fonction IA ne répond pas"}</small></span>
+      </div>
+    </div>
+    <p class="note" style="margin-top:10px;font-size:11px">Diagnostic du ${esc(new Date(DIAG.ts).toLocaleString('fr-FR'))}. Les appels de test ne consomment aucun crédit IA (ils sont refusés avant d'atteindre le modèle).</p>`;
+  } else {
+    h+=`<p class="note" style="margin-top:8px;font-size:11px">Teste en une fois : les règles de sécurité (base bien fermée ?), les 7 Cloud Functions, et le secret IA. À faire après chaque déploiement.</p>`;
+  }
+  h+=`</div>`;
+  return h;
+}
+
+/* ============================================================
+ * ④ BANNIÈRE D'ANNONCE — poussée aux artisans depuis l'espace dev
+ * L'annonce vit dans "config", qui est déjà lu par toutes les apps.
+ * ========================================================== */
+function annonce(){ const a=CONFIG_DB.annonce; return (a && a.txt && String(a.txt).trim()) ? a : null; }
+function annonceVue(){ try{ return String(lsGet('batisuivi_annonce_vue','')||''); }catch(_){ return ''; } }
+function annonceMasquer(){
+  const a=annonce(); if(!a) return;
+  try{ lsSet('batisuivi_annonce_vue', String(a.id||a.ts||'')); }catch(_){ }
+  render();
+}
+function annonceBanner(){
+  const a=annonce(); if(!a) return '';
+  if(annonceVue()===String(a.id||a.ts||'')) return '';
+  const t=a.type||'info';
+  const col = t==='alerte' ? 'var(--danger)' : (t==='attention' ? 'var(--warn)' : 'var(--acc)');
+  const ic  = t==='alerte' ? '🚨' : (t==='attention' ? '⚠️' : '📣');
+  return `<div class="card" style="border-left:3px solid ${col};display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">
+    <span style="flex:none;font-size:18px;line-height:1.3">${ic}</span>
+    <span style="flex:1;min-width:0">
+      ${a.titre?`<b style="font-size:13.5px;display:block;color:${col}">${esc(a.titre)}</b>`:''}
+      <span style="font-size:12.5px;line-height:1.45;white-space:pre-wrap">${esc(a.txt)}</span>
+    </span>
+    ${a.dismissible!==false?`<button class="iconbtn" style="flex:none" onclick="annonceMasquer()" aria-label="Masquer"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}
+  </div>`;
+}
+function annonceCard(){
+  if(!isDevSpace()) return '';
+  const a=CONFIG_DB.annonce||{titre:'',txt:'',type:'info',dismissible:true};
+  const active=!!annonce();
+  return `<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">📣 Annonce à l'artisan</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Un message qui s'affiche en haut de SON app (accueil, tableau de bord et espace client). Idéal pour annoncer une nouveauté ou une maintenance.</p>
+    ${active?`<div class="card" style="box-shadow:none;padding:0;margin-bottom:12px;background:transparent">${annonceApercu()}</div>
+      <p class="note" style="margin:0 0 10px;font-size:11px;color:var(--ok)"><b>✓ Annonce active</b> — publiée le ${esc(new Date(a.ts||Date.now()).toLocaleString('fr-FR'))}.</p>`:''}
+    <label style="margin-top:0">Titre (option)</label>
+    <input id="an_titre" value="${esc(a.titre||'')}" maxlength="60" placeholder="ex : Nouveau dans BatiSuivi">
+    <label style="margin-top:10px">Message</label>
+    <textarea id="an_txt" rows="3" maxlength="400" placeholder="ex : Le devis par photo est disponible dans le hub IA. Photographiez une pièce, l'IA chiffre les travaux.">${esc(a.txt||'')}</textarea>
+    <label style="margin-top:10px">Ton</label>
+    <div class="row" style="gap:6px">
+      ${[['info','📣 Info'],['attention','⚠️ Attention'],['alerte','🚨 Alerte']].map(([k,l])=>`<button class="btn ${((a.type||'info')===k)?'primary':'ghost'} mini" style="flex:1" onclick="annonceSetType('${k}')">${l}</button>`).join('')}
+    </div>
+    <div class="row" style="gap:6px;margin-top:10px">
+      <button class="btn ${a.dismissible!==false?'primary':'ghost'} mini" style="flex:1" onclick="annonceSetDismiss(true)">Masquable</button>
+      <button class="btn ${a.dismissible===false?'primary':'ghost'} mini" style="flex:1" onclick="annonceSetDismiss(false)">Permanente</button>
+    </div>
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="publierAnnonce()">${icone('send','16px')} Publier l'annonce</button>
+    ${active?`<button class="btn danger" style="width:100%;margin-top:8px" onclick="retirerAnnonce()">Retirer l'annonce</button>`:''}
+    <p class="note" style="margin-top:8px;font-size:11px">Chaque publication génère un nouvel identifiant : même un artisan qui avait masqué la précédente reverra celle-ci.</p>
+  </div>`;
+}
+function annonceApercu(){
+  const a=CONFIG_DB.annonce||{};
+  const t=a.type||'info';
+  const col = t==='alerte' ? 'var(--danger)' : (t==='attention' ? 'var(--warn)' : 'var(--acc)');
+  const ic  = t==='alerte' ? '🚨' : (t==='attention' ? '⚠️' : '📣');
+  return `<div style="border:1px solid var(--line);border-left:3px solid ${col};border-radius:12px;padding:11px 13px;display:flex;gap:10px;background:var(--card2)">
+    <span style="flex:none;font-size:18px">${ic}</span>
+    <span style="flex:1;min-width:0">${a.titre?`<b style="font-size:13px;display:block;color:${col}">${esc(a.titre)}</b>`:''}<span style="font-size:12.5px;white-space:pre-wrap">${esc(a.txt||'')}</span></span>
+  </div>`;
+}
+function annonceSetType(t){
+  if(!isDevSpace()) return;
+  if(!CONFIG_DB.annonce) CONFIG_DB.annonce={};
+  CONFIG_DB.annonce.titre=(val('an_titre')||''); CONFIG_DB.annonce.txt=(val('an_txt')||'');
+  CONFIG_DB.annonce.type=t; renderDev();
+}
+function annonceSetDismiss(v){
+  if(!isDevSpace()) return;
+  if(!CONFIG_DB.annonce) CONFIG_DB.annonce={};
+  CONFIG_DB.annonce.titre=(val('an_titre')||''); CONFIG_DB.annonce.txt=(val('an_txt')||'');
+  CONFIG_DB.annonce.dismissible=v; renderDev();
+}
+function publierAnnonce(){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  const txt=(val('an_txt')||'').trim();
+  if(!txt){ toast("Écris d'abord un message."); return; }
+  const a=CONFIG_DB.annonce||{};
+  CONFIG_DB.annonce={
+    id:'an_'+Date.now().toString(36),
+    titre:(val('an_titre')||'').trim().slice(0,60),
+    txt:txt.slice(0,400),
+    type:a.type||'info',
+    dismissible:(a.dismissible!==false),
+    ts:Date.now()
+  };
+  saveConfigDB(); renderDev(); toast("Annonce publiée ✅ Elle s'affichera chez l'artisan.");
+}
+function retirerAnnonce(){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  if(!confirm("Retirer l'annonce ? Elle disparaîtra de l'app de l'artisan.")) return;
+  CONFIG_DB.annonce=null; saveConfigDB(); renderDev(); toast("Annonce retirée");
+}
+
+/* ============================================================
+ * ⑤ PACK DE RÉGLAGES — copier la configuration d'un client à l'autre
+ * Ne contient JAMAIS l'identité (nom, logo, SIREN, IBAN, avis, compteurs).
+ * ========================================================== */
+const REGLAGES_PORTABLES=[
+  {k:'modeles',        l:"Modèles de chantier"},
+  {k:'etapes',         l:"Étapes de chantier"},
+  {k:'roles',          l:"Rôles & permissions"},
+  {k:'devisPrefix',    l:"Préfixe devis"},
+  {k:'factPrefix',     l:"Préfixe facture"},
+  {k:'avoirPrefix',    l:"Préfixe avoir"},
+  {k:'tvaRate',        l:"Taux de TVA"},
+  {k:'delaiPaiement',  l:"Délai de paiement"},
+  {k:'conditions',     l:"Conditions de paiement"},
+  {k:'clientMsg',      l:"Message d'accueil client"},
+  {k:'clientOff',      l:"Blocs masqués au client"},
+  {k:'equipeClientOff',l:"Équipe visible du client"},
+  {k:'meteoOff',       l:"Météo"},
+  {k:'couleurDefaut',  l:"Couleur par défaut"},
+  {k:'pointage',       l:"Pointage activé"},
+  {k:'factuOff',       l:"Facturation activée"},
+  {k:'iaPlafond',      l:"Plafond IA"},
+  {k:'supportEmail',   l:"Email du support"}
+];
+let _PACK=null;
+function exportReglages(){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  const r={};
+  REGLAGES_PORTABLES.forEach(x=>{ if(CONFIG_DB[x.k]!==undefined && CONFIG_DB[x.k]!==null) r[x.k]=CONFIG_DB[x.k]; });
+  const data={ app:'BatiSuivi', type:'reglages', version:APP_VERSION, exportedAt:new Date().toISOString(), reglages:r };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='batisuivi-reglages-'+ymd(new Date())+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>{ try{ URL.revokeObjectURL(url); }catch(_){ } },15000);
+  toast("Pack de réglages exporté ✅ ("+Object.keys(r).length+" réglages)");
+}
+function importReglagesPick(input){
+  const f=input.files&&input.files[0]; if(!f) return; input.value='';
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  const r=new FileReader();
+  r.onload=e=>{
+    let d=null;
+    try{ d=JSON.parse(e.target.result); }catch(_){ toast("Fichier illisible."); return; }
+    if(!d || d.app!=='BatiSuivi' || d.type!=='reglages' || !d.reglages){ toast("Ce n'est pas un pack de réglages BatiSuivi."); return; }
+    _PACK=d; openPackModal();
+  };
+  r.readAsText(f);
+}
+function openPackModal(){
+  const d=_PACK; if(!d) return;
+  const r=d.reglages||{};
+  const dt=d.exportedAt?new Date(d.exportedAt):null;
+  const presents=REGLAGES_PORTABLES.filter(x=>r[x.k]!==undefined);
+  openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('layers')} Appliquer un pack de réglages</h2>
+    <p class="note" style="margin:0 0 12px">Pack du <b>${dt?esc(dt.toLocaleDateString('fr-FR')):'?'}</b>${d.version?(' · '+esc(d.version)):''} · ${presents.length} réglage(s).</p>
+    <div class="card" style="box-shadow:none;padding:10px 12px;margin-bottom:12px;border-left:3px solid var(--ok)">
+      <b style="font-size:13px;color:var(--ok)">✓ L'identité du client n'est jamais touchée</b>
+      <p class="note" style="margin:3px 0 0;font-size:11.5px">Nom, logo, SIREN, adresse, IBAN, assurance, lien d'avis et <b>numérotation des documents</b> restent intacts. Seuls les réglages de fonctionnement sont copiés.</p>
+    </div>
+    <div style="max-height:200px;overflow:auto;margin-bottom:12px">
+      ${presents.map(x=>`<div class="task-row"><span style="flex:1;font-size:12.5px">${esc(x.l)}</span><span style="color:var(--ok)">✓</span></div>`).join('')}
+    </div>
+    <button class="btn primary" style="width:100%" onclick="appliquerPack()">${icone('save','16px')} Appliquer ces ${presents.length} réglages</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closeModal();_PACK=null">Annuler</button>`);
+}
+function appliquerPack(){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  const d=_PACK; if(!d) return;
+  const r=d.reglages||{};
+  let cnt=0;
+  REGLAGES_PORTABLES.forEach(x=>{ if(r[x.k]!==undefined){ CONFIG_DB[x.k]=r[x.k]; cnt++; } });
+  saveConfigDB(); syncEtapes();
+  _PACK=null; closeModal(); renderDev();
+  toast(cnt+" réglage(s) appliqué(s) ✅");
+}
+function packCard(){
+  if(!isDevSpace()) return '';
+  const dispo=REGLAGES_PORTABLES.filter(x=>CONFIG_DB[x.k]!==undefined && CONFIG_DB[x.k]!==null).length;
+  return `<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('layers')} Pack de réglages</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Copie la configuration d'un client à l'autre : modèles, étapes, rôles, TVA, préfixes, espace client, couleur… <b>Sans jamais toucher à son identité.</b></p>
+    <div class="task-row"><span style="flex:1">Réglages exportables ici</span><b>${dispo} / ${REGLAGES_PORTABLES.length}</b></div>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="exportReglages()">${icone('save','16px')} Exporter mes réglages</button>
+    <input type="file" id="pack_file" accept="application/json,.json" style="display:none" onchange="importReglagesPick(this)">
+    <button class="btn primary" style="width:100%;margin-top:8px" onclick="document.getElementById('pack_file').click()">${icone('download','16px')} Appliquer un pack</button>
+    <p class="note" style="margin-top:8px;font-size:11px"><b>Jamais copiés :</b> nom, logo, SIREN, adresse, IBAN, assurance, lien d'avis, numéros de documents, fiche client. Le nouveau client garde son identité.</p>
+  </div>`;
+}
+
+/* ============================================================
+ * FICHE CLIENT & RENTABILITÉ (espace dev)
+ * ========================================================== */
+function devClient(){ return (CONFIG_DB.devClient||{}); }
+function saveDevClient(){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  const d={
+    nom:(val('dc_nom')||'').trim(),
+    depuis:(val('dc_depuis')||'').trim(),
+    prix:Math.max(0, parseFloat((val('dc_prix')||'0').replace(',','.'))||0),
+    infra:Math.max(0, parseFloat((val('dc_infra')||'0').replace(',','.'))||0),
+    echeance:(val('dc_echeance')||'').trim(),
+    notes:(val('dc_notes')||'').trim().slice(0,600)
+  };
+  CONFIG_DB.devClient=d; saveConfigDB(); renderDev(); toast("Fiche client enregistrée ✅");
+}
+function devClientCard(){
+  if(!isDevSpace()) return '';
+  const d=devClient();
+  const coutIA=(IA_USAGE && IA_USAGE.total)?(IA_USAGE.total.euros||0):null;
+  const infra=(d.infra!==undefined && d.infra!==null)?d.infra:1;
+  const prix=d.prix||0;
+  const marge=(coutIA===null)?null:(prix-coutIA-infra);
+  const pctMarge=(marge!==null && prix>0)?Math.round(marge/prix*100):null;
+  const col=(marge===null)?'var(--muted)':(marge<0?'var(--danger)':(pctMarge!==null && pctMarge<40?'var(--warn)':'var(--ok)'));
+  let jEch=null;
+  if(d.echeance){ const t=new Date(d.echeance+'T12:00:00').getTime(); if(!isNaN(t)) jEch=Math.round((t-Date.now())/86400000); }
+  return `<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">🧾 Fiche client & rentabilité</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Ce que ce client te rapporte, et ce qu'il te coûte. Visible uniquement d'ici.</p>
+
+    ${prix>0?`<div class="kpis" style="margin:0 0 10px">
+      <div class="kpi acc"><div class="big" style="font-size:20px">${eurF2(prix)}</div><div class="lbl">Abonnement / mois</div></div>
+      <div class="kpi"><div class="big" style="font-size:20px">${coutIA===null?'—':eurF2(coutIA+infra)}</div><div class="lbl">Coût réel / mois</div></div>
+      <div class="kpi ${marge!==null&&marge<0?'warn':''}"><div class="big" style="font-size:20px;color:${col}">${marge===null?'—':eurF2(marge)}</div><div class="lbl">Marge${pctMarge!==null?(' · '+pctMarge+'%'):''}</div></div>
+      <div class="kpi ${(jEch!==null&&jEch<=7)?'warn':''}"><div class="big" style="font-size:20px">${jEch===null?'—':(jEch<0?('J+'+(-jEch)):('J-'+jEch))}</div><div class="lbl">Prochaine échéance</div></div>
+    </div>
+    ${coutIA===null?`<p class="note" style="margin:0 0 10px;font-size:11px;color:var(--warn)">Lance « Voir ma consommation IA » ci-dessous pour calculer la marge réelle.</p>`:''}
+    ${marge!==null&&marge<0?`<p class="note" style="margin:0 0 10px;font-size:11.5px;color:var(--danger)"><b>⚠️ Ce client te coûte plus qu'il ne te rapporte.</b> Baisse son plafond IA, ou revois son tarif.</p>`:''}
+    ${(jEch!==null&&jEch<0)?`<p class="note" style="margin:0 0 10px;font-size:11.5px;color:var(--danger)"><b>⚠️ Échéance dépassée de ${-jEch} jour(s).</b></p>`:''}
+    `:''}
+
+    <div class="row"><div><label>Nom du client</label><input id="dc_nom" value="${esc(d.nom||'')}" placeholder="ex : Menuiserie Da Silva"></div>
+      <div><label>Client depuis</label><input id="dc_depuis" type="date" value="${esc(d.depuis||'')}"></div></div>
+    <div class="row" style="margin-top:10px"><div><label>Abonnement (€/mois)</label><input id="dc_prix" type="number" inputmode="decimal" step="1" min="0" value="${prix||''}" placeholder="49"></div>
+      <div><label>Coût infra estimé (€/mois)</label><input id="dc_infra" type="number" inputmode="decimal" step="0.5" min="0" value="${infra}" placeholder="1"></div></div>
+    <div style="margin-top:10px"><label>Prochaine échéance</label><input id="dc_echeance" type="date" value="${esc(d.echeance||'')}"></div>
+    <div style="margin-top:10px"><label>Notes internes</label><textarea id="dc_notes" rows="3" placeholder="ex : sensible aux avis Google, veut le module rentabilité, paie par virement le 5…">${esc(d.notes||'')}</textarea></div>
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveDevClient()">${icone('save','16px')} Enregistrer la fiche</button>
+    <p class="note" style="margin-top:8px;font-size:11px">Le coût infra est une estimation à ta main (Firebase, Cloud Functions, stockage). Le coût IA, lui, est mesuré réellement.</p>
+  </div>`;
+}
+
+/* ============================================================
+ * GARDE-FOUS DES ACTIONS DESTRUCTIVES (espace dev)
+ * ========================================================== */
+let _DANGER=null;
+function instanceEnProd(){
+  /* Y a-t-il de vraies données ? (documents publiés, heures pointées, ou fiche client remplie) */
+  try{
+    if((devClient().nom||'').trim()) return true;
+    const ch=Object.values(CHANTIERS||{});
+    for(let i=0;i<ch.length;i++){
+      const c=ch[i]||{};
+      if(c.published && Object.keys(c.published).length) return true;
+      if(c.pointages && Object.keys(c.pointages).length) return true;
+    }
+  }catch(_){ }
+  return false;
+}
+function dangerGuard(titre, avert, mot, cb){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  _DANGER={cb, mot};
+  const j=backupJours();
+  const frais=(j===0);
+  openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px;color:var(--danger)">⚠️ ${titre}</h2>
+    <p class="note" style="margin:0 0 12px;font-size:12px">${avert}</p>
+    <div class="card" style="box-shadow:none;padding:11px 13px;margin-bottom:12px;border-left:3px solid ${frais?'var(--ok)':'var(--danger)'}">
+      <b style="font-size:13px;color:${frais?'var(--ok)':'var(--danger)'}">${frais?'✓ Sauvegarde faite aujourd\'hui':(j===null?"🚨 Aucune sauvegarde n'a jamais été faite":"🚨 Dernière sauvegarde il y a "+j+" jour(s)")}</b>
+      ${frais?'':`<p class="note" style="margin:4px 0 8px;font-size:11.5px">Ne fais pas ça sans filet. Sauvegarde d'abord : 5 secondes.</p>
+      <button class="btn primary mini" style="width:100%" onclick="exportData();setTimeout(function(){ closeModal(); },400)">${icone('save','15px')} Sauvegarder d'abord</button>`}
+    </div>
+    <label style="margin-top:0">Pour confirmer, tape <b style="color:var(--danger)">${esc(mot)}</b></label>
+    <input id="dg_mot" placeholder="${esc(mot)}" style="text-transform:uppercase" oninput="dangerCheck()">
+    <button class="btn danger" id="dg_go" style="width:100%;margin-top:12px;opacity:.45;pointer-events:none" onclick="dangerGo()">${esc(titre)}</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closeModal();_DANGER=null">Annuler</button>`);
+}
+function dangerCheck(){
+  const e=document.getElementById('dg_mot'), b=document.getElementById('dg_go');
+  if(!e||!b||!_DANGER) return;
+  const ok=(e.value||'').trim().toUpperCase()===_DANGER.mot;
+  b.style.opacity=ok?'1':'.45';
+  b.style.pointerEvents=ok?'':'none';
+}
+function dangerGo(){
+  if(!_DANGER) return;
+  const e=document.getElementById('dg_mot');
+  if(((e&&e.value)||'').trim().toUpperCase()!==_DANGER.mot){ toast("Le mot ne correspond pas."); return; }
+  const cb=_DANGER.cb; _DANGER=null; closeModal();
+  setTimeout(cb, 120);
+}
+
+/* ============================================================
+ * CHECKLIST « NOUVEAU CLIENT » (espace dev)
+ * ========================================================== */
+function devCheck(){ return (CONFIG_DB.devCheck||{}); }
+function devCheckToggle(k){
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
+  if(!CONFIG_DB.devCheck) CONFIG_DB.devCheck={};
+  CONFIG_DB.devCheck[k]=!CONFIG_DB.devCheck[k];
+  saveConfigDB(); renderDev();
+}
+function demoPresente(){ return !!(TEAM['demo-chef']||TEAM['demo-emp1']||TEAM['demo-emp2']); }
+function deployEtapes(){
+  const fOk = DIAG ? DIAG.fonctions.filter(f=>f.lvl==='ok').length : 0;
+  const fTot = DIAG_FONCTIONS.length;
+  const reglesOk = !!(DIAG && DIAG.regles && DIAG.regles.lvl==='ok');
+  const iaOk = !!(DIAG && DIAG.fonctions.find(f=>f.k==='assistantBatiSuivi' && f.lvl==='ok'));
+  const cfg=(typeof FIREBASE_CONFIG!=='undefined')?FIREBASE_CONFIG:{};
+  const c=devCheck();
+  return [
+    {k:'firebase', auto:true,  ok:!!useFB, l:"Projet Firebase créé et connecté",
+     d:useFB?("Projet : "+(cfg.projectId||'?')):"L'app est en mode local : la config Firebase n'est pas renseignée dans index.html."},
+    {k:'region', auto:true, ok:String(cfg.databaseURL||'').indexOf('europe-west1')>=0, l:"Base en europe-west1",
+     d:"La région doit être la même que celle des Cloud Functions."},
+    {k:'fonctions', auto:true, ok:(DIAG && fOk===fTot), l:"Les "+fTot+" Cloud Functions déployées",
+     d:DIAG?(fOk+"/"+fTot+" répondent. Lance « firebase deploy --only functions » si besoin."):"Lance le diagnostic pour vérifier."},
+    {k:'secret', auto:true, ok:iaOk, l:"Secret ANTHROPIC_API_KEY présent",
+     d:"⚠️ Il doit être créé AVANT le déploiement des fonctions, sinon le déploiement échoue."},
+    {k:'regles', auto:true, ok:reglesOk, l:"Règles de sécurité collées et publiées",
+     d:DIAG?(DIAG.regles?DIAG.regles.msg:''):"Lance le diagnostic pour vérifier que la base est bien fermée."},
+    {k:'identite', auto:true, ok:!!(CONFIG_DB.nom && CONFIG_DB.siren), l:"Identité de l'artisan renseignée",
+     d:"Nom de l'entreprise et SIREN, au minimum."},
+    {k:'demo', auto:true, ok:!demoPresente(), l:"Données de démo effacées",
+     d:demoPresente()?"⚠️ L'équipe de démo (Karim, Lucas, Thomas) est encore présente. Efface avant de livrer.":"Aucune trace de la démo."},
+    {k:'appcheck', auto:false, ok:!!c.appcheck, l:"App Check activé (reCAPTCHA v3)",
+     d:"Recommandé. Déploie d'abord en mode surveillance, puis force."},
+    {k:'budget', auto:false, ok:!!c.budget, l:"Budget / alerte de coût posée",
+     d:"Sur Google Cloud, pour ne pas découvrir la facture trop tard."},
+    {k:'plafondIA', auto:false, ok:!!c.plafondIA, l:"Plafond IA fixé pour ce client",
+     d:"Dans la carte « Consommation IA » ci-dessus."},
+    {k:'backup', auto:false, ok:!!c.backup, l:"Sauvegarde initiale faite",
+     d:"Un export .json juste après la mise en route."},
+    {k:'teste', auto:false, ok:!!c.teste, l:"Testé de bout en bout",
+     d:"Connexion équipe (1er compte = patron), accès client par code, dictée IA."}
+  ];
+}
+function deployCard(){
+  if(!isDevSpace()) return '';
+  const e=deployEtapes();
+  const ok=e.filter(x=>x.ok).length;
+  const pct=Math.round(ok/e.length*100);
+  const col=pct===100?'var(--ok)':(pct>=70?'var(--warn)':'var(--danger)');
+  return `<div class="card" style="border-color:${col}">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">📋 Checklist « nouveau client »</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Les étapes à ne jamais oublier en livrant une instance. Les 🔒 se cochent toutes seules après un diagnostic.</p>
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px">
+      <div style="font-family:'Sora';font-size:26px;font-weight:800;color:${col}">${pct}%</div>
+      <span class="note" style="font-size:12px">${ok}/${e.length} étapes${pct===100?' — prêt à livrer 🎉':''}</span>
+    </div>
+    <div class="progress" style="margin-bottom:12px"><span style="width:${pct}%;background:${col}"></span></div>
+    ${e.map(x=>`<div class="member-row" style="${x.ok?'opacity:.65':''}">
+      <span style="width:26px;flex:0 0 26px;font-size:15px;text-align:center;color:${x.ok?'var(--ok)':'var(--muted)'}">${x.ok?'✓':'○'}</span>
+      <span style="flex:1;min-width:0"><b style="font-size:13px;display:block;${x.ok?'text-decoration:line-through':''}">${esc(x.l)}${x.auto?' <span class="tag" style="font-size:9.5px">auto</span>':''}</b>
+        <small class="note" style="font-size:11px">${esc(x.d)}</small></span>
+      ${x.auto?'':`<div class="checkbox ${x.ok?'on':''}" onclick="devCheckToggle('${x.k}')">${x.ok?'✓':''}</div>`}
+    </div>`).join('')}
+    <p class="note" style="margin-top:10px;font-size:11px">Rappel : le secret <b>ANTHROPIC_API_KEY</b> doit exister <b>avant</b> le déploiement des fonctions. Une fonction en 403 / 0 ms = permission Cloud Run manquante → supprime-la et redéploie-la.</p>
+  </div>`;
+}
 function saveIaPlafond(){
-  if(!isBoss()){ toast("Réservé au patron."); return; }
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
   const v=parseFloat((val('ia_cap')||'').replace(',','.'));
   CONFIG_DB.iaPlafond=(isNaN(v)||v<0)?0:Math.round(v*100)/100;
-  saveConfigDB(); render();
+  saveConfigDB(); renderDev();
   toast(CONFIG_DB.iaPlafond>0?("Plafond fixé à "+eurF2(CONFIG_DB.iaPlafond)+" par mois ✅"):"Plafond retiré (consommation illimitée)");
 }
 function chargerIaUsage(){
   if(IA_USAGE_BUSY) return;
-  if(!isBoss()){ toast("Réservé au patron."); return; }
+  if(!isDevSpace()){ toast("Réservé à l'espace développeur."); return; }
   if(!useFB){ toast("Disponible une fois l'app en ligne."); return; }
-  if(!(firebase.auth().currentUser)){ toast("Connecte-toi."); return; }
-  IA_USAGE_BUSY=true; render();
+  if(!(firebase.auth().currentUser)){ toast("Connecte-toi avec ton compte dev."); return; }
+  IA_USAGE_BUSY=true; renderDev();
   const fn=firebase.app().functions('europe-west1').httpsCallable('iaUsage');
   fn({}).then(r=>{ IA_USAGE=(r&&r.data)||null; })
     .catch(e=>{ toast("Lecture impossible : "+((e&&e.message)||'erreur')); })
-    .finally(()=>{ IA_USAGE_BUSY=false; render(); });
+    .finally(()=>{ IA_USAGE_BUSY=false; renderDev(); });
 }
 function iaUsageCard(){
-  if(!isBoss()) return '';
+  if(!isDevSpace()) return '';
   const cap=iaPlafond();
   const u=IA_USAGE;
   const cout=u?(u.total.euros||0):0;
   const pct=(cap>0 && u)?Math.min(100,Math.round(cout/cap*100)):0;
   const col=pct>=100?'var(--danger)':(pct>=80?'var(--warn)':'var(--ok)');
-  let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">🤖 Consommation IA</h2></div>
-    <p class="note" style="margin:0 0 10px;font-size:12px">Ce que l'IA coûte réellement chaque mois : assistant, dictée, projections, lecture de tickets, devis par photo.</p>`;
+  let h=`<div class="card" style="border-color:var(--acc)"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">🤖 Consommation IA — <span style="color:var(--acc)">ton coût</span></h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px"><b>C'est toi qui paies l'API.</b> L'artisan, lui, paie un abonnement. Cette carte n'est visible que d'ici, jamais de son côté.</p>`;
 
   if(u){
     h+=`<div class="kpis" style="margin:0 0 10px">
@@ -6847,7 +7365,7 @@ function iaUsageCard(){
         ${u.histo.slice().reverse().map(x=>`<div class="task-row" style="gap:10px"><span style="width:58px;font-size:12px" class="note">${esc(x.mois)}</span>${statBar(x.euros/maxH*100)}<b style="width:66px;text-align:right;font-size:13px">${eurF2(x.euros)}</b></div>`).join('')}
       </div>`;
     }
-    h+=`<p class="note" style="margin-top:10px;font-size:11px">Estimation calculée à partir des jetons réellement consommés (et d'un forfait par rendu de projection). Elle sert à piloter, pas à facturer.</p>`;
+    h+=`<p class="note" style="margin-top:10px;font-size:11px">Estimation calculée à partir des jetons réellement consommés (et d'un forfait par rendu de projection). À comparer avec ce que ce client te paie chaque mois.</p>`;
   } else {
     h+=`<p class="note" style="margin:0 0 10px">Touche le bouton ci-dessous pour lire la consommation du mois.</p>`;
   }
@@ -6860,7 +7378,7 @@ function iaUsageCard(){
         <input id="ia_cap" type="number" inputmode="decimal" step="0.5" min="0" value="${cap||''}" placeholder="ex : 20" style="flex:1">
         <button class="btn primary mini" style="flex:none;align-self:flex-end" onclick="saveIaPlafond()">OK</button>
       </div>
-      <p class="note" style="font-size:11px;margin-top:6px">Au-delà de ce montant, <b>l'IA se met en pause</b> jusqu'au mois suivant : plus aucun appel n'est facturé. Les autres fonctions de l'app continuent normalement.</p>
+      <p class="note" style="font-size:11px;margin-top:6px">Au-delà de ce montant, <b>l'IA de CE client se met en pause</b> jusqu'au mois suivant : plus aucun appel n'est facturé sur ton compte. Le reste de l'app continue normalement, et il verra un message l'invitant à te contacter.</p>
     </div>
   </div>`;
   return h;
