@@ -284,10 +284,29 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
 .swipe-arch{background:#d98a2b}
 .swipe-del{background:var(--danger)}
 .ch-tools{margin-bottom:12px}
+.tl{position:relative;padding-left:30px;margin-top:4px}
+.tl:before{content:"";position:absolute;left:10px;top:8px;bottom:8px;width:2px;background:var(--line)}
+.tl-i{position:relative;margin-bottom:16px}
+.tl-i:last-child{margin-bottom:2px}
+.tl-d{position:absolute;left:-30px;top:0;width:22px;height:22px;border-radius:50%;background:var(--card);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1}
+.tl-t{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.02em}
+.tl-b{font-size:13.5px;font-weight:700;margin-top:1px}
+.tl-s{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px;white-space:pre-wrap}
+.tl-ph{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+.tl-ph .t{width:56px;height:56px;border-radius:9px;background-size:cover;background-position:center;cursor:pointer;border:1px solid var(--line)}
+.kb{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 10px}
+.kb-col{flex:0 0 214px;background:var(--bg2);border:1px solid var(--line);border-radius:15px;padding:10px;min-height:110px;transition:.15s}
+.kb-col.over{border-color:var(--acc);background:var(--card)}
+.kb-h{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-size:12.5px;font-weight:800}
+.kb-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px;margin-bottom:8px;cursor:pointer;transition:.12s}
+.kb-card:active{transform:scale(.98)}
+.kb-card[draggable="true"]{cursor:grab}
+.kb-card .pill{font-size:10px;padding:2px 7px}
 .ch-search{width:100%;margin-bottom:10px}
 .chip-row{display:flex;gap:7px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .chip{flex:none;font-size:12px;font-weight:600;padding:7px 13px;border-radius:20px;background:var(--card2);border:1px solid var(--line);color:var(--muted);cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--acc);border-color:var(--acc);color:var(--accText)}
+.chip svg{vertical-align:-2px;margin-right:2px}
 .pill.late{background:rgba(255,90,90,.16);color:#ff8a8a;border:none;font-size:10px;margin-left:4px;vertical-align:middle}
 .pill.msg{background:rgba(61,139,255,.18);color:var(--acc2);border:none;font-size:10px;margin-left:4px;vertical-align:middle}
 .nav-badge{position:absolute;top:-6px;right:-12px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 3px;border:1.5px solid var(--bg2);line-height:1}
@@ -837,7 +856,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v166 · 13/07";
+const APP_VERSION="v171 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1395,6 +1414,7 @@ function demoEnrichir(ids){
       const cout=total*(1-cible);
       const hChef=(cout*0.4)/(memberCout(chef)||38);
       const hEmp =(cout*0.6)/(memberCout(e1)||28);
+      c.heuresPrevues=Math.round((hChef+hEmp)*(scen===2?0.72:(scen===1?0.95:1.15)));
       c.pointages={};
       c.pointages[chef]=demoSessions(chef,hChef,46);
       c.pointages[e1]=demoSessions(e1,hEmp,46);
@@ -1768,6 +1788,90 @@ function localTeamDemo(){
 }
 
 /* ====================== CLIENT — tableau de bord ====================== */
+/* ============ Fil d'actualité du chantier (espace client) ============ */
+function clientFeed(ch){
+  const ev=[];
+  const J=864e5;
+  if(ch.dateDebut){
+    const t=new Date(ch.dateDebut+'T08:00:00').getTime();
+    if(!isNaN(t) && t<=Date.now()) ev.push({ts:t, ic:'🏗️', t:'Démarrage du chantier', s:''});
+  }
+  /* photos : regroupées par jour */
+  const ph=ch.photos?Object.keys(ch.photos).map(k=>Object.assign({k},ch.photos[k])).filter(p=>p&&p.ts):[];
+  const parJour={};
+  ph.forEach(p=>{ const d=new Date(p.ts); const key=d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); (parJour[key]||(parJour[key]=[])).push(p); });
+  Object.keys(parJour).forEach(k=>{
+    const arr=parJour[k].sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const desc=arr.map(p=>p.desc).filter(Boolean)[0]||'';
+    ev.push({ts:arr[0].ts, ic:'📷', t:arr.length+' photo'+(arr.length>1?'s':'')+' ajoutée'+(arr.length>1?'s':''), s:desc, photos:arr.slice(0,4)});
+  });
+  /* comptes-rendus publiés */
+  if(ch.crs) Object.keys(ch.crs).forEach(k=>{
+    const r=ch.crs[k]; if(!r||!r.ts) return;
+    const bits=[r.taches_realisees,r.problemes,r.notes].filter(Boolean);
+    ev.push({ts:r.ts, ic:'📝', t:'Compte-rendu de chantier', s:bits.join('\n'), crk:k});
+  });
+  /* documents partagés */
+  if(ch.docs) Object.keys(ch.docs).forEach(k=>{
+    const d=ch.docs[k]; if(!d||!d.ts) return;
+    ev.push({ts:d.ts, ic:'📎', t:'Document partagé', s:d.nom||'', dock:k});
+  });
+  /* devis / factures */
+  if(ch.published) Object.keys(ch.published).forEach(pid=>{
+    const d=ch.published[pid]; if(!d) return;
+    if(d.ts){
+      if(d.type==='facture') ev.push({ts:d.ts, ic:'🧾', t:'Facture '+(d.num||''), s:'', pid:pid});
+      else if(d.type==='avoir') ev.push({ts:d.ts, ic:'↩️', t:'Avoir '+(d.num||''), s:'', pid:pid});
+      else ev.push({ts:d.ts, ic:'📄', t:'Devis '+(d.num||''), s:d.signature?'':'À lire et à signer', pid:pid, signer:!d.signature});
+    }
+    if(d.signature && d.signedAt){
+      const st=new Date(d.signedAt).getTime();
+      if(!isNaN(st)) ev.push({ts:st, ic:'✅', t:'Devis '+(d.num||'')+' signé', s:'Merci ! Les travaux peuvent être planifiés.'});
+    }
+  });
+  /* messages de l'équipe */
+  if(ch.messages) Object.keys(ch.messages).forEach(k=>{
+    const m=ch.messages[k];
+    if(!m||m.deleted||!m.ts||m.from==='client') return;
+    ev.push({ts:m.ts, ic:'💬', t:'Message de l\'équipe', s:String(m.txt||'').slice(0,220)});
+  });
+  return ev.filter(e=>e.ts && !isNaN(e.ts)).sort((a,b)=>b.ts-a.ts);
+}
+function tlDate(ts){
+  const d=new Date(ts), n=new Date();
+  const j=Math.floor((new Date(n.getFullYear(),n.getMonth(),n.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5);
+  const heure=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  if(j===0) return "Aujourd'hui · "+heure;
+  if(j===1) return "Hier · "+heure;
+  const s=d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+let CL_FEED_ALL=false;
+function clientFeedMore(){ CL_FEED_ALL=true; render(); }
+function clientFeedCard(ch){
+  const ev=clientFeed(ch);
+  if(!ev.length) return '';
+  const N=CL_FEED_ALL?ev.length:8;
+  return `<div class="card">
+    <div class="section-title" style="margin-top:0"><h2>Suivi de votre chantier</h2></div>
+    <p class="note" style="margin:0 0 12px;font-size:12px">Tout ce qui s'est passé, du plus récent au plus ancien.</p>
+    <div class="tl">
+      ${ev.slice(0,N).map(e=>`<div class="tl-i">
+        <span class="tl-d">${e.ic}</span>
+        <div class="tl-t">${esc(tlDate(e.ts))}</div>
+        <div class="tl-b">${esc(e.t)}</div>
+        ${e.s?`<div class="tl-s">${esc(e.s)}</div>`:''}
+        ${e.photos?`<div class="tl-ph">${e.photos.map(p=>`<div class="t" style="background-image:url(${p.url})" onclick="clientViewPhoto('${p.k}')"></div>`).join('')}</div>`:''}
+        ${e.signer?`<button class="btn primary mini" style="margin-top:8px" onclick="clientSignDoc('${e.pid}')">Lire et signer le devis</button>`:''}
+        ${(e.pid&&!e.signer)?`<button class="btn ghost mini" style="margin-top:8px" onclick="clientOpenDoc(CLIENT.chantierId,'${e.pid}')">Ouvrir</button>`:''}
+        ${e.dock?`<button class="btn ghost mini" style="margin-top:8px" onclick="clientOpenReport('${e.dock}')">Ouvrir</button>`:''}
+        ${e.crk?`<button class="btn ghost mini" style="margin-top:8px" onclick="crReportPDF(CLIENT.chantierId,'${e.crk}')">Voir en PDF</button>`:''}
+      </div>`).join('')}
+    </div>
+    ${ev.length>N?`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="clientFeedMore()">Voir les ${ev.length-N} événement${(ev.length-N)>1?'s':''} plus anciens</button>`:''}
+  </div>`;
+}
+
 function renderClientDashboard(){
   const ch=CHANTIERS[CLIENT.chantierId];
   if(!ch){ // chantier supprimé
@@ -1785,6 +1889,14 @@ function renderClientDashboard(){
     <button class="burger" onclick="openClientMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   ${BOSS_PREVIEW?`<div onclick="clientLogout()" style="background:var(--acc);color:var(--accText);text-align:center;padding:8px;border-radius:10px;margin:0 0 12px;font-weight:700;font-size:13px;cursor:pointer"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Aperçu vue client — touche pour revenir au chantier</div>`:''}
 
+  ${(etapeIdx===ETAPES.length-1 && avisUrl())?`<div class="card" style="border:1px solid var(--acc);position:relative;overflow:hidden">
+    <div style="position:absolute;width:150px;height:150px;right:-50px;top:-65px;border-radius:50%;background:radial-gradient(circle,var(--acc),transparent 70%);opacity:.3;pointer-events:none"></div>
+    <div style="font-size:26px;line-height:1;position:relative">⭐⭐⭐⭐⭐</div>
+    <h2 style="font-size:17px;margin:8px 0 4px;position:relative">Content du travail ?</h2>
+    <p class="note" style="margin:0 0 12px;font-size:12.5px;position:relative">Votre chantier est terminé. Un avis de votre part aiderait beaucoup ${esc(coName())} — cela ne prend qu'une minute.</p>
+    <a class="btn primary" style="width:100%;text-decoration:none;justify-content:center;position:relative" href="${esc(avisUrl())}" target="_blank" rel="noopener">Laisser un avis</a>
+  </div>`:''}
+
   <div class="card">
     <div class="section-title" style="margin-top:0"><h2>Avancement</h2><span class="pill acc">${pct}%</span></div>
     <div class="progress"><span style="width:${pct}%"></span></div>
@@ -1799,6 +1911,8 @@ function renderClientDashboard(){
       :ch.rdvStatus==='contre'?`<p class="tag" style="color:var(--acc);margin-top:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg> Vous avez proposé ${ch.rdvContre?esc(frDateTimeRdv(ch.rdvContre.date,ch.rdvContre.heure)):''}. En attente de confirmation.</p><button class="btn ghost mini" style="margin-top:6px" onclick="clientAcceptRdv()">Finalement, accepter le créneau proposé</button>`
       :`<div class="row" style="margin-top:10px"><button class="btn primary" style="flex:1" onclick="clientAcceptRdv()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> Accepter</button><button class="btn ghost" style="flex:1" onclick="clientProposeRdv()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Autre créneau</button></div>`}
     </div>`:''}
+
+  ${clientFeedCard(ch)}
 
   <div class="card">
     <div class="section-title" style="margin-top:0"><h2><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Photos du chantier</h2><span class="tag">${photos.length}</span></div>
@@ -1905,6 +2019,7 @@ function myArchived(){
 function clientMenu(btn){ const key=btn.parentElement.getAttribute('data-key'); if(!key) return; openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">Client</h2><p class="note" style="margin:0 0 12px">Que veux-tu faire ?</p><button class="btn danger" style="width:100%" onclick="closeModal();delClientKey(\'${encodeURIComponent(key)}\')">🗑 Retirer de l\'annuaire</button><button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeModal()">Annuler</button>`); }
 function delClientKey(k){ const key=decodeURIComponent(k); if(!confirm("Retirer ce client de l\'annuaire ? (ses chantiers ne sont pas supprimes)")) return; if(!CONFIG_DB.clientsMasques)CONFIG_DB.clientsMasques={}; CONFIG_DB.clientsMasques[key]=true; saveConfigDB(); toast('Client retire de l\'annuaire'); render(); }
 function chMenu(id){ const c=CHANTIERS[id]; if(!c) return; openModal(`<div class="grabber"></div>
+    ${perm('gerer_reglages')?`<button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start;text-align:left" onclick="closeModal();modeleDepuisChantier('${id}')">${icone('layers','16px')} Enregistrer comme modèle</button>`:''}
   <h2 style="margin:0 0 4px">${esc(c.nom)}</h2>
   <p class="note" style="margin:0 0 12px">Que veux-tu faire avec ce chantier ?</p>
   <button class="btn ghost" style="width:100%" onclick="closeModal();archiveChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archiver</button>
@@ -1979,7 +2094,7 @@ function fabFor(){
   return '';
 }
 function setTab(t){ TAB=t; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; CHAT_OPEN=null; if(t==='dashboard') markSignedSeen(); render(); toTop(); }
-function openChantier(id){ CUR_CHANTIER=id; markMsgSeen(id); markEtapeSeen(id); render(); toTop(); }
+function openChantier(id){ CUR_CHANTIER=id; CHTAB='apercu'; markMsgSeen(id); markEtapeSeen(id); render(); toTop(); }
 function closeChantier(){ CUR_CHANTIER=null; render(); toTop(); }
 function toTop(){ try{ window.scrollTo(0,0); document.documentElement.scrollTop=0; document.body.scrollTop=0; }catch(e){} }
 
@@ -2005,14 +2120,25 @@ function joursDepuis(ts){ if(!ts) return 0; return Math.floor((Date.now()-ts)/86
 function relanceDevis(d){ if(!d || d.type!=='devis' || d.signature) return 0; const j=joursDepuis(d.ts); return j>=5? j : 0; }
 function totalRelances(){ let n=0; Object.values(CHANTIERS).forEach(c=>{ if(c.published) Object.values(c.published).forEach(d=>{ if(relanceDevis(d)) n++; }); }); return n; }
 function markSignedSeen(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ if(c.published[pid].signature && !SIGN_SEEN[pid]){ SIGN_SEEN[pid]=true; ch=true; } }); }); if(ch){ lsSet('sign_seen',SIGN_SEEN); pushSeen('sign',SIGN_SEEN); } }
+function chDevisHT(c){ return (((c&&c.devis&&c.devis.items)||[])).reduce((s,it)=>s+it.qty*it.pu,0); }
 function chCard(c){
   const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
   const done=c.etape===ETAPES[ETAPES.length-1]; const late=isLate(c);
+  const jj=chJours(c);
+  const tks=c.taches?Object.values(c.taches):[];
+  const tDone=tks.filter(t=>t.done).length;
+  const devTot=chDevisHT(c);
+  const mg=((typeof isChef==='function')&&isChef())?chantierMarge(c):null;
   const inner=`<div class="ch-top"><div><h3>${esc(c.nom)}${late?' <span class="pill late"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> en retard</span>':''}${chUnread(c,c.id)?` <span class="pill msg"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ${chUnread(c,c.id)}</span>`:''}${chAdvanced(c,c.id)?` <span class="pill adv"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> +${chAdvanced(c,c.id)*20}%</span>`:''}</h3><div class="ch-client"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))}${adresseFull(c)?' · '+esc(adresseFull(c)):''}</div></div>
       <span class="pill ${done?'ok':'acc'}">${done?'Terminé':c.etape||ETAPES[0]}</span></div>
     <div class="progress"><span style="width:${pct}%"></span></div>
     <div class="ch-meta"><span class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> ${frDate(c.dateDebut)} → ${frDate(c.dateFin)}</span>
-      <span class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> ${esc(c.clientCode||'')}</span></div>`;
+      <span class="tag"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> ${esc(c.clientCode||'')}</span>
+      ${(jj!==null&&!done)?`<span class="tag" style="${jj<0?'color:var(--danger);font-weight:700':(jj<=3?'color:var(--warn);font-weight:700':'')}">${icone('clock')} ${jj<0?('J+'+(-jj)):('J-'+jj)}</span>`:''}
+      ${tks.length?`<span class="tag">${icone('check-circle')} ${tDone}/${tks.length} tâches</span>`:''}
+      ${(devTot>0&&perm('gerer_devis'))?`<span class="tag">${icone('euro')} ${eurF(devTot)}</span>`:''}
+      ${(mg&&mg.calculable)?`<span class="tag" style="color:${margeCoul(mg.pct)};font-weight:700">${margeFeu(mg.pct)} ${mg.pct.toFixed(0)}% marge</span>`:''}
+    </div>`;
   if(perm('suppr_chantier')){
     return `<div class="chantier" style="position:relative" onclick="openChantier('${c.id}')">
       <button class="ch-more" onclick="event.stopPropagation();chMenu('${c.id}')" aria-label="Options du chantier">⋯</button>${inner}</div>`;
@@ -2037,6 +2163,69 @@ function viewArchivedList(){
   });
   return h;
 }
+/* ===== Vue Kanban : les chantiers en colonnes par étape ===== */
+let CH_VIEW='cartes';
+function setChView(v){ CH_VIEW=v; render(); toTop(); }
+function chBodyHTML(){ return CH_VIEW==='kanban'?kanbanHTML():chListHTML(); }
+function chRefreshList(){ const l=document.getElementById('chList'); if(l) l.innerHTML=chBodyHTML(); else render(); }
+function kbCard(c,i,canMove){
+  const late=isLate(c);
+  const jj=chJours(c);
+  const done=(c.etape===ETAPES[ETAPES.length-1]);
+  const tks=c.taches?Object.values(c.taches):[];
+  const tDone=tks.filter(t=>t.done).length;
+  const mg=((typeof isChef==='function')&&isChef())?chantierMarge(c):null;
+  const un=chUnread(c,c.id);
+  return `<div class="kb-card" ${canMove?`draggable="true" ondragstart="kbDrag(event,'${c.id}')"`:''} onclick="openChantier('${c.id}')">
+    <b style="font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.nom||'Chantier')}</b>
+    <div class="note" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(clientFull(c))}</div>
+    ${chDevisHT(c)>0&&perm('gerer_devis')?`<div style="font-size:12px;font-weight:700;color:var(--acc2);margin-top:3px">${eurF(chDevisHT(c))} HT</div>`:''}
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">
+      ${late?`<span class="pill late">retard ${jj!==null?(-jj)+' j':''}</span>`:((jj!==null&&!done)?`<span class="pill">J-${jj}</span>`:'')}
+      ${(mg&&mg.calculable)?`<span class="pill" style="color:${margeCoul(mg.pct)}">${margeFeu(mg.pct)} ${mg.pct.toFixed(0)}%</span>`:''}
+      ${tks.length?`<span class="pill">${tDone}/${tks.length}</span>`:''}
+      ${un?`<span class="pill msg">${un}</span>`:''}
+    </div>
+    ${canMove?`<div class="row" style="gap:4px;margin-top:8px">
+      <button class="btn ghost mini" style="flex:1;padding:3px 0" onclick="event.stopPropagation();kbMove('${c.id}',-1)" ${i===0?'disabled':''} aria-label="Étape précédente">◀</button>
+      <button class="btn ghost mini" style="flex:1;padding:3px 0" onclick="event.stopPropagation();kbMove('${c.id}',1)" ${i===ETAPES.length-1?'disabled':''} aria-label="Étape suivante">▶</button>
+    </div>`:''}
+  </div>`;
+}
+function kanbanHTML(){
+  let list=myChantiers().slice();
+  const q=(CH_SEARCH||'').toLowerCase().trim();
+  if(q) list=list.filter(c=>((c.nom||'')+' '+clientFull(c)+' '+adresseFull(c)).toLowerCase().includes(q));
+  const canMove=(typeof isChef==='function')&&isChef();
+  let h=`<div class="kb">`;
+  ETAPES.forEach((e,i)=>{
+    const col=list.filter(c=>(c.etape||ETAPES[0])===e).sort((a,b)=>{ const la=isLate(a),lb=isLate(b); if(la!==lb) return la?-1:1; return (b.createdAt||0)-(a.createdAt||0); });
+    const tot=col.reduce((s,c)=>s+chDevisHT(c),0);
+    h+=`<div class="kb-col" ${canMove?`ondragover="kbOver(event,this)" ondragleave="kbLeave(this)" ondrop="kbDrop(event,this,${i})"`:''}>
+      <div class="kb-h"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e)}</span><span class="tag">${col.length}</span></div>
+      ${(tot>0&&perm('gerer_devis'))?`<div class="note" style="font-size:11px;margin:-5px 0 9px">${eurF(tot)} HT</div>`:''}
+      ${col.length?col.map(c=>kbCard(c,i,canMove)).join(''):`<p class="note" style="font-size:11px;margin:0;opacity:.55">Aucun chantier</p>`}
+    </div>`;
+  });
+  h+=`</div>`;
+  h+=`<p class="note" style="font-size:11px;margin-top:2px">${canMove?"Fais glisser une carte d'une colonne à l'autre (ou utilise ◀ ▶) pour changer l'étape du chantier.":"Tes chantiers, rangés par étape."}</p>`;
+  return h;
+}
+let _kbDrag=null;
+function kbDrag(e,id){ _kbDrag=id; try{ e.dataTransfer.setData('text/plain',id); e.dataTransfer.effectAllowed='move'; }catch(_){ } }
+function kbOver(e,el){ e.preventDefault(); if(el) el.classList.add('over'); }
+function kbLeave(el){ if(el) el.classList.remove('over'); }
+function kbDrop(e,el,i){ e.preventDefault(); if(el) el.classList.remove('over'); let id=_kbDrag; try{ const t=e.dataTransfer.getData('text/plain'); if(t) id=t; }catch(_){ } _kbDrag=null; kbSet(id,i); }
+function kbMove(id,d){ const c=CHANTIERS[id]; if(!c) return; const i=ETAPES.indexOf(c.etape||ETAPES[0]); kbSet(id, Math.max(0,Math.min(ETAPES.length-1, i+d))); }
+function kbSet(id,i){
+  const c=CHANTIERS[id]; const e=ETAPES[i];
+  if(!c||!e) return;
+  if(!((typeof isChef==='function')&&isChef())){ toast("Réservé au patron et aux chefs."); return; }
+  if(c.etape===e) return;
+  c.etape=e; saveChantier(id); markEtapeSeen(id);
+  chRefreshList();
+  toast((c.nom||'Chantier')+' → '+e);
+}
 function chListHTML(){
   let list=myChantiers().slice();
   // tri : en retard d'abord, puis plus récents
@@ -2058,11 +2247,15 @@ function viewChantiersList(){
   else if(nArch) h+=`<button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="openArchived()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Chantiers archivés (${nArch})</button>`;
   if(!all.length){ h+=`<div class="card empty">${isChef()?"Aucun chantier. Touche le bouton + en bas à droite pour en créer un.":"Aucun chantier ne t'est assigné pour l'instant."}</div>`; return h; }
   const chips=['Tous',...ETAPES];
-  h+=`<div class="ch-tools">
-    <input id="chSearch" class="ch-search" placeholder="Rechercher un chantier, un client…" value="${esc(CH_SEARCH||'')}" oninput="applyChFilter()">
-    <div class="chip-row">${chips.map(e=>{const fv=e==='Tous'?'':e; const on=(e==='Tous'&&!CH_FILTER)||CH_FILTER===e; return `<button class="chip ${on?'on':''}" data-f="${esc(fv)}" onclick="setChFilter('${e==='Tous'?'':e}')">${esc(e)}</button>`;}).join('')}</div>
+  h+=`<div class="row" style="gap:6px;margin-bottom:11px">
+    <button class="btn ${CH_VIEW==='cartes'?'primary':'ghost'} mini" style="flex:1" onclick="setChView('cartes')">${icone('grid','15px')} Cartes</button>
+    <button class="btn ${CH_VIEW==='kanban'?'primary':'ghost'} mini" style="flex:1" onclick="setChView('kanban')">${icone('layers','15px')} Kanban</button>
   </div>
-  <div id="chList">${chListHTML()}</div>`;
+  <div class="ch-tools">
+    <input id="chSearch" class="ch-search" placeholder="Rechercher un chantier, un client…" value="${esc(CH_SEARCH||'')}" oninput="applyChFilter()">
+    ${CH_VIEW==='cartes'?`<div class="chip-row">${chips.map(e=>{const fv=e==='Tous'?'':e; const on=(e==='Tous'&&!CH_FILTER)||CH_FILTER===e; return `<button class="chip ${on?'on':''}" data-f="${esc(fv)}" onclick="setChFilter('${e==='Tous'?'':e}')">${esc(e)}</button>`;}).join('')}</div>`:''}
+  </div>
+  <div id="chList">${chBodyHTML()}</div>`;
   return h;
 }
 function openClients(){ CLIENTS_VIEW=true; render(); toTop(); }
@@ -2091,8 +2284,8 @@ function viewClientsList(){
   return h;
 }
 function filterClients(){ const q=(document.getElementById('clSearch').value||'').toLowerCase().trim(); document.querySelectorAll('#clList .card').forEach(el=>{ el.style.display=(!q||(el.getAttribute('data-name')||'').includes(q))?'':'none'; }); }
-function applyChFilter(){ const i=document.getElementById('chSearch'); if(i)CH_SEARCH=i.value; const l=document.getElementById('chList'); if(l)l.innerHTML=chListHTML(); }
-function setChFilter(e){ CH_FILTER=e||''; try{ document.querySelectorAll('.chip').forEach(b=>{ b.classList.toggle('on',(b.getAttribute('data-f')||'')===CH_FILTER); }); }catch(_){ } const l=document.getElementById('chList'); if(l) l.innerHTML=chListHTML(); else render(); }
+function applyChFilter(){ const i=document.getElementById('chSearch'); if(i)CH_SEARCH=i.value; chRefreshList(); }
+function setChFilter(e){ CH_FILTER=e||''; try{ document.querySelectorAll('.chip[data-f]').forEach(b=>{ b.classList.toggle('on',(b.getAttribute('data-f')||'')===CH_FILTER); }); }catch(_){ } chRefreshList(); }
 let _csw=null;
 function chTouchStart(e,id){ const card=e.currentTarget; _csw={id,card,x:e.touches[0].clientX,y:e.touches[0].clientY,dx:0,locked:null}; }
 function chTouchMove(e){ if(!_csw)return; const t=e.touches[0]; const dx=t.clientX-_csw.x, dy=t.clientY-_csw.y;
@@ -2113,26 +2306,169 @@ function chTap(id,ev){ const card=ev.currentTarget;
 }
 
 /* ---- détail chantier ---- */
+/* ===== Fiche chantier : onglets + en-tête santé ===== */
+let CHTAB='apercu';
+function setCHTab(t){ CHTAB=t; render(); toTop(); }
+function chTabs(){
+  const t=[['apercu','Aperçu','home'],['terrain','Terrain','hardhat']];
+  if(perm('gerer_devis')||isChef()) t.push(['argent','Argent','euro']);
+  t.push(['client','Client','user']);
+  if(isChef()) t.push(['fin','Fin','check-circle']);
+  return t;
+}
+function chJours(c){
+  if(!c.dateFin) return null;
+  const a=new Date(c.dateFin+'T00:00:00').getTime(), b=new Date(todayISO()+'T00:00:00').getTime();
+  return Math.round((a-b)/86400000);
+}
+function chProchaineAction(id,c){
+  const pub=c.published?Object.keys(c.published).map(pid=>Object.assign({pid},c.published[pid])):[];
+  const fin=(c.etape===ETAPES[ETAPES.length-1]);
+  const devSigne=pub.find(d=>d.type==='devis' && d.signature && !(d.factureId && c.published[d.factureId]));
+  if(devSigne && perm('gerer_devis')) return {t:"Transformer le devis signé en facture", b:`<button class="btn primary mini" onclick="devisVersFacture('${id}','${devSigne.pid}')">Facturer</button>`};
+  const enRetard=pub.filter(d=>d.type==='facture' && factureRetard(Object.assign({},d))>0).sort((a,b)=>factureRetard(b)-factureRetard(a))[0];
+  if(enRetard && perm('gerer_devis')) return {t:"Une facture est en retard de paiement", b:`<button class="btn mini" onclick="relanceFacture('${id}','${enRetard.pid}')">Relancer</button>`};
+  if(perm('gerer_devis')){ const r=resteAPayer(c); if(r.total>0 && r.paye>0 && r.reste>0) return {t:"Le solde n'est pas encore facturé", b:`<button class="btn primary mini" onclick="publishFactureSolde('${id}')">Facturer le solde</button>`}; }
+  const taches=c.taches?Object.values(c.taches):[];
+  const reste=taches.filter(t=>!t.done).length;
+  if(!fin && reste) return {t:reste+' tâche'+(reste>1?'s':'')+' à terminer', b:`<button class="btn ghost mini" onclick="setCHTab('terrain')">Voir</button>`};
+  if(fin && isChef() && !(c.reception&&c.reception.done)) return {t:"Le chantier est terminé : prononce la réception", b:`<button class="btn primary mini" onclick="setCHTab('fin')">Réception</button>`};
+  if(c.reception&&c.reception.done && !c.archived && isChef()) return {t:"Réception faite : tu peux clôturer le chantier", b:`<button class="btn ghost mini" onclick="setCHTab('fin')">Clôturer</button>`};
+  return {t:"Rien d'urgent sur ce chantier ✅", b:''};
+}
+/* ===== Alertes intelligentes par chantier ===== */
+function chHeures(c){
+  const prev=parseInt(c.heuresPrevues,10)||0;
+  const faites=chantierHours(c);
+  const pct=prev>0?Math.round(faites/prev*100):0;
+  return {prev, faites, pct, actif:prev>0};
+}
+function chDernierePhoto(c){
+  const ph=c.photos?Object.values(c.photos).map(p=>p&&p.ts).filter(Boolean):[];
+  return ph.length?Math.max.apply(null,ph):0;
+}
+function chantierAlertes(id,c){
+  const a=[];
+  if(!c || c.archived) return a;
+  const fini=(c.etape===ETAPES[ETAPES.length-1]);
+  const idx=ETAPES.indexOf(c.etape||ETAPES[0]);
+  const chef=(typeof isChef==='function')&&isChef();
+
+  /* dépassement d'heures */
+  const H=chHeures(c);
+  if(chef && H.actif && H.pct>=90){
+    a.push({lvl:(H.pct>100?'danger':'warn'), ic:'⏱️',
+      t:(H.pct>100?('Dépassement d\'heures : '+H.pct+'%'):('Bientôt au bout des heures prévues : '+H.pct+'%')),
+      s:Math.round(H.faites)+' h pointées sur '+H.prev+' h prévues.', go:`setCHTab('terrain')`});
+  }
+  /* marge faible */
+  if(chef){
+    const m=chantierMarge(c);
+    if(m.calculable && m.pct<10){
+      a.push({lvl:'danger', ic:'📉', t:'Marge faible : '+m.pct.toFixed(0)+'%',
+        s:'Coût réel '+dashEur(m.reel)+' pour '+dashEur(m.devise)+' devisés.', go:`setCHTab('argent')`});
+    }
+  }
+  /* retard sur la date de fin */
+  const j=chJours(c);
+  if(!fini && j!==null && j<0){
+    a.push({lvl:'danger', ic:'📅', t:'Chantier en retard de '+(-j)+' jour'+((-j)>1?'s':''),
+      s:'La date de fin prévue ('+frDate(c.dateFin)+') est dépassée.', go:''});
+  }
+  /* matériel pas reçu alors que les travaux sont lancés */
+  if(idx>=3 && !fini && c.materiel){
+    const mats=Object.values(c.materiel);
+    const manque=mats.filter(m=>matStatut(m)!=='reçu');
+    if(manque.length){
+      a.push({lvl:'warn', ic:'📦', t:manque.length+' matériel'+(manque.length>1?'s':'')+' pas encore reçu'+(manque.length>1?'s':''),
+        s:'Les travaux sont lancés : '+manque.slice(0,3).map(m=>m.label||'').filter(Boolean).join(', ')+(manque.length>3?'…':''), go:`setCHTab('terrain')`});
+    }
+  }
+  /* silence photo */
+  const lp=chDernierePhoto(c);
+  if(!fini && idx>=2){
+    const jours=lp?Math.floor((Date.now()-lp)/86400000):999;
+    if(jours>=12){
+      a.push({lvl:'warn', ic:'📷', t:(lp?('Aucune photo depuis '+jours+' jours'):'Aucune photo sur ce chantier'),
+        s:'Ton client ne voit plus rien avancer. Une photo le rassure.', go:`setCHTab('terrain')`});
+    }
+  }
+  /* devis non signé alors que les travaux avancent */
+  if(chef && idx>=2 && !fini && c.published){
+    const pub=Object.values(c.published);
+    const devis=pub.filter(d=>d.type==='devis');
+    if(devis.length && !devis.some(d=>d.signature)){
+      a.push({lvl:'warn', ic:'✍️', t:'Devis non signé', s:'Les travaux ont commencé, mais aucun devis n\'est signé par le client.', go:`setCHTab('client')`});
+    }
+  }
+  return a;
+}
+function chAlertesCard(id,c){
+  const a=chantierAlertes(id,c);
+  if(!a.length) return '';
+  const rouge=a.some(x=>x.lvl==='danger');
+  return `<div class="card" style="border-left:3px solid ${rouge?'var(--danger)':'var(--warn)'}">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px;color:${rouge?'var(--danger)':'var(--warn)'}">${icone('alert')} Points de vigilance <span class="tag">${a.length}</span></h2></div>
+    ${a.map(x=>`<div class="member-row" ${x.go?`onclick="${x.go}" style="cursor:pointer"`:''}>
+      <span style="width:30px;flex:0 0 30px;font-size:17px;text-align:center">${x.ic}</span>
+      <span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block;color:${x.lvl==='danger'?'var(--danger)':'var(--warn)'}">${esc(x.t)}</b><small class="note" style="font-size:12px">${esc(x.s)}</small></span>
+    </div>`).join('')}
+  </div>`;
+}
+function chantierSanteCard(id,c){
+  const idx=ETAPES.indexOf(c.etape||ETAPES[0]);
+  const pct=Math.round((idx/(ETAPES.length-1))*100);
+  const j=chJours(c);
+  const fin=(c.etape===ETAPES[ETAPES.length-1]);
+  const m=(typeof isChef==='function' && isChef())?chantierMarge(c):null;
+  const r=perm('gerer_devis')?resteAPayer(c):null;
+  const act=chProchaineAction(id,c);
+  const jTxt = (j===null)?'—':(fin?'Terminé':(j<0?('J+'+(-j)):('J-'+j)));
+  const jCol = (j===null||fin)?'var(--txt)':(j<0?'var(--danger)':(j<=3?'var(--warn)':'var(--txt)'));
+  const jLbl = (j===null)?'Pas de date de fin':(fin?'Chantier terminé':(j<0?'de retard':'avant la fin prévue'));
+  return `<div class="card" style="border-left:3px solid var(--acc)">
+    <div class="kpis" style="margin:0 0 10px">
+      <div class="kpi acc"><div class="big" style="font-size:22px">${pct}%</div><div class="lbl">Avancement</div></div>
+      <div class="kpi"><div class="big" style="font-size:22px;color:${jCol}">${jTxt}</div><div class="lbl">${jLbl}</div></div>
+      ${m?`<div class="kpi"><div class="big" style="font-size:22px;color:${m.calculable?margeCoul(m.pct):'var(--muted)'}">${m.calculable?(margeFeu(m.pct)+' '+m.pct.toFixed(0)+'%'):'—'}</div><div class="lbl">Marge estimée</div></div>`:''}
+      ${r?`<div class="kpi ${r.reste>0?'warn':'ok'}"><div class="big" style="font-size:22px">${dashEur(r.reste)}</div><div class="lbl">Reste à facturer</div></div>`:''}
+    </div>
+    <div class="member-row" style="margin:0">
+      <span style="width:32px;height:32px;flex:0 0 32px;border-radius:10px;background:var(--card2);color:var(--acc);display:flex;align-items:center;justify-content:center">${icone('alert','17px')}</span>
+      <span style="flex:1;min-width:0"><small class="note" style="font-size:11px;display:block">Prochaine action</small><b style="font-size:13.5px">${esc(act.t)}</b></span>
+      ${act.b}
+    </div>
+  </div>`;
+}
 function viewChantier(id){
   const c=CHANTIERS[id]; const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
   const taches=c.taches?Object.keys(c.taches).map(k=>({k,...c.taches[k]})):[];
   const photos=c.photos?Object.keys(c.photos).map(k=>({k,...c.photos[k]})).sort((a,b)=>b.ts-a.ts):[];
   const mats=c.materiel?Object.keys(c.materiel).map(k=>({k,...c.materiel[k]})):[];
   const assignes=c.assignes?Object.keys(c.assignes).filter(u=>TEAM[u]):[];
+  const tabs=chTabs();
+  if(!tabs.some(t=>t[0]===CHTAB)) CHTAB='apercu';
+  const T=CHTAB;
   let h=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
     <button class="backbtn" onclick="closeChantier()"><span class="ar"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></span> Tous les chantiers</button>
     <div style="flex:1"></div>
     ${isBoss()?`<button class="linkbtn" onclick="previewClientView('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Vue client</button>`:''}
     ${isChef()?`<button class="pen" onclick="editChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>`:''}
   </div>
-  <div class="card flat" style="text-align:center">
+  <div class="chip-row" style="margin:0 0 14px;overflow-x:auto">${tabs.map(t=>`<button class="chip ${T===t[0]?'on':''}" onclick="setCHTab('${t[0]}')">${icone(t[2],'15px')} ${t[1]}</button>`).join('')}</div>`;
+
+  if(T==='apercu'){ h+=`  <div class="card flat" style="text-align:center">
     <h2 style="margin:0 0 4px">${esc(c.nom)}</h2>
     <div class="ch-client"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${esc(clientFull(c))}</div>${addrBlock(c)}
-    ${(c.clientTel||c.clientEmail)?`<div class="row" style="justify-content:center;gap:8px;margin-top:10px">${c.clientTel?`<a class="btn ghost mini" style="text-decoration:none" href="tel:${esc((c.clientTel||'').replace(/\s/g,''))}"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2z"/></svg> ${esc(c.clientTel)}</a>`:''}${c.clientEmail?`<a class="btn ghost mini" style="text-decoration:none" href="mailto:${esc(c.clientEmail)}"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> ${esc(c.clientEmail)}</a>`:''}</div>`:''}</div>
-
-  <div class="card">
-    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Description interne</h2><button class="${c.description?'pen':'linkbtn'}" onclick="editChantierDesc('${id}')">${c.description?'✎':'+'}</button></div>
-    ${c.description?`<p style="white-space:pre-wrap;line-height:1.5">${esc(c.description)}</p>`:`<p class="note">Aucune description. Ajoute des notes internes (visibles par l'équipe, jamais par le client).</p>`}
+    ${(c.clientTel||c.clientEmail)?`<div class="row" style="justify-content:center;gap:8px;margin-top:10px">${c.clientTel?`<a class="btn ghost mini" style="text-decoration:none" href="tel:${esc((c.clientTel||'').replace(/\s/g,''))}"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 1.9.6 2.8a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2z"/></svg> ${esc(c.clientTel)}</a>`:''}${c.clientEmail?`<a class="btn ghost mini" style="text-decoration:none" href="mailto:${esc(c.clientEmail)}"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg> ${esc(c.clientEmail)}</a>`:''}</div>`:''}</div>`;
+    h+=chantierSanteCard(id,c);
+    h+=chAlertesCard(id,c);
+    h+=`  <div class="card avc">
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;margin:0 0 6px">Avancement</h2>
+    <div style="font-family:'Sora';font-size:34px;font-weight:800;color:var(--acc2);text-align:center;line-height:1">${pct}%</div>
+    <div class="steps" style="margin:14px 0 10px">${ETAPES.map((e,i)=>`<div class="step-dot ${i<=idx?'done':''}"></div>`).join('')}</div>
+    ${!isChef()?`<p style="text-align:center;font-weight:700;margin:0">${esc(c.etape||ETAPES[0])}</p>`:''}
+    ${isChef()?`<select onchange="setEtape('${id}',this.value)" style="text-align:center;text-align-last:center">${ETAPES.map(e=>`<option ${e===(c.etape||ETAPES[0])?'selected':''}>${e}</option>`).join('')}</select>`:''}
   </div>
 
   <div class="card">
@@ -2144,12 +2480,24 @@ function viewChantier(id){
     `:`<p class="note">Aucun rendez-vous prévu.</p>`}
   </div>
 
-  <div class="card avc">
-    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;margin:0 0 6px">Avancement</h2>
-    <div style="font-family:'Sora';font-size:34px;font-weight:800;color:var(--acc2);text-align:center;line-height:1">${pct}%</div>
-    <div class="steps" style="margin:14px 0 10px">${ETAPES.map((e,i)=>`<div class="step-dot ${i<=idx?'done':''}"></div>`).join('')}</div>
-    ${!isChef()?`<p style="text-align:center;font-weight:700;margin:0">${esc(c.etape||ETAPES[0])}</p>`:''}
-    ${isChef()?`<select onchange="setEtape('${id}',this.value)" style="text-align:center;text-align-last:center">${ETAPES.map(e=>`<option ${e===(c.etape||ETAPES[0])?'selected':''}>${e}</option>`).join('')}</select>`:''}
+  <div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Description interne</h2><button class="${c.description?'pen':'linkbtn'}" onclick="editChantierDesc('${id}')">${c.description?'✎':'+'}</button></div>
+    ${c.description?`<p style="white-space:pre-wrap;line-height:1.5">${esc(c.description)}</p>`:`<p class="note">Aucune description. Ajoute des notes internes (visibles par l'équipe, jamais par le client).</p>`}
+  </div>
+
+  ${isChef()?`<div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Équipe assignée</h2><button class="btn ghost mini" onclick="assignMembers('${id}')">Gérer</button></div>
+    ${assignes.length?assignes.map(u=>`<span class="pill">${esc((TEAM[u]||{}).nom||'')}</span>`).join(' '):`<p class="note">Personne d'assigné.</p>`}
+  </div>`:''}`;
+  }
+  else if(T==='terrain'){ h+=`  <div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> Tâches${taches.length?` <span class="tag">${taches.filter(t=>t.done).length}/${taches.length} · ${Math.round(taches.filter(t=>t.done).length/taches.length*100)}%</span>`:''}</h2><button class="btn ghost mini" onclick="addTache('${id}')">+</button></div>
+    ${taches.length?`<div class="progress" style="margin-bottom:10px"><span style="width:${Math.round(taches.filter(t=>t.done).length/taches.length*100)}%"></span></div>`:''}
+    ${taches.length?taches.map(t=>`<div class="task-row ${t.done?'done':''}">
+      <div class="checkbox ${t.done?'on':''}" onclick="toggleTache('${id}','${t.k}')">${t.done?'✓':''}</div>
+      <span class="tk-label" style="flex:1">${esc(t.label)}</span>
+      ${isChef()?`<button class="iconbtn danger" onclick="delTache('${id}','${t.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}
+    </div>`).join(''):`<p class="note">Aucune tâche.</p>`}
   </div>
 
   <div class="card">
@@ -2159,16 +2507,6 @@ function viewChantier(id){
   </div>
 
   ${avantApresCard(id,c)}
-
-  <div class="card">
-    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/></svg> Tâches${taches.length?` <span class="tag">${taches.filter(t=>t.done).length}/${taches.length} · ${Math.round(taches.filter(t=>t.done).length/taches.length*100)}%</span>`:''}</h2><button class="btn ghost mini" onclick="addTache('${id}')">+</button></div>
-    ${taches.length?`<div class="progress" style="margin-bottom:10px"><span style="width:${Math.round(taches.filter(t=>t.done).length/taches.length*100)}%"></span></div>`:''}
-    ${taches.length?taches.map(t=>`<div class="task-row ${t.done?'done':''}">
-      <div class="checkbox ${t.done?'on':''}" onclick="toggleTache('${id}','${t.k}')">${t.done?'✓':''}</div>
-      <span class="tk-label" style="flex:1">${esc(t.label)}</span>
-      ${isChef()?`<button class="iconbtn danger" onclick="delTache('${id}','${t.k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}
-    </div>`).join(''):`<p class="note">Aucune tâche.</p>`}
-  </div>
 
   <div class="card">
     <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3zM3 9h18M3 15h18M8 4v5M16 4v5M12 9v6M8 15v5M16 15v5"/></svg> Matériel</h2><button class="btn ghost mini" onclick="openMateriel('${id}')">+</button></div>
@@ -2183,23 +2521,15 @@ function viewChantier(id){
 
   ${pointageOn()? pointageCard(id,c):''}
 
-  ${perm('gerer_devis')? devisCard(id,c):''}
-
-  ${isChef()? receptionCard(id,c):''}
-
-  ${isChef()? rentabiliteCard(id,c):''}
-
   ${journalCard(id,c)}
 
-  ${plansCard(id,c)}
+  ${plansCard(id,c)}`;
+  }
+  else if(T==='argent'){ h+=`  ${perm('gerer_devis')? devisCard(id,c):''}
 
-
-  ${isChef()?`<div class="card">
-    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Équipe assignée</h2><button class="btn ghost mini" onclick="assignMembers('${id}')">Gérer</button></div>
-    ${assignes.length?assignes.map(u=>`<span class="pill">${esc((TEAM[u]||{}).nom||'')}</span>`).join(' '):`<p class="note">Personne d'assigné.</p>`}
-  </div>`:''}
-
-  <div class="card">
+  ${isChef()? rentabiliteCard(id,c):''}`;
+  }
+  else if(T==='client'){ h+=`  <div class="card">
     <div class="section-title" style="margin-top:0"><h2 style="font-size:15px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg> Accès client</h2></div>
     <p class="note">Donne ce code au client pour qu'il suive son chantier :</p>
     <div class="code-display">${esc(c.clientCode||'—')}</div>
@@ -2218,13 +2548,17 @@ function viewChantier(id){
     ${isChef()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="chantierReportPDF('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Voir / imprimer le compte-rendu</button>`:''}
     ${isChef()?`<button class="btn primary" style="width:100%;margin-top:10px" onclick="chantierReportShare('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg> Partager le compte-rendu au client</button>`:''}
     ${(isChef()&&c.docs&&Object.keys(c.docs).length)?`<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><p class="tag" style="margin:0 0 6px">Partagés au client</p>`+Object.keys(c.docs).map(k=>`<div class="task-row"><span style="flex:1;font-size:12px">📎 ${esc(c.docs[k].nom||'Compte-rendu')}</span><button class="iconbtn" title="Ouvrir" onclick="clientOpenReportById('${id}','${k}')">${icone('eye')}</button><button class="iconbtn danger" title="Retirer du client" onclick="delSharedDoc('${id}','${k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>`).join('')+`</div>`:''}
-  </div>`:''}
+  </div>`:''}`;
+  }
+  else if(T==='fin'){ h+=`  ${isChef()? receptionCard(id,c):''}
 
   ${(isChef()&&!c.archived)? clotureCard(id,c):''}
 
   ${perm('suppr_chantier')?`<div class="row" style="margin-top:8px">
     ${c.archived?`<button class="btn ghost" onclick="unarchiveChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg> Désarchiver</button>`:`<button class="btn ghost" onclick="archiveChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg> Archiver</button>`}
     <button class="btn danger" onclick="delChantier('${id}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg> Supprimer</button></div>`:''}`;
+  }
+
   return h;
 }
 
@@ -2419,6 +2753,8 @@ function chantierForm(id){
       <div><label>Email client (option)</label><input id="f_cemail" value="${esc(c.clientEmail||'')}" inputmode="email" placeholder="client@email.fr"></div></div>
     <div class="row"><div><label>Début</label><input id="f_d1" type="date" value="${c.dateDebut||''}"></div>
       <div><label>Fin prévue</label><input id="f_d2" type="date" value="${c.dateFin||''}"></div></div>
+    <div class="row" style="margin-top:10px"><div><label>Heures prévues (option)</label><input id="f_hprev" type="number" min="0" inputmode="numeric" value="${c.heuresPrevues||''}" placeholder="ex : 110"></div><div></div></div>
+    <p class="note" style="font-size:11px;margin-top:4px">Le nombre d'heures que tu as chiffré. BatiSuivi te prévient si le chantier les dépasse.</p>
     ${!id && Object.keys(modeles()).length?`<label style="margin-top:10px">Partir d'un modèle (option)</label>
       <select id="f_modele"><option value="">— Aucun (vierge) —</option>${Object.keys(modeles()).map(k=>`<option value="${k}">${esc(modeles()[k].nom||'Modèle')}</option>`).join('')}</select>`:''}
     <button class="btn primary" style="width:100%;margin-top:16px" onclick="saveChantierForm('${id||''}')">${id?'Enregistrer':'Créer le chantier'}</button>`);
@@ -2436,6 +2772,7 @@ function saveChantierForm(id){
   const nom=val('f_nom'); if(!nom){ toast("Donne un nom au chantier"); return; }
   const ctype=((document.getElementById('f_ctype')||{}).value)||'particulier';
   const fields={nom, clientType:ctype, clientPrenom:val('f_prenom'), client:val('f_client'), clientSociete:val('f_societe'), clientSiren:(val('f_siren')||'').replace(/\s/g,''), clientTvaIntra:val('f_ctva'), adresse:val('f_adr'), cp:val('f_cp'), ville:val('f_ville'), clientTel:val('f_ctel'), clientEmail:val('f_cemail'), dateDebut:val('f_d1'), dateFin:val('f_d2')};
+  const hp=parseInt(val('f_hprev'),10); fields.heuresPrevues=(isNaN(hp)||hp<0)?0:hp;
   if(id){ Object.assign(CHANTIERS[id],fields); saveChantier(id); }
   else { const nid=uid(); CHANTIERS[nid]={...fields,etape:ETAPES[0],clientCode:code6(),assignes:{},createdAt:Date.now()}; saveChantier(nid);
     const mk=(document.getElementById('f_modele')||{}).value; if(mk) applyModele(nid,mk);
@@ -3408,6 +3745,18 @@ function viewDashToday(){
       rdv.map(c=>{ const id=Object.keys(CHANTIERS).find(k=>CHANTIERS[k]===c); return dashRow(esc(c.nom||'Chantier'), (c.heureRdv?esc(c.heureRdv)+' · ':'')+esc(c.noteRdv||clientFull(c)),
         `<button class="btn ghost mini" onclick="openChantier('${id}')">Ouvrir</button>`); }).join(''));
   }
+  /* Points de vigilance, tous chantiers confondus */
+  const vig=[];
+  Object.keys(CHANTIERS).forEach(cid=>{ const cc=CHANTIERS[cid]; if(!cc||cc.archived) return;
+    chantierAlertes(cid,cc).forEach(x=>vig.push({cid,c:cc,x})); });
+  if(vig.length){
+    const rouge=vig.filter(v=>v.x.lvl==='danger');
+    h+=dashBloc('alert', rouge.length?'var(--danger)':'var(--warn)','Points de vigilance',vig.length,
+      'Des signaux à regarder de près sur tes chantiers.',
+      vig.sort((a,b)=>(a.x.lvl==='danger'?-1:1)-(b.x.lvl==='danger'?-1:1)).slice(0,5).map(v=>dashRow(
+        v.x.ic+' '+esc(v.x.t), esc(v.c.nom||'Chantier')+' · '+esc(v.x.s),
+        `<button class="btn ghost mini" onclick="openChantier('${v.cid}')">Ouvrir</button>`)).join('')+dashPlus(vig,5));
+  }
   h+=meteoCard();
   h+=dashActiviteCard(10);
   return h;
@@ -3680,7 +4029,7 @@ function hubBody(hub,tab){
     if(tab==='redaction') return viewRedaction();
   }
   if(hub==='params'){
-    if(tab==='entreprise') return viewIdentite();
+    if(tab==='entreprise') return viewIdentite()+avisSettingsCard();
     if(tab==='factu') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Facturation</h2></div>
       <button class="btn ghost" style="width:100%" onclick="openFacturationSettings()">${icone('settings')} Préfixes, numéros, TVA</button>
       ${facturXOn()?`<button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting</button>`:''}</div>`;
@@ -4904,6 +5253,10 @@ function openFacturationSettings(){
     <div class="row" style="margin-top:10px"><div><label>Code postal</label><input id="fs_cp" type="text" inputmode="numeric" value="${esc(CONFIG_DB.cp||'')}" maxlength="5"></div>
       <div><label>Ville</label><input id="fs_ville" type="text" value="${esc(CONFIG_DB.ville||'')}"></div></div>
     <p class="note" style="font-size:11px;margin-top:4px">Obligatoires pour générer une facture électronique conforme (format Factur-X) à destination des professionnels.</p>
+    <label style="margin-top:14px;display:block">Assurance décennale</label>
+    <div class="row" style="margin-top:6px"><div><label>Assureur</label><input id="fs_ass" type="text" value="${esc(CONFIG_DB.assurance||'')}" placeholder="ex : AXA / MAAF…"></div>
+      <div><label>N° de police</label><input id="fs_assnum" type="text" value="${esc(CONFIG_DB.assuranceNum||'')}" placeholder="ex : 123456789"></div></div>
+    <p class="note" style="font-size:11px;margin-top:4px">Mention obligatoire pour les métiers du bâtiment. Elle apparaîtra sur le <b>dossier client (DOE)</b> remis en fin de chantier.</p>
     <label style="margin-top:14px;display:block">Coordonnées bancaires (imprimées sur tes factures)</label>
     <div style="margin-top:6px"><label>IBAN</label><input id="fs_iban" type="text" value="${esc(CONFIG_DB.iban||'')}" placeholder="FR76 …" maxlength="40"></div>
     <div class="row" style="margin-top:10px"><div><label>BIC</label><input id="fs_bic" type="text" value="${esc(CONFIG_DB.bic||'')}" placeholder="AGRIFRPP…" maxlength="15"></div>
@@ -4930,6 +5283,8 @@ function saveFacturationSettings(){
   CONFIG_DB.bic=(val('fs_bic')||'').trim().toUpperCase();
   CONFIG_DB.ibanTitu=(val('fs_titu')||'').trim();
   CONFIG_DB.conditions=(val('fs_cond')||'').trim();
+  CONFIG_DB.assurance=(val('fs_ass')||'').trim();
+  CONFIG_DB.assuranceNum=(val('fs_assnum')||'').trim();
   const ap=(val('fs_avpre')||'').trim().toUpperCase(); if(ap) CONFIG_DB.avoirPrefix=ap;
   const nextA=parseInt(val('fs_avnum'),10); if(!isNaN(nextA)&&nextA>0) CONFIG_DB.avoirCounter=nextA-1;
   CONFIG_DB.adr=(val('fs_adr')||'').trim();
@@ -5806,6 +6161,13 @@ function rentabiliteCard(id,c){
     ${mat>0?`<div class="task-row" style="padding-left:12px"><span style="flex:1" class="note">Matériel</span><span class="note">${eurFmt(mat)}</span></div>`:''}
     <div class="task-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:10px"><span style="flex:1"><b>Marge</b></span><b style="color:${col}">${eurFmt(marge)}</b></div>
     <div class="task-row"><span style="flex:1">% de marge</span><b style="color:${col}">${devise>0?pct.toFixed(1)+' %':'—'}</b></div>
+    ${(()=>{ const H=chHeures(c); if(!H.actif) return `<p class="note" style="margin-top:10px;font-size:11px;border-top:1px solid var(--line);padding-top:10px">💡 Renseigne les <b>heures prévues</b> du chantier (bouton ✎ en haut de la fiche) : BatiSuivi te préviendra dès que tu les dépasses.</p>`;
+      const col=H.pct>100?'var(--danger)':(H.pct>=90?'var(--warn)':'var(--ok)');
+      return `<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px">
+        <div class="task-row"><span style="flex:1">Heures pointées / prévues</span><b style="color:${col}">${Math.round(H.faites)} h / ${H.prev} h · ${H.pct}%</b></div>
+        <div class="progress" style="margin-top:6px"><span style="width:${Math.min(100,H.pct)}%;background:${col}"></span></div>
+        ${H.pct>100?`<p class="note" style="margin-top:6px;font-size:11px;color:var(--danger)">⚠️ Tu as dépassé de ${Math.round(H.faites-H.prev)} h ce que tu avais chiffré.</p>`:''}
+      </div>`; })()}
     <p class="note" style="margin:8px 0 0;font-size:11px">Devisé = total HT du devis (ou des factures). Coût réel = heures pointées × coût horaire de chaque personne${mat>0?', plus le matériel chiffré':''}. Estimation indicative de gestion.</p>
   </div>`;
 }
@@ -5913,6 +6275,206 @@ function clotureEtats(c){
   const factureOK=!!(c.published&&Object.values(c.published).some(d=>d&&d.type==='facture'));
   return {recu,reserves,reservesOK,factureOK};
 }
+/* ============ AVIS CLIENT (Google) ============ */
+function avisUrl(){ return (CONFIG_DB.avisUrl||'').trim(); }
+function avisSettingsCard(){
+  return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">⭐ Avis clients</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Colle ici ton lien Google « Rédiger un avis ». Il sera proposé automatiquement à ton client quand son chantier est terminé, et tu pourras le lui envoyer en un clic.</p>
+    <label>Lien pour laisser un avis</label>
+    <input id="av_url" type="url" inputmode="url" value="${esc(avisUrl())}" placeholder="https://g.page/r/…/review">
+    <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveAvisUrl()">${icone('save','16px')} Enregistrer</button>
+    <p class="note" style="margin-top:10px;font-size:11px">Où le trouver : va sur ta fiche <b>Google Business Profile</b> → « Demander des avis » → copie le lien proposé. Il ressemble à <code>https://g.page/r/…/review</code>.</p>
+    ${avisUrl()?`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="window.open(avisUrl(),'_blank')">${icone('eye','16px')} Tester le lien</button>`:''}
+  </div>`;
+}
+function saveAvisUrl(){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const v=(val('av_url')||'').trim();
+  if(v && !/^https?:\/\//i.test(v)){ toast("Le lien doit commencer par https://"); return; }
+  CONFIG_DB.avisUrl=v; saveConfigDB(); render(); toast(v?"Lien d'avis enregistré ✅":"Lien d'avis retiré");
+}
+function demanderAvis(id){
+  const c=CHANTIERS[id]; if(!c) return;
+  const lien=avisUrl();
+  if(!lien){ toast("Ajoute d'abord ton lien d'avis : Paramètres → Entreprise."); return; }
+  const sujet='Merci pour votre confiance — '+coName();
+  const corps='Bonjour,\n\nLe chantier « '+(c.nom||'')+' » est terminé, et nous vous remercions de la confiance que vous nous avez accordée.\n\nSi vous avez été satisfait de notre travail, un avis de votre part nous aiderait énormément :\n'+lien+'\n\nCela ne prend qu\'une minute, et cela compte beaucoup pour une entreprise comme la nôtre.\n\nBien cordialement,\n'+coName();
+  const to=(c.clientEmail||'').trim();
+  openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">⭐ Demander un avis</h2>
+    <p class="note" style="margin:0 0 12px">${esc(c.nom||'')} · ${esc(clientFull(c))}</p>
+    <label>Email du client</label><input id="av_to" type="email" inputmode="email" value="${esc(to)}" placeholder="client@email.fr">
+    <label style="margin-top:10px">Message</label><textarea id="av_body" rows="9">${esc(corps)}</textarea>
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="demanderAvisSend('${id}')">${icone('mail','16px')} Ouvrir mon email</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="demanderAvisCopy()">${icone('clipboard','16px')} Copier le message</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closeModal()">Annuler</button>`);
+}
+function demanderAvisSend(id){
+  const c=CHANTIERS[id];
+  const to=(val('av_to')||'').trim(); const body=(val('av_body')||'');
+  if(!to || to.indexOf('@')<1){ toast("Renseigne un email valide."); return; }
+  if(c && c.clientEmail!==to){ c.clientEmail=to; saveChantier(id); }
+  closeModal();
+  window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent('Merci pour votre confiance — '+coName())+'&body='+encodeURIComponent(body);
+}
+function demanderAvisCopy(){
+  const body=(val('av_body')||'');
+  try{ navigator.clipboard.writeText(body); toast("Message copié ✅"); }catch(_){ toast("Copie impossible sur ce navigateur."); }
+}
+
+/* ============ DOE — Dossier des Ouvrages Exécutés (PDF client) ============ */
+function doeAssurance(){ const a=(CONFIG_DB.assurance||'').trim(); const num=(CONFIG_DB.assuranceNum||'').trim(); if(!a && !num) return ''; return a+(num?(' - police n '+num):''); }
+async function doePDF(id){
+  const c=CHANTIERS[id]; if(!c) return false;
+  let PL; try{ toast("Génération du dossier client…"); PL=await loadPdfLib(); }
+  catch(e){ toast("PDF indisponible : vérifie ta connexion."); return false; }
+  try{
+    const {PDFDocument,StandardFonts,rgb}=PL;
+    const doc=await PDFDocument.create();
+    let page=doc.addPage([595.28,841.89]);
+    const font=await doc.embedFont(StandardFonts.Helvetica), bold=await doc.embedFont(StandardFonts.HelveticaBold);
+    const M=50, W=595.28-2*M; let y=795;
+    const dark=rgb(0.1,0.1,0.1), grey=rgb(0.42,0.42,0.42), acc=rgb(0.24,0.55,1);
+    const nl=(px)=>{ y-=px; if(y<70){ page=doc.addPage([595.28,841.89]); y=795; } };
+    const t=(s,x,yy,fo,sz,col)=>page.drawText(pdfTxt(s),{x,y:yy,size:sz||10,font:fo||font,color:col||dark});
+    const line=(s,fo,sz,col)=>{ if(y<70){ page=doc.addPage([595.28,841.89]); y=795; } t(s,M,y,fo,sz,col); nl((sz||10)+5); };
+    const titre=(s)=>{ nl(8); if(y<100){ page=doc.addPage([595.28,841.89]); y=795; }
+      page.drawRectangle({x:M,y:y-3,width:W,height:19,color:rgb(0.94,0.96,1)});
+      t(s,M+7,y+2,bold,11,acc); nl(26); };
+
+    /* --- En-tête --- */
+    try{
+      const lg=coLogo();
+      if(lg && lg.indexOf('data:image')===0){
+        const b64=lg.split(',')[1];
+        const bin=Uint8Array.from(atob(b64), ch=>ch.charCodeAt(0));
+        const img = lg.indexOf('image/png')>0 ? await doc.embedPng(bin) : await doc.embedJpg(bin);
+        const d=img.scale(46/img.height);
+        page.drawImage(img,{x:M,y:y-32,width:d.width,height:d.height});
+        t(coName(),M+d.width+12,y-4,bold,16);
+        nl(44);
+      } else { t(coName(),M,y,bold,16); nl(20); }
+    }catch(_){ t(coName(),M,y,bold,16); nl(20); }
+    if(CONFIG_DB.adr) line(CONFIG_DB.adr,font,9,grey);
+    const cpv=[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).join(' '); if(cpv) line(cpv,font,9,grey);
+    if(CONFIG_DB.siren) line('SIREN '+CONFIG_DB.siren+(CONFIG_DB.tvaIntra?(' - TVA '+CONFIG_DB.tvaIntra):''),font,9,grey);
+    const ass=doeAssurance(); if(ass) line('Assurance decennale : '+ass,font,9,grey);
+    nl(12);
+    t('DOSSIER DES OUVRAGES EXECUTES',M,y,bold,17); nl(20);
+    t('Remis au client a la reception des travaux',M,y,font,10,grey); nl(24);
+
+    /* --- Le chantier --- */
+    titre('LE CHANTIER');
+    line('Chantier : '+(c.nom||''),bold,11);
+    line('Client : '+(clientFull(c)||''),font,10);
+    const adr=adresseFull(c); if(adr) line('Adresse des travaux : '+adr,font,10);
+    if(c.dateDebut||c.dateFin) line('Periode : '+(c.dateDebut?frDate(c.dateDebut):'?')+' au '+(c.dateFin?frDate(c.dateFin):'?'),font,10);
+    if(c.description){ nl(4); String(c.description).split('\n').slice(0,8).forEach(l=>line(l.slice(0,100),font,9,grey)); }
+
+    /* --- Travaux réalisés --- */
+    const taches=c.taches?Object.values(c.taches):[];
+    if(taches.length){
+      titre('TRAVAUX REALISES');
+      taches.forEach(x=>line((x.done?'[x] ':'[ ] ')+String(x.label||'').slice(0,95),font,10));
+    }
+    /* --- Matériel / équipements posés --- */
+    const mats=c.materiel?Object.values(c.materiel):[];
+    if(mats.length){
+      titre('MATERIELS ET EQUIPEMENTS');
+      mats.forEach(m=>line('- '+String(m.label||'').slice(0,70)+(m.fournisseur?(' ('+m.fournisseur+')'):''),font,10));
+    }
+
+    /* --- Réception & réserves --- */
+    const r=c.reception;
+    titre('RECEPTION DES TRAVAUX');
+    if(r&&r.done){
+      line('Reception prononcee le '+frDate(r.date)+(r.withReserves?' avec reserves':' sans reserve'),bold,11);
+      const res=r.reserves?Object.values(r.reserves):[];
+      if(res.length){
+        const leve=res.filter(x=>x.statut==='done').length;
+        line('Reserves : '+leve+' levee(s) sur '+res.length,font,10);
+        res.forEach((x,i)=>line('  '+(i+1)+'. '+String(x.desc||'').slice(0,80)+(x.zone?(' - '+x.zone):'')+(x.statut==='done'?(' [levee le '+frDate(x.doneAt)+']'):' [en attente]'),font,9,grey));
+      } else line('Aucune reserve.',font,10,grey);
+
+      /* --- Garanties --- */
+      const g=garantieDates(r.date);
+      titre('VOS GARANTIES LEGALES');
+      line("Garantie de parfait achevement (1 an) : "+String(g.gpaTxt).replace(/[^\x20-\xFF]/g,''),font,10);
+      line("Garantie biennale / bon fonctionnement (2 ans) : "+String(g.bieTxt).replace(/[^\x20-\xFF]/g,''),font,10);
+      line("Garantie decennale (10 ans) : "+String(g.decTxt).replace(/[^\x20-\xFF]/g,''),font,10);
+      nl(2); line("Elles courent a compter de la date de reception ci-dessus.",font,9,grey);
+    } else {
+      line('La reception des travaux n a pas encore ete prononcee.',font,10,grey);
+    }
+
+    /* --- Récapitulatif financier --- */
+    const facts=c.published?Object.values(c.published).filter(d=>d.type==='facture' && !d.annulee):[];
+    if(facts.length){
+      titre('RECAPITULATIF DES FACTURES');
+      let ht=0;
+      facts.sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(d=>{
+        const tt=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); ht+=tt;
+        line(String(d.num||'').padEnd(18,' ')+'  '+new Date(d.ts||Date.now()).toLocaleDateString('fr-FR')+'   '+fxAmt(tt)+' EUR HT'+(d.paye?'   [payee]':''),font,9);
+      });
+      const f=tvaFactor();
+      nl(4);
+      line('Total HT : '+fxAmt(ht)+' EUR',bold,11);
+      if(f>0){ line('TVA '+tvaPct()+'% : '+fxAmt(ht*f)+' EUR',font,10); line('Total TTC : '+fxAmt(ht*(1+f))+' EUR',bold,11); }
+      else line('TVA non applicable, art. 293 B du CGI.',font,9,grey);
+    }
+
+    /* --- Photos --- */
+    const ph=c.photos?Object.keys(c.photos).map(k=>Object.assign({k},c.photos[k])):[];
+    const av=ph.filter(p=>p.tag==='avant'), ap=ph.filter(p=>p.tag==='apres');
+    const autres=ph.filter(p=>p.tag!=='avant'&&p.tag!=='apres').sort((a,b)=>(a.ts||0)-(b.ts||0));
+    const embed=async(p)=>{
+      try{
+        if(!p.url || p.url.indexOf('data:image')!==0) return null;
+        const b64=p.url.split(',')[1];
+        const bin=Uint8Array.from(atob(b64), ch=>ch.charCodeAt(0));
+        return (p.url.indexOf('image/png')>0) ? await doc.embedPng(bin) : await doc.embedJpg(bin);
+      }catch(_){ return null; }
+    };
+    const grille=async(arr,lbl)=>{
+      if(!arr.length) return;
+      titre(lbl);
+      const CW=(W-12)/2, CH=115;
+      for(let i=0;i<Math.min(arr.length,8);i+=2){
+        if(y<CH+40){ page=doc.addPage([595.28,841.89]); y=795; }
+        for(let k=0;k<2;k++){
+          const p=arr[i+k]; if(!p) break;
+          const img=await embed(p); if(!img) continue;
+          const sc=Math.min(CW/img.width, CH/img.height);
+          page.drawImage(img,{x:M+k*(CW+12), y:y-CH, width:img.width*sc, height:img.height*sc});
+        }
+        nl(CH+10);
+      }
+    };
+    if(av.length||ap.length){ await grille(av,'PHOTOS - AVANT'); await grille(ap,'PHOTOS - APRES'); }
+    if(autres.length) await grille(autres,'PHOTOS DU CHANTIER');
+
+    /* --- Pied --- */
+    nl(10);
+    line('Document etabli le '+new Date().toLocaleDateString('fr-FR')+' par '+coName()+'.',font,9,grey);
+    if(avisUrl()) line('Satisfait de nos travaux ? Laissez-nous un avis : '+avisUrl(),font,9,grey);
+
+    doc.setProducer('BatiSuivi'); doc.setCreator('BatiSuivi'); doc.setTitle('DOE - '+(c.nom||'chantier'));
+    const bytes=await doc.save();
+    const nom='DOE_'+String(c.nom||'chantier').replace(/[^a-z0-9]+/gi,'_')+'.pdf';
+    try{
+      const file=new File([bytes],nom,{type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file], title:'Dossier des ouvrages exécutés — '+(c.nom||'')});
+        toast("Dossier partagé ✅"); return true;
+      }
+    }catch(e){ if(e && e.name==='AbortError') return true; }
+    const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=nom; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_){ } },20000);
+    toast("Dossier client (DOE) téléchargé ✅");
+    return true;
+  }catch(e){ toast("Souci à la génération du dossier."); return false; }
+}
+
 function clotureCard(id,c){
   const e=clotureEtats(c);
   const row=(ok,label,attente)=>`<div class="task-row"><span style="flex:1">${label}</span><b style="color:${ok?'var(--ok)':'var(--warn)'}">${ok?'<svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> OK':esc(attente||'en attente')}</b></div>`;
@@ -5926,6 +6488,14 @@ function clotureCard(id,c){
     ${row(reservesOkDisp,reservesLabel,reservesAttente)}
     ${row(e.factureOK,'Au moins une facture publiée','en attente')}
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="cloturerChantier('${id}')">Clôturer le chantier</button>
+  </div>
+  <div class="card">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('bookmark')} Remise au client</h2></div>
+    <p class="note" style="margin:0 0 10px;font-size:12px">Deux gestes qui font la différence en fin de chantier.</p>
+    <button class="btn ghost" style="width:100%" onclick="doePDF('${id}')">📘 Générer le dossier client (DOE)</button>
+    <p class="note" style="margin:6px 0 10px;font-size:11px">Un PDF complet à remettre au client : travaux réalisés, matériels posés, PV de réception, réserves, <b>garanties légales avec leurs dates</b>, récapitulatif des factures et photos avant/après.</p>
+    <button class="btn ${avisUrl()?'primary':'ghost'}" style="width:100%" onclick="demanderAvis('${id}')">⭐ Demander un avis au client</button>
+    ${!avisUrl()?`<p class="note" style="margin:6px 0 0;font-size:11px">Ajoute d'abord ton lien Google : <b>Paramètres → Entreprise → Avis clients</b>.</p>`:''}
   </div>`;
   return h;
 }
@@ -6090,14 +6660,95 @@ function delRole(k){
 
 /* ============== modèles de chantier récurrents ============== */
 function modeles(){ return (CONFIG_DB&&CONFIG_DB.modeles)||{}; }
+function modLignes(t){ return (t&&t.devis)||[]; }
+function modTotal(t){ return modLignes(t).reduce((s,l)=>s+(l.qty||0)*(l.pu||0),0); }
+
+/* --- Bibliothèque prête à l'emploi (installable en 1 clic) --- */
+const MODELES_LIB=[
+  {nom:"Rénovation salle de bain complète", emoji:"🚿", duree:12, heures:110,
+   description:"Dépose complète, reprise plomberie et électricité, faïence murale, sol, pose des équipements sanitaires.",
+   taches:["Protection et dépose de l'existant","Évacuation des gravats","Reprise plomberie (alim. + évac.)","Reprise électricité et éclairage","Ragréage / étanchéité sous carrelage","Pose faïence murale","Pose carrelage au sol","Pose du receveur et de la paroi","Pose meuble vasque et robinetterie","Joints, silicone et finitions","Nettoyage de fin de chantier"],
+   materiel:["Faïence murale","Carrelage sol","Colle et mortier-joint","Kit d'étanchéité (SPEC)","Receveur de douche","Paroi de douche","Meuble vasque","Robinetterie","Silicone sanitaire","Évacuation et flexibles"],
+   devis:[{desc:"Dépose de l'existant et évacuation",qty:1,pu:850},{desc:"Reprise plomberie",qty:1,pu:1200},{desc:"Reprise électricité",qty:1,pu:650},{desc:"Étanchéité sous carrelage",qty:1,pu:450},{desc:"Faïence murale (fourniture + pose) au m²",qty:18,pu:75},{desc:"Carrelage au sol (fourniture + pose) au m²",qty:6,pu:85},{desc:"Pose receveur et paroi de douche",qty:1,pu:780},{desc:"Pose meuble vasque et robinetterie",qty:1,pu:520},{desc:"Finitions et nettoyage",qty:1,pu:300}]},
+  {nom:"Peinture appartement (T3)", emoji:"🎨", duree:6, heures:60,
+   description:"Remise en peinture complète d'un T3 : murs et plafonds, deux couches, protection intégrale.",
+   taches:["Protection des sols et du mobilier","Rebouchage et ponçage","Traitement des fissures","Application de la sous-couche","1re couche de finition","2e couche de finition","Peinture des boiseries","Retrait des protections et nettoyage"],
+   materiel:["Bâches et adhésif de masquage","Enduit de rebouchage","Sous-couche","Peinture murs (mate)","Peinture plafond","Peinture boiseries (satin)","Rouleaux, pinceaux, bacs"],
+   devis:[{desc:"Protection et préparation des supports",qty:1,pu:420},{desc:"Rebouchage et ponçage",qty:1,pu:380},{desc:"Peinture murs 2 couches au m²",qty:120,pu:22},{desc:"Peinture plafonds 2 couches au m²",qty:60,pu:26},{desc:"Peinture des boiseries (ml)",qty:35,pu:18},{desc:"Nettoyage de fin de chantier",qty:1,pu:180}]},
+  {nom:"Ravalement de façade", emoji:"🏠", duree:15, heures:140,
+   description:"Nettoyage, réparation et mise en peinture de la façade, avec échafaudage.",
+   taches:["Montage de l'échafaudage","Nettoyage haute pression","Traitement des fissures et épaufrures","Application du fixateur","1re couche de revêtement","2e couche de revêtement","Reprise des points singuliers","Démontage de l'échafaudage et nettoyage"],
+   materiel:["Location échafaudage","Fixateur / primaire","Enduit de réparation","Revêtement de façade","Bâches de protection"],
+   devis:[{desc:"Installation et location d'échafaudage",qty:1,pu:2200},{desc:"Nettoyage haute pression au m²",qty:150,pu:9},{desc:"Réparation des fissures (ml)",qty:20,pu:28},{desc:"Fixateur au m²",qty:150,pu:7},{desc:"Revêtement de façade 2 couches au m²",qty:150,pu:38},{desc:"Repli de chantier et nettoyage",qty:1,pu:450}]},
+  {nom:"Pose de cuisine équipée", emoji:"🍽️", duree:5, heures:45,
+   description:"Dépose de l'ancienne cuisine, reprise des arrivées, montage et pose des meubles, plan de travail et raccordements.",
+   taches:["Dépose de l'ancienne cuisine","Reprise des arrivées d'eau et évacuations","Reprise électrique (prises, hotte, plaque)","Montage des caissons","Pose et fixation des meubles hauts et bas","Découpe et pose du plan de travail","Pose de l'évier et de la robinetterie","Raccordement de l'électroménager","Crédence et finitions"],
+   materiel:["Caissons et façades","Plan de travail","Évier et robinetterie","Crédence","Fixations et équerres","Silicone et joints"],
+   devis:[{desc:"Dépose de l'ancienne cuisine",qty:1,pu:450},{desc:"Reprise plomberie",qty:1,pu:520},{desc:"Reprise électrique",qty:1,pu:680},{desc:"Montage et pose des meubles (ml)",qty:5,pu:190},{desc:"Découpe et pose du plan de travail",qty:1,pu:640},{desc:"Pose évier, robinetterie et raccordements",qty:1,pu:380},{desc:"Crédence et finitions",qty:1,pu:420}]},
+  {nom:"Isolation des combles perdus", emoji:"🧊", duree:2, heures:16,
+   description:"Soufflage de laine minérale dans les combles perdus, avec repères d'épaisseur et protection des points sensibles.",
+   taches:["Protection des spots et de la trappe","Pose des repères d'épaisseur","Soufflage de l'isolant","Isolation de la trappe d'accès","Contrôle d'épaisseur et nettoyage"],
+   materiel:["Laine à souffler","Machine à souffler (location)","Capots de spots","Pare-vapeur trappe","Repères d'épaisseur"],
+   devis:[{desc:"Protection et préparation",qty:1,pu:250},{desc:"Soufflage laine minérale au m² (R=7)",qty:70,pu:22},{desc:"Isolation de la trappe et repères",qty:1,pu:180}]},
+  {nom:"Pose de parquet / sol souple", emoji:"🪵", duree:4, heures:32,
+   description:"Préparation du support, ragréage si besoin, pose du revêtement et des plinthes.",
+   taches:["Dépose de l'ancien revêtement","Ragréage du support","Pose de la sous-couche","Pose du revêtement","Pose des plinthes","Barres de seuil et finitions"],
+   materiel:["Revêtement de sol","Sous-couche acoustique","Ragréage","Plinthes","Barres de seuil","Colle / cales"],
+   devis:[{desc:"Dépose de l'ancien sol au m²",qty:45,pu:12},{desc:"Ragréage au m²",qty:45,pu:18},{desc:"Fourniture et pose du revêtement au m²",qty:45,pu:48},{desc:"Pose des plinthes (ml)",qty:38,pu:14},{desc:"Barres de seuil et finitions",qty:1,pu:160}]}
+];
+function openModelesLib(){
+  let h=`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('layers')} Bibliothèque de modèles</h2>
+    <p class="note" style="margin:0 0 12px">Des chantiers types prêts à l'emploi : tâches, matériel et lignes de devis déjà remplies. Installe-les, puis adapte-les à tes prix.</p>`;
+  const dejà=Object.values(modeles()).map(t=>(t.nom||'').toLowerCase());
+  MODELES_LIB.forEach((t,i)=>{
+    const has=dejà.indexOf((t.nom||'').toLowerCase())>=0;
+    h+=`<div class="card" style="padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px;flex:none">${t.emoji}</span>
+        <div style="flex:1;min-width:0"><b style="font-size:14px">${esc(t.nom)}</b>
+          <div class="tag">${t.taches.length} tâches · ${t.materiel.length} matériels · ${t.devis.length} lignes de devis</div>
+          <div class="tag">≈ ${eurF(modTotal(t))} HT · ${t.heures} h · ${t.duree} jours</div></div>
+        ${has?`<span class="pill" style="color:var(--ok);flex:none">${icone('check')} Installé</span>`:`<button class="btn primary mini" style="flex:none" onclick="installModele(${i})">Installer</button>`}
+      </div></div>`;
+  });
+  h+=`<button class="btn ghost" style="width:100%;margin-top:6px" onclick="closeModal();setTimeout(openModelesManager,60)">← Retour à mes modèles</button>`;
+  openModal(h);
+}
+function installModele(i){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const t=MODELES_LIB[i]; if(!t) return;
+  const key='mod_'+Date.now().toString(36);
+  if(!CONFIG_DB.modeles) CONFIG_DB.modeles={};
+  CONFIG_DB.modeles[key]={nom:t.nom, emoji:t.emoji, description:t.description, duree:t.duree, heures:t.heures,
+    taches:t.taches.slice(), materiel:t.materiel.slice(), devis:t.devis.map(l=>({desc:l.desc,qty:l.qty,pu:l.pu}))};
+  saveConfigDB(); toast("Modèle « "+t.nom+" » installé ✅"); openModelesLib();
+}
+function modeleDepuisChantier(id){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const c=CHANTIERS[id]; if(!c) return;
+  const taches=c.taches?Object.values(c.taches).map(t=>t.label).filter(Boolean):[];
+  const materiel=c.materiel?Object.values(c.materiel).map(m=>m.label).filter(Boolean):[];
+  const devis=((c.devis&&c.devis.items)||[]).map(l=>({desc:l.desc,qty:l.qty,pu:l.pu}));
+  if(!taches.length && !materiel.length && !devis.length){ toast("Ce chantier n'a ni tâche, ni matériel, ni devis à enregistrer."); return; }
+  openPrompt("Nom du modèle","ex : Rénovation salle de bain",v=>{
+    const nom=(v||'').trim(); if(!nom){ toast("Donne un nom au modèle"); return; }
+    const key='mod_'+Date.now().toString(36);
+    if(!CONFIG_DB.modeles) CONFIG_DB.modeles={};
+    CONFIG_DB.modeles[key]={nom, emoji:'🏗️', description:c.description||'', duree:0, heures:c.heuresPrevues||0, taches, materiel, devis};
+    saveConfigDB(); toast("Modèle « "+nom+" » créé ✅ ("+taches.length+" tâches, "+devis.length+" lignes de devis)");
+  });
+  setTimeout(()=>{ const e=document.getElementById('pr_in'); if(e){ e.value=c.nom||''; try{e.select();}catch(_){ } } },70);
+}
 function openModelesManager(){
   const m=modeles();
   let h=`<div class="grabber"></div><h2 style="margin-bottom:4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg> Modèles de chantier</h2>
-    <p class="note" style="margin-bottom:12px">Crée des chantiers types (tâches + matériel pré-remplis) à réutiliser en un clic.</p>`;
+    <p class="note" style="margin-bottom:12px">Crée des chantiers types (tâches, matériel et devis pré-remplis) à réutiliser en un clic.</p>
+    <button class="btn primary" style="width:100%;margin-bottom:12px" onclick="closeModal();setTimeout(openModelesLib,60)">${icone('download','16px')} Bibliothèque de modèles prêts à l'emploi</button>`;
   const keys=Object.keys(m);
-  if(!keys.length) h+=`<p class="note" style="text-align:center;margin:10px 0">Aucun modèle pour l'instant.</p>`;
+  if(!keys.length) h+=`<p class="note" style="text-align:center;margin:10px 0">Aucun modèle pour l'instant. Installe-en depuis la bibliothèque, ou crée le tien.</p>`;
   keys.forEach(k=>{ const t=m[k]; h+=`<div class="card" style="padding:12px 14px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px">
-    <div style="flex:1"><b>${esc(t.nom||'Modèle')}</b><div class="tag">${(t.taches||[]).length} tâche(s) · ${(t.materiel||[]).length} matériel</div></div>
+    <span style="font-size:20px;flex:none">${t.emoji||'🏗️'}</span>
+    <div style="flex:1;min-width:0"><b>${esc(t.nom||'Modèle')}</b><div class="tag">${(t.taches||[]).length} tâches · ${(t.materiel||[]).length} matériels${modLignes(t).length?(' · '+modLignes(t).length+' lignes'):''}</div>${modTotal(t)>0?`<div class="tag">≈ ${eurF(modTotal(t))} HT${t.heures?(' · '+t.heures+' h'):''}</div>`:''}</div>
     <button class="pen" onclick="editModele('${k}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
     <button class="iconbtn danger" onclick="delModele('${k}')"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
   </div></div>`; });
@@ -6105,20 +6756,39 @@ function openModelesManager(){
   openModal(h);
 }
 function editModele(k){
-  const isNew=!k; const t=isNew?{nom:'',taches:[],materiel:[]}:(modeles()[k]||{nom:'',taches:[],materiel:[]});
+  const isNew=!k; const t=isNew?{nom:'',taches:[],materiel:[],devis:[]}:(modeles()[k]||{nom:'',taches:[],materiel:[],devis:[]});
+  const devTxt=modLignes(t).map(l=>[l.desc,l.qty,l.pu].join(' | ')).join('\n');
   let h=`<div class="grabber"></div><h2 style="margin-bottom:10px">${isNew?'Nouveau modèle':'Modifier le modèle'}</h2>
     <label>Nom du modèle</label><input id="mod_nom" value="${esc(t.nom||'')}" placeholder="ex: Rénovation salle de bain">
+    <label style="margin-top:10px">Description (option)</label>
+    <textarea id="mod_desc" rows="2" placeholder="Ce que comprend ce type de chantier…">${esc(t.description||'')}</textarea>
+    <div class="row" style="margin-top:10px"><div><label>Durée type (jours)</label><input id="mod_duree" type="number" min="0" value="${t.duree||''}" placeholder="12"></div>
+      <div><label>Heures prévues</label><input id="mod_heures" type="number" min="0" value="${t.heures||''}" placeholder="110"></div></div>
     <label style="margin-top:10px">Tâches (une par ligne)</label>
     <textarea id="mod_taches" rows="5" placeholder="Dépose ancien carrelage&#10;Plomberie&#10;Pose faïence&#10;Joints et finitions">${esc((t.taches||[]).join('\n'))}</textarea>
     <label style="margin-top:10px">Matériel (un par ligne)</label>
     <textarea id="mod_materiel" rows="4" placeholder="Faïence&#10;Colle&#10;Receveur">${esc((t.materiel||[]).join('\n'))}</textarea>
+    <label style="margin-top:10px">Lignes de devis — <b>Description | quantité | prix unitaire</b></label>
+    <textarea id="mod_devis" rows="5" placeholder="Dépose de l'existant | 1 | 850&#10;Faïence murale au m² | 18 | 75">${esc(devTxt)}</textarea>
+    <p class="note" style="font-size:11px;margin-top:4px">Une ligne par prestation, séparée par des barres verticales. Ces lignes rempliront automatiquement le devis du nouveau chantier.</p>
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="saveModele('${k}')">Enregistrer</button>`;
   openModal(h);
 }
 function linesOf(id){ const e=document.getElementById(id); return e?e.value.split('\n').map(s=>s.trim()).filter(Boolean):[]; }
+function parseDevisLignes(id){
+  return linesOf(id).map(l=>{
+    const p=l.split('|').map(s=>s.trim());
+    const qty=parseFloat((p[1]||'1').replace(',','.'));
+    const pu=parseFloat((p[2]||'0').replace(',','.'));
+    return { desc:p[0]||'', qty:(isNaN(qty)?1:qty), pu:(isNaN(pu)?0:pu) };
+  }).filter(l=>l.desc);
+}
 function saveModele(k){
   const nom=val('mod_nom'); if(!nom){ toast("Donne un nom au modèle"); return; }
-  const t={nom,taches:linesOf('mod_taches'),materiel:linesOf('mod_materiel')};
+  const old=k?(modeles()[k]||{}):{};
+  const t={nom, emoji:old.emoji||'🏗️', description:val('mod_desc')||'',
+    duree:parseInt(val('mod_duree'),10)||0, heures:parseInt(val('mod_heures'),10)||0,
+    taches:linesOf('mod_taches'), materiel:linesOf('mod_materiel'), devis:parseDevisLignes('mod_devis')};
   const key=k||('mod_'+Date.now().toString(36));
   if(!CONFIG_DB.modeles) CONFIG_DB.modeles={};
   CONFIG_DB.modeles[key]=t; saveConfigDB(); closeModal(); toast("Modèle enregistré ✅"); if(SCREEN==='dev') renderDev(); else { render(); setTimeout(openModelesManager,80); }
@@ -6165,8 +6835,18 @@ function saveEtapes(){
 }
 function applyModele(id,key){ const t=modeles()[key]; const c=CHANTIERS[id]; if(!t||!c) return;
   c.taches=c.taches||{}; (t.taches||[]).forEach(l=>{ c.taches[uid()]={label:l,done:false}; });
-  c.materiel=c.materiel||{}; (t.materiel||[]).forEach(l=>{ c.materiel[uid()]={label:l,ok:false}; });
-  saveChantier(id); }
+  c.materiel=c.materiel||{}; (t.materiel||[]).forEach(l=>{ c.materiel[uid()]={label:l,ok:false,statut:'à commander'}; });
+  const lignes=modLignes(t);
+  if(lignes.length){ c.devis=c.devis||{}; c.devis.items=(c.devis.items||[]).concat(lignes.map(l=>({desc:l.desc,qty:l.qty,pu:l.pu}))); }
+  if(t.heures>0 && !c.heuresPrevues) c.heuresPrevues=t.heures;
+  if(t.description && !c.description) c.description=t.description;
+  if(t.duree>0 && c.dateDebut && !c.dateFin){
+    const d=new Date(c.dateDebut+'T12:00:00'); d.setDate(d.getDate()+t.duree);
+    if(!isNaN(d.getTime())) c.dateFin=d.toISOString().slice(0,10);
+  }
+  saveChantier(id);
+  toast("Modèle appliqué : "+(t.taches||[]).length+" tâches, "+(t.materiel||[]).length+" matériels"+(lignes.length?(", "+lignes.length+" lignes de devis"):""));
+}
 
 /* ============== statistiques équipe ============== */
 function openTeamStats(){
