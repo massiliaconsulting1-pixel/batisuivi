@@ -149,7 +149,29 @@ input,select,textarea{font-family:'Manrope',sans-serif}
 @supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){ .card,.top,.nav{ background:rgba(18,30,46,.9) } }
 .card.flat{box-shadow:none}
 label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:12px 0 5px}
-input,select,textarea{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:11px;padding:12px;font-size:15px;outline:none}
+input,select,textarea{width:100%;box-sizing:border-box;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:11px;padding:12px;font-size:15px;outline:none}
+/* Champs date / mois / heure : même hauteur, même alignement que les autres champs */
+input[type=date],input[type=month],input[type=time],input[type=datetime-local]{
+  -webkit-appearance:none;appearance:none;
+  display:block;width:100%;min-width:0;box-sizing:border-box;
+  min-height:47px;line-height:normal;text-align:left;
+  padding:12px 12px;font-size:15px;
+}
+input[type=date]::-webkit-date-and-time-value,
+input[type=month]::-webkit-date-and-time-value,
+input[type=time]::-webkit-date-and-time-value,
+input[type=datetime-local]::-webkit-date-and-time-value{
+  text-align:left;margin:0;min-height:21px;
+}
+input[type=date]::-webkit-datetime-edit,
+input[type=month]::-webkit-datetime-edit,
+input[type=time]::-webkit-datetime-edit,
+input[type=datetime-local]::-webkit-datetime-edit{ padding:0;text-align:left }
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=month]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator,
+input[type=datetime-local]::-webkit-calendar-picker-indicator{ filter:invert(.55);opacity:.75;cursor:pointer }
+input[type=number]{ -moz-appearance:textfield }
 input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 textarea{resize:vertical;min-height:64px}
 .note{color:var(--muted);font-size:12.5px;line-height:1.5}
@@ -246,7 +268,7 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
 .section-title{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;min-height:38px}
 .section-title h2{font-size:18px}
 .empty{text-align:center;color:var(--muted);padding:30px 16px;font-size:14px}
-.row{display:flex;gap:10px}.row>*{flex:1}
+.row{display:flex;gap:10px}.row>*{flex:1;min-width:0}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--card2);
   border:1px solid var(--line);color:var(--txt);padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;
   opacity:0;transition:.3s;z-index:300;box-shadow:var(--shadow);max-width:90%;text-align:center}
@@ -970,7 +992,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v189 · 13/07";
+const APP_VERSION="v190 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -4783,14 +4805,6 @@ function viewDashToday(){
       rdv.map(c=>{ const id=Object.keys(CHANTIERS).find(k=>CHANTIERS[k]===c); return dashRow(esc(c.nom||'Chantier'), (c.heureRdv?esc(c.heureRdv)+' · ':'')+esc(c.noteRdv||clientFull(c)),
         `<button class="btn ghost mini" onclick="openChantier('${id}')">Ouvrir</button>`); }).join(''));
   }
-  /* Nouveautés de l'app */
-  if(changelogNouveau() && CHANGELOG.length){
-    const c0=CHANGELOG[0];
-    h+=dashBloc('bolt','var(--acc)','Quoi de neuf',0,'',
-      dashRow('🎁 '+esc(c0.t), esc(c0.items[0]||'')+' <span class="note">('+esc(c0.v)+')</span>',
-        `<button class="btn primary mini" onclick="openChangelog()">Lire</button>`));
-  }
-
   /* Guide de démarrage incomplet */
   if((typeof isBoss==='function') && isBoss() && demarragePct()<70){
     const reste=demarrageEtapes().filter(x=>!x.ok);
@@ -6335,7 +6349,7 @@ const HUB_GUIDES={
     "La cloche 🔔 (Premium) t'alerte : devis signés, messages clients, notes de frais, échéances.",
     "Chaque espace a son propre guide, dans ce menu ☰.",
     "Balaie du bord gauche vers la droite pour revenir à l'accueil à tout moment.",
-    "Perdu ? Menu ☰ → Aide & support : tu y trouves le guide de démarrage et les nouveautés."
+    "Perdu ? Menu ☰ → Aide & support : tu y trouves le guide de démarrage."
   ]},
   dashboard:{t:"Tableau de bord",b:[
     "Aujourd'hui : tout ce qui t'attend, avec le bouton pour agir tout de suite (facturer un devis signé, relancer une facture, répondre au client).",
@@ -6398,7 +6412,7 @@ const HUB_GUIDES={
     "Client : tu choisis ce que ton client voit dans son espace, tu lui écris un message d'accueil, tu ajoutes ton lien d'avis Google, et tu prévisualises.",
     "Équipe : les permissions de chaque rôle, et l'interrupteur du pointage.",
     "Perso : la couleur de l'app, le gros texte, tes modèles de chantier et tes étapes.",
-    "Système : ta SAUVEGARDE (fais-la, et sache que tu peux la restaurer), l'aide, le guide de démarrage et les nouveautés.",
+    "Système : ta SAUVEGARDE (fais-la, et sache que tu peux la restaurer), l'aide et le guide de démarrage.",
     "Le guide de démarrage te dit ce qu'il te reste à régler pour tirer le maximum de l'app."
   ]}
 };
@@ -6506,7 +6520,7 @@ function openMenu(){
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
     ${themeSwatches(40)}
     ${_hg?`<h3 style="font-size:14px;margin:20px 0 8px">${icone('help')} Guide - ${esc(_hg.t)}</h3>`+_hg.b.map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;align-items:flex-start"><span style="color:var(--acc);font-weight:800;line-height:1.4">&bull;</span><span style="flex:1;font-size:13px;line-height:1.45">${esc(x)}</span></div>`).join(''):''}
-    <button class="btn ghost" style="width:100%;margin-top:14px" onclick="closeModal();setTimeout(openAide,80)">${icone('help','16px')} Aide & support${changelogNouveau()?` <span class="pill" style="color:var(--acc);margin-left:6px">nouveau</span>`:''}</button>
+    <button class="btn ghost" style="width:100%;margin-top:14px" onclick="closeModal();setTimeout(openAide,80)">${icone('help','16px')} Aide & support</button>
     <button class="btn danger" style="width:100%;margin-top:8px" onclick="teamSignOut()">${DEV_ACCESS?'↩ Revenir à l\'espace dev':'Se déconnecter'}</button>
     <p class="note" style="text-align:center;margin-top:10px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p>`);
 }
@@ -6514,94 +6528,6 @@ function menuOpen(){ return !!document.getElementById('menuModalMark'); }
 /* ===== Paramètres de facturation (patron) ===== */
 function setFactuOn(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); openFacturationSettings(); }
 function setMeteoOn(v){ CONFIG_DB.meteoOff=!v; saveConfigDB(); render(); toast(v?'Météo affichée sur le tableau de bord':'Météo masquée'); }
-
-/* ============ Quoi de neuf (changelog) ============ */
-const CHANGELOG=[
-  {v:"v184", d:"13/07", t:"Centre d'aide et « Quoi de neuf »", items:[
-    "Un centre d'aide avec un guide de démarrage : l'app te dit ce qu'il te reste à régler.",
-    "Cette page « Quoi de neuf », pour suivre les nouveautés.",
-    "Un bouton pour contacter le support, avec ta version déjà remplie."]},
-  {v:"v183", d:"13/07", t:"Mon abonnement & confidentialité", items:[
-    "Un écran « Mon abonnement » : ce que tu as, ce qui te manque.",
-    "Ta politique de confidentialité, générée automatiquement.",
-    "Export et effacement des données d'un client (RGPD), depuis sa fiche chantier."]},
-  {v:"v182", d:"13/07", t:"Sauvegarde restaurable & réglages rangés", items:[
-    "⭐ Tu peux enfin RESTAURER une sauvegarde, pas seulement l'exporter.",
-    "Une alerte si ta dernière sauvegarde date de plus d'un mois.",
-    "Les Paramètres sont rangés en 6 onglets clairs.",
-    "Tu choisis ce que ton client voit dans son espace, et tu lui écris un message d'accueil."]},
-  {v:"v181", d:"13/07", t:"Consommation IA", items:[
-    "Tu vois combien l'IA coûte chaque mois, fonction par fonction.",
-    "Tu peux fixer un plafond mensuel : au-delà, l'IA se met en pause."]},
-  {v:"v180", d:"13/07", t:"Devis par photo & projections au client", items:[
-    "📸 Photographie une pièce : l'IA propose les lignes de devis chiffrées.",
-    "📄 Photographie le devis d'un concurrent : l'IA en extrait les lignes.",
-    "Tu peux publier une projection (rendu IA) dans l'espace de ton client."]},
-  {v:"v179", d:"13/07", t:"L'assistant IA connaît ton entreprise", items:[
-    "Demande-lui « quel chantier me coûte de l'argent ? » : il répond avec tes vrais chiffres.",
-    "Le Devis IA s'ajoute directement au devis d'un chantier.",
-    "La Rédaction s'envoie vraiment : messagerie client ou email. 8 types de messages."]},
-  {v:"v178", d:"13/07", t:"Planning : vue mois et envoi à l'équipe", items:[
-    "Planifie toute une équipe sur un chantier en 3 clics, depuis sa fiche.",
-    "Une vue mensuelle du planning.",
-    "Envoie le planning de la semaine à l'équipe, et le rappel de demain."]},
-  {v:"v177", d:"13/07", t:"Gantt & « tu es plein jusqu'au… »", items:[
-    "Une vue de tes chantiers dans le temps (barres colorées).",
-    "L'app te dit jusqu'à quelle date tu es plein.",
-    "Ton client voit ses prochaines interventions, avec la météo."]},
-  {v:"v176", d:"13/07", t:"Planning relié aux chantiers", items:[
-    "Le planning connaît tes vrais chantiers : couleurs, ouverture en un clic.",
-    "Les absences apparaissent dans le planning (et t'alertent).",
-    "La météo s'affiche sur chaque jour de la semaine."]},
-  {v:"v175", d:"13/07", t:"Statistiques de l'équipe", items:[
-    "Taux d'occupation de ton équipe.",
-    "Heure vendue contre heure coûtée : la vraie question."]},
-  {v:"v174", d:"13/07", t:"Frais & pointage", items:[
-    "🧾 Photographie ton ticket : l'IA remplit montant, date, catégorie et commerçant.",
-    "Catégories, validation et export CSV des notes de frais.",
-    "Les pointages sont enfin corrigeables, et les oublis détectés."]},
-  {v:"v173", d:"13/07", t:"Absences & paie", items:[
-    "Congés, arrêts, RTT : avec un compteur de jours restants.",
-    "L'app t'alerte si tu as un RDV client alors que quelqu'un est absent.",
-    "Un récap mensuel PDF par salarié, à envoyer au comptable."]},
-  {v:"v172", d:"13/07", t:"Habilitations & équipe", items:[
-    "Carte BTP, visite médicale, habilitations : l'app te prévient 45 jours avant l'expiration.",
-    "Ton client voit qui intervient chez lui, et ses habilitations."]},
-  {v:"v171", d:"13/07", t:"Modèles & alertes", items:[
-    "Une bibliothèque de chantiers types prêts à l'emploi.",
-    "Des points de vigilance par chantier (heures dépassées, marge faible, matériel manquant…)."]},
-  {v:"v169", d:"13/07", t:"Dossier client & avis Google", items:[
-    "📘 Génère le dossier de fin de chantier (DOE) : travaux, réception, garanties, factures, photos.",
-    "⭐ Demande automatiquement un avis Google à ton client quand son chantier est terminé."]},
-  {v:"v167", d:"13/07", t:"Fiche chantier en onglets", items:[
-    "Aperçu, Terrain, Argent, Client, Fin : fini le scroll interminable.",
-    "Un en-tête « santé » qui te dit la prochaine action à faire."]},
-  {v:"v163", d:"13/07", t:"Tableau de bord repensé", items:[
-    "Un onglet « Aujourd'hui » qui te dit quoi faire, avec les boutons pour le faire.",
-    "Ton carnet de commandes : le travail que tu as devant toi."]},
-  {v:"v160", d:"13/07", t:"Facturation", items:[
-    "Transforme un devis signé en facture en 1 clic.",
-    "Les factures en retard passent en rouge, avec le nombre de jours."]}
-];
-function changelogVu(){ try{ return String(lsGet('batisuivi_changelog_vu','')||''); }catch(_){ return ''; } }
-function changelogNouveau(){ return changelogVu()!==APP_VERSION; }
-function openChangelog(){
-  try{ lsSet('batisuivi_changelog_vu', APP_VERSION); }catch(_){ }
-  let h=`<div class="grabber"></div><h2 style="margin:0 0 4px">🎁 Quoi de neuf dans BatiSuivi</h2>
-    <p class="note" style="margin:0 0 14px;font-size:12px">Ton app évolue en continu. Voici ce qui a été ajouté récemment.</p>`;
-  CHANGELOG.forEach((c,i)=>{
-    h+=`<div class="card" style="box-shadow:none;padding:12px 14px;margin-bottom:10px;${i===0?'border-left:3px solid var(--acc)':''}">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <b style="flex:1;font-size:14px">${esc(c.t)}</b>
-        <span class="tag">${esc(c.v)} · ${esc(c.d)}</span>
-      </div>
-      ${c.items.map(x=>`<div style="display:flex;gap:8px;margin-top:5px"><span style="color:var(--acc);font-weight:800;line-height:1.4">•</span><span style="flex:1;font-size:12.5px;line-height:1.45">${esc(x)}</span></div>`).join('')}
-    </div>`;
-  });
-  h+=`<button class="btn ghost" style="width:100%;margin-top:4px" onclick="closeModal()">Fermer</button>`;
-  openModal(h);
-  setTimeout(render,50);
-}
 
 /* ============ Guide de démarrage ============ */
 function demarrageEtapes(){
@@ -6648,7 +6574,6 @@ function openAide(){
   let h=`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('help')} Aide & support</h2>
     <p class="note" style="margin:0 0 14px;font-size:12px">Tout ce qu'il faut pour t'en sortir seul — ou nous joindre.</p>
     <button class="btn ${pct===100?'ghost':'primary'}" style="width:100%" onclick="closeModal();setTimeout(openDemarrage,80)">🚀 Guide de démarrage${pct<100?` <span class="tag" style="margin-left:6px">${pct}%</span>`:' ✓'}</button>
-    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closeModal();setTimeout(openChangelog,80)">🎁 Quoi de neuf${changelogNouveau()?` <span class="pill" style="color:var(--acc);margin-left:6px">nouveau</span>`:''}</button>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <b style="font-size:13px">Les guides de chaque espace</b>
       <p class="note" style="margin:4px 0 8px;font-size:11.5px">Ouvre un espace, puis touche le menu ☰ en haut à droite : son guide s'affiche.</p>
@@ -6671,18 +6596,12 @@ function signalerBug(){
 }
 function aideCard(){
   const pct=demarragePct();
-  const neuf=changelogNouveau();
   return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('help')} Aide & support</h2></div>
     ${pct<100?`<div class="member-row" style="cursor:pointer" onclick="openDemarrage()">
       <span style="width:30px;flex:0 0 30px;font-size:17px;text-align:center">🚀</span>
       <span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block">Guide de démarrage — ${pct}%</b><small class="note" style="font-size:11.5px">Il te reste ${demarrageEtapes().filter(x=>!x.ok).length} réglage(s) pour tirer le maximum de l'app.</small></span>
       <button class="btn primary mini" style="flex:none">Voir</button>
     </div>`:''}
-    <div class="member-row" style="cursor:pointer" onclick="openChangelog()">
-      <span style="width:30px;flex:0 0 30px;font-size:17px;text-align:center">🎁</span>
-      <span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block">Quoi de neuf ${neuf?`<span class="pill" style="color:var(--acc)">nouveau</span>`:''}</b><small class="note" style="font-size:11.5px">Les nouveautés de ton app, expliquées simplement.</small></span>
-      <button class="btn ${neuf?'primary':'ghost'} mini" style="flex:none">Lire</button>
-    </div>
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openAide()">${icone('help','16px')} Ouvrir le centre d'aide</button>
   </div>`;
 }
@@ -6932,9 +6851,17 @@ async function diagPingFonction(f){
       return {k:f.k, l:f.l, lvl:'danger', ms, msg:"NON DÉPLOYÉE — lance « firebase deploy --only functions »"};
     }
     if(c==='permission-denied'){
-      return {k:f.k, l:f.l, lvl:'warn', ms, msg:"403 — permission Cloud Run invoker manquante. Supprime cette fonction dans la console, puis redéploie-la."};
+      /* Deux cas très différents :
+         - la fonction a tourné et a refusé ce compte (message en français, temps de réponse normal) → elle est déployée, tout va bien ;
+         - Cloud Run refuse l'appel avant même d'entrer dans la fonction (403 invoker) → réponse immédiate, message générique. */
+      const msg=String((e&&e.message)||'');
+      const repondu = /[éèêàçûôïÉÈÀ]/.test(msg) || /connecte|réserv|patron|chef|équipe/i.test(msg);
+      if(repondu || ms>=400){
+        return {k:f.k, l:f.l, lvl:'ok', ms, msg:"déployée · elle a refusé ce compte (normal : ton compte dev n'est pas dans l'équipe)"};
+      }
+      return {k:f.k, l:f.l, lvl:'warn', ms, msg:"403 immédiat — permission Cloud Run invoker manquante. Supprime cette fonction dans la console, puis redéploie-la."};
     }
-    if(c==='internal' && ms<80){
+    if(c==='internal' && ms<200){
       return {k:f.k, l:f.l, lvl:'warn', ms, msg:"erreur immédiate (403 probable) — supprime et redéploie cette fonction"};
     }
     if(c==='unavailable'){
