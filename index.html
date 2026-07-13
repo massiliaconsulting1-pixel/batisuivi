@@ -970,7 +970,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v188 · 13/07";
+const APP_VERSION="v189 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1802,12 +1802,15 @@ function clientContact(){
 function clientHelp(){
   const step=(ic,t,d)=>`<div class="help-step"><div class="help-ic">${icone(ic,'30px')}</div><div><b>${t}</b><div class="note" style="margin-top:2px">${d}</div></div></div>`;
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:4px">Bienvenue 👋</h2>
-    <p class="note" style="margin-bottom:14px">Voici votre espace de suivi de chantier.</p>
-    ${step('chart','Avancement',"Suivez en direct l'avancement de votre chantier et l'étape en cours.")}
-    ${step('calendar','Rendez-vous',"Retrouvez la date de votre prochain rendez-vous.")}
-    ${step('camera','Photos',"Consultez les photos du chantier ajoutées par l'équipe.")}
-    ${step('file','Documents',"Téléchargez vos devis et factures, et signez votre devis directement du doigt.")}
-    ${step('message','Messages',"Échangez des messages avec l'équipe à tout moment.")}
+    <p class="note" style="margin-bottom:14px">Voici votre espace de suivi de chantier. Tout est à jour, en temps réel, sans rien installer.</p>
+    ${step('chart','Avancement',"Suivez en direct l'avancement de votre chantier, étape par étape, avec la date de fin prévue.")}
+    ${step('calendar','Prochaines interventions',"Voyez les jours où l'équipe est prévue chez vous — avec la météo annoncée.")}
+    ${step('users','Votre équipe',"Découvrez qui intervient chez vous : leurs noms, leurs rôles et leurs habilitations.")}
+    ${step('clock','Suivi du chantier',"Un fil retrace tout ce qui s'est passé : photos, comptes-rendus, documents, messages.")}
+    ${step('camera','Photos',"Consultez les photos ajoutées par l'équipe, et validez celles qui vous plaisent d'un 👍.")}
+    ${step('file','Documents',"Retrouvez vos devis et factures. Vous pouvez signer un devis directement du doigt.")}
+    ${step('palette','Votre projet en images',"Si l'entreprise vous l'a préparé, découvrez un aperçu du résultat avant même le début des travaux.")}
+    ${step('message','Messages',"Écrivez à l'équipe à tout moment : vous n'avez pas besoin d'appeler.")}
     ${step('menu','Menu',"Changez la couleur, contactez l'entreprise, et retrouvez ce guide ici.")}
     <button class="btn primary" style="width:100%;margin-top:16px" onclick="closeModal()">C'est compris !</button>`);
 }
@@ -6326,14 +6329,78 @@ async function facturXTestPdf(){
 
 /* ====================== MENU / RÉGLAGES ====================== */
 const HUB_GUIDES={
-  accueil:{t:"Accueil",b:["Ton résumé du jour est en haut : chantiers en cours, RDV, devis en attente, membres.","Touche une tuile pour ouvrir un espace : Chantiers, Équipe, Planning, Facturation, IA, Paramètres.","Chaque espace a son propre guide, dans ce menu.","Balaie du bord gauche vers la droite pour revenir à l'accueil à tout moment."]},
-  chantiers:{t:"Chantiers",b:["Crée un chantier avec le bouton +, puis ouvre-le pour tout gérer.","Dans la fiche : avancement, photos, tâches, équipe, matériel, réception, rentabilité, clôture.","Onglet Clients : ton annuaire ou la messagerie avec le client.","Onglet Archivés : les chantiers terminés. Onglet Carte : leurs adresses."]},
-  equipe:{t:"Équipe",b:["Membres : ajoute tes équipiers, leurs rôles, véhicules et coût horaire.","Messages : discute avec ton équipe (groupe ou privé) et l'assistant IA.","Pointage : active le suivi des heures avec l'interrupteur, puis retrouve les heures par personne.","Frais : les notes de frais de l'équipe. Stats : les statistiques."]},
-  planning:{t:"Planning",b:["Calendrier : la vue mensuelle. Aujourd'hui : ce qui se passe ce jour.","RDV : les rendez-vous clients à venir. Échéances : les chantiers en retard ou proches de la fin.","Charge : qui est sur quels chantiers, et qui est libre."]},
-  facturation:{t:"Facturation",b:["Devis : crée et suis tes devis (en cours / passés).","Factures : tes factures (Pros / Particuliers), avec la facture électronique pour les pros.","Clients : ton annuaire. Résumé : la vue d'ensemble."]},
-  ia:{t:"Intelligence artificielle",b:["Assistant : pose tes questions à l'IA.","Projection : transforme une photo (existant + inspiration) en rendu.","Devis IA : propose des lignes de devis. Rédaction : rédige tes messages."]},
-  dashboard:{t:"Tableau de bord",b:["Aujourd'hui : tout ce qui t'attend, avec un bouton pour agir tout de suite (facturer, relancer, répondre).","Argent : encaissé, facturé, reste à encaisser, et ton carnet de commandes (le travail qu'il te reste à facturer).","Chantiers : l'avancement de chacun. Équipe : les heures pointées et leur coût.","Tout se met à jour automatiquement à partir de tes chantiers, devis et factures."]},
-  params:{t:"Paramètres",b:["Entreprise : ton identité et ton logo.","Facturation : préfixes, numéros, TVA, plateforme agréée.","Rôles : les permissions de chaque membre.","Apparence : couleur de l'app et thème clair/sombre."]}
+  accueil:{t:"Accueil",b:[
+    "Ton résumé du jour est en haut : chantiers en cours, RDV du jour, devis en attente, membres.",
+    "Touche une tuile pour ouvrir un espace : Tableau de bord, Chantiers, Équipe, Planning, Facturation, IA, Paramètres.",
+    "La cloche 🔔 (Premium) t'alerte : devis signés, messages clients, notes de frais, échéances.",
+    "Chaque espace a son propre guide, dans ce menu ☰.",
+    "Balaie du bord gauche vers la droite pour revenir à l'accueil à tout moment.",
+    "Perdu ? Menu ☰ → Aide & support : tu y trouves le guide de démarrage et les nouveautés."
+  ]},
+  dashboard:{t:"Tableau de bord",b:[
+    "Aujourd'hui : tout ce qui t'attend, avec le bouton pour agir tout de suite (facturer un devis signé, relancer une facture, répondre au client).",
+    "En haut, le résumé du jour écrit par l'IA (Premium) : en 5 phrases, ce qui compte vraiment.",
+    "Argent : encaissé, facturé, reste à encaisser, et ton carnet de commandes — le travail qu'il te reste à facturer.",
+    "Chantiers : l'avancement de chacun, et sa rentabilité au feu tricolore (🟢 ≥20% · 🟠 10-20% · 🔴 <10%).",
+    "Équipe : les heures pointées et ce qu'elles te coûtent.",
+    "Tu y trouves aussi la météo de tes chantiers, les points de vigilance, les documents de l'équipe qui expirent, et le fil de tout ce qui bouge.",
+    "Tout se calcule tout seul à partir de tes chantiers, devis, factures et pointages."
+  ]},
+  chantiers:{t:"Chantiers",b:[
+    "Crée un chantier avec le bouton + — ou pars d'un modèle : tâches, matériel et devis se remplissent tout seuls.",
+    "Deux vues : Cartes (avec retard, tâches, montant et marge) ou Kanban, où tu fais glisser un chantier d'une étape à l'autre.",
+    "La fiche d'un chantier a 5 onglets. Aperçu : sa santé et LA prochaine action à faire. Terrain : tâches, photos, avant/après, matériel, pointage, journal, plans.",
+    "Argent : devis, factures, rentabilité et heures prévues. Client : son code d'accès, les messages, les comptes-rendus.",
+    "Fin : la réception, les réserves, la clôture, le dossier client (DOE) et la demande d'avis Google.",
+    "Le bouton « Planifier l'équipe » (onglet Aperçu) remplit ton planning tout seul, en sautant les week-ends et les absences.",
+    "Onglet Archivés : les chantiers terminés. Onglet Carte : leurs adresses. Onglet Messages : la messagerie client."
+  ]},
+  equipe:{t:"Équipe",b:[
+    "Aujourd'hui : qui pointe en ce moment, qui est absent, qui est sur quel chantier, et les oublis de pointage à corriger.",
+    "Membres : les rôles, les véhicules, le coût horaire — sans lui, aucune marge ne peut être calculée.",
+    "Dans la fiche d'un membre : ses documents et habilitations (carte BTP, visite médicale, CACES…). L'app te prévient 45 jours avant qu'ils expirent.",
+    "Toujours dans sa fiche : ses absences et congés, avec le compteur de jours restants.",
+    "Pointage : les heures par personne, corrigeables — et le récap mensuel PDF à envoyer à ton comptable (avec les heures sup).",
+    "Frais : catégories, validation, export CSV. En Premium, photographie le ticket : l'IA remplit montant, date et commerçant.",
+    "Stats : le taux d'occupation de ton équipe, et ton heure vendue comparée à ton heure coûtée.",
+    "Messages : discute avec ton équipe (groupe ou privé) et avec l'assistant IA."
+  ]},
+  planning:{t:"Planning",b:[
+    "Calendrier : la semaine, une ligne par personne. Bascule en vue Mois pour la vision d'ensemble.",
+    "Touche une personne pour planifier sa journée : choisis un vrai chantier (il apparaît en couleur) ou un lieu libre.",
+    "Les absents sont grisés et barrés : impossible de les planifier par erreur.",
+    "La météo s'affiche sur chaque jour : un mercredi de pluie, et tu bascules l'équipe en intérieur.",
+    "Le bouton « Envoyer le planning à l'équipe » publie la semaine dans le chat, ou envoie à chacun son planning en privé — plus le rappel de demain.",
+    "Chantiers : la vue dans le temps (barres colorées) et LA réponse à « je peux commencer quand ? » : tu es plein jusqu'au…",
+    "RDV : les rendez-vous clients. Échéances : les chantiers en retard. Charge : qui est occupé, qui est libre."
+  ]},
+  facturation:{t:"Facturation",b:[
+    "Devis : un devis signé se transforme en facture en 1 clic — plus rien à retaper.",
+    "Factures : payées, impayées, en retard (en rouge, avec le nombre de jours), acomptes, soldes et avoirs.",
+    "Quand tu encaisses, choisis le mode (virement, chèque, espèces, CB) : ta compta te dira merci.",
+    "Le bouton ✉️ envoie un devis ou une facture par email, avec le PDF. Le bouton 📨 relance un impayé.",
+    "Pour tes clients pros : la facture électronique Factur-X (Premium).",
+    "Stats : ton CA par mois, ton taux de transformation devis → facture, tes meilleurs clients, ton délai moyen d'encaissement.",
+    "Réglages : préfixes et numéros, TVA, délai de paiement, IBAN et conditions, assurance décennale."
+  ]},
+  ia:{t:"Intelligence artificielle",b:[
+    "Assistant : il connaît TON entreprise. Demande-lui « quel chantier me coûte de l'argent ? » ou « je peux prendre un chantier en août ? » — il répond avec tes vrais chiffres.",
+    "Projection : une photo de l'existant + une inspiration → un rendu. Tu peux le publier dans l'espace de ton client pour l'aider à se décider.",
+    "Devis IA : décris les travaux, ou photographie la pièce — l'IA propose les lignes chiffrées.",
+    "Tu peux aussi photographier le devis d'un concurrent : l'IA en extrait les lignes.",
+    "Les lignes proposées s'ajoutent directement au devis d'un chantier, ou deviennent un modèle réutilisable.",
+    "Rédaction : relance, retard, réclamation, réponse à un avis, fin de chantier… et le message part vraiment (messagerie client ou email).",
+    "L'IA se trompe parfois : relis toujours avant d'envoyer ou de facturer."
+  ]},
+  params:{t:"Paramètres",b:[
+    "Entreprise : ton identité, ton logo, et ta formule (Basique ou Premium — regarde ce que tu rates).",
+    "Facturation : préfixes et numéros, TVA et délai de paiement, IBAN et conditions, identité légale et assurance décennale.",
+    "Client : tu choisis ce que ton client voit dans son espace, tu lui écris un message d'accueil, tu ajoutes ton lien d'avis Google, et tu prévisualises.",
+    "Équipe : les permissions de chaque rôle, et l'interrupteur du pointage.",
+    "Perso : la couleur de l'app, le gros texte, tes modèles de chantier et tes étapes.",
+    "Système : ta SAUVEGARDE (fais-la, et sache que tu peux la restaurer), l'aide, le guide de démarrage et les nouveautés.",
+    "Le guide de démarrage te dit ce qu'il te reste à régler pour tirer le maximum de l'app."
+  ]}
 };
 function openHubGuide(h){
   const g=HUB_GUIDES[h]; if(!g){ openMenu(); return; }
