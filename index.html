@@ -837,7 +837,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v162 · 13/07";
+const APP_VERSION="v166 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1346,6 +1346,114 @@ function demoTradeChantiers(key, ids, iso, et){
   ];};
   return (T[key]?T[key]():[]);
 }
+/* ===== Démo : remplir pointages, devis publiés, factures, frais, comptes-rendus ===== */
+function demoSignature(nom){
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="260" height="90"><rect width="260" height="90" fill="#ffffff"/><path d="M18 62 C 46 22, 62 78, 92 44 S 138 20, 160 58 S 206 34, 240 46" stroke="#1a2740" stroke-width="2.4" fill="none" stroke-linecap="round"/><text x="20" y="82" font-size="11" fill="#8a93a6" font-family="Arial,sans-serif">'+String(nom||'').slice(0,28)+'</text></svg>');
+}
+function demoSessions(u,heures,depuisJours){
+  const arr=[]; if(!(heures>0.05)) return arr;
+  const N=Math.min(44,Math.max(1,Math.ceil(heures/8)));
+  const per=heures/N;
+  for(let i=0;i<N;i++){
+    const d=new Date(); d.setDate(d.getDate()-(depuisJours-i)); d.setHours(8,0,0,0);
+    if(d.getTime()>Date.now()) continue;
+    const tin=d.getTime();
+    arr.push({in:tin, out:tin+Math.round(per*3600000), nom:(TEAM[u]&&TEAM[u].nom)||''});
+  }
+  return arr;
+}
+function demoEnrichir(ids){
+  const chef=ids.chef, e1=ids.e1, e2=ids.e2;
+  const Y=new Date().getFullYear();
+  const J=864e5;
+  let nDev=0, nFact=0;
+  const numDev=()=>devisPrefix()+'-'+Y+'-'+String(++nDev).padStart(3,'0');
+  const numFact=()=>factPrefix()+'-'+Y+'-'+String(++nFact).padStart(3,'0');
+  const delai=delaiPaiement();
+  const mkDoc=(id,type,items,ts,extra)=>{
+    const c=CHANTIERS[id];
+    const snap=docSnapshot(id,type);
+    snap.type=type; snap.items=items.map(it=>({desc:it.desc,qty:it.qty,pu:it.pu}));
+    snap.ts=ts; snap.date=new Date(ts).toLocaleDateString('fr-FR');
+    snap.num=(type==='facture')?numFact():numDev();
+    Object.assign(snap, extra||{});
+    if(!c.published) c.published={};
+    const pid=uid(); c.published[pid]=snap;
+    return {pid,snap};
+  };
+
+  const list=Object.keys(CHANTIERS);
+  list.forEach((id,i)=>{
+    const c=CHANTIERS[id];
+    const items=((c.devis&&c.devis.items)||[]);
+    const total=items.reduce((s,it)=>s+it.qty*it.pu,0);
+    const scen=i%5;
+
+    /* ---- Heures pointées : marge visée différente selon le chantier ---- */
+    if(scen!==3 && total>0){
+      const cible=[0.35,0.15,0.05,0,0.28][scen];          // taux de marge visé
+      const cout=total*(1-cible);
+      const hChef=(cout*0.4)/(memberCout(chef)||38);
+      const hEmp =(cout*0.6)/(memberCout(e1)||28);
+      c.pointages={};
+      c.pointages[chef]=demoSessions(chef,hChef,46);
+      c.pointages[e1]=demoSessions(e1,hEmp,46);
+      if(i===0){ const t=Date.now()-2*3600000; c.pointages[e2]=[{in:t,nom:(TEAM[e2]&&TEAM[e2].nom)||''}]; } // pointage en cours
+    }
+
+    if(!total) return;
+    const cli=clientFull(c);
+
+    /* ---- Devis publiés, factures, encaissements ---- */
+    if(scen===0){                                   // devis signé, PAS encore facturé → argent qui dort
+      const ts=Date.now()-18*J;
+      mkDoc(id,'devis',items,ts,{signature:demoSignature(cli), signedAt:new Date(Date.now()-12*J).toISOString(), signedBy:cli});
+    }
+    else if(scen===1){                              // acompte 30% payé → solde à facturer
+      const ts=Date.now()-30*J;
+      mkDoc(id,'devis',items,ts,{signature:demoSignature(cli), signedAt:new Date(Date.now()-26*J).toISOString(), signedBy:cli});
+      const tsF=Date.now()-24*J;
+      const ac=Math.round(total*0.3*100)/100;
+      mkDoc(id,'facture',[{desc:'Acompte 30% sur devis',qty:1,pu:ac}],tsF,{acompte:30, echeance:tsF+delai*J, paye:true, payeAt:Date.now()-18*J, modePaiement:'virement'});
+      c.dateRdv=todayISO(); c.heureRdv=c.heureRdv||'08:30'; c.noteRdv=c.noteRdv||"Point d'avancement avec le client";
+    }
+    else if(scen===2){                              // facture totale IMPAYÉE, échéance dépassée → relance
+      const ts=Date.now()-52*J;
+      mkDoc(id,'devis',items,ts,{signature:demoSignature(cli), signedAt:new Date(Date.now()-48*J).toISOString(), signedBy:cli});
+      const tsF=Date.now()-48*J;
+      mkDoc(id,'facture',items,tsF,{echeance:tsF+delai*J});
+    }
+    else if(scen===3){                              // devis envoyé, sans réponse depuis 9 jours
+      mkDoc(id,'devis',items,Date.now()-9*J,{});
+    }
+    else {                                          // facture payée → CA encaissé
+      const ts=Date.now()-40*J;
+      mkDoc(id,'devis',items,ts,{signature:demoSignature(cli), signedAt:new Date(Date.now()-36*J).toISOString(), signedBy:cli});
+      const tsF=Date.now()-34*J;
+      mkDoc(id,'facture',items,tsF,{echeance:tsF+delai*J, paye:true, payeAt:Date.now()-22*J, modePaiement:(i%2?'cheque':'virement')});
+    }
+
+    /* ---- Notes de frais ---- */
+    if(i%3===0){
+      c.frais=c.frais||{};
+      c.frais[uid()]={ts:Date.now()-3*J, by:(TEAM[e1]&&TEAM[e1].nom)||'Lucas Martin', montant:84, desc:'Quincaillerie et consommables', photo:demoImg('Ticket','#2b3a55')};
+      c.frais[uid()]={ts:Date.now()-9*J, by:(TEAM[chef]&&TEAM[chef].nom)||'Karim Benali', montant:42, desc:'Carburant', photo:demoImg('Ticket','#3a4a2b')};
+    }
+    /* ---- Comptes-rendus ---- */
+    if(i%2===0){
+      c.crs=c.crs||{};
+      c.crs[uid()]={ts:Date.now()-2*J, by:(TEAM[chef]&&TEAM[chef].nom)||'Karim Benali', published:true,
+        taches_realisees:"Avancement conforme au planning, zone principale terminée.",
+        materiaux_manquants:"Deux plaques et un pot d'enduit à recommander.",
+        problemes:"Accès camion difficile le matin, prévoir de décharger avant 9h.",
+        notes:"Le client passe vendredi pour valider les finitions."};
+    }
+  });
+
+  CONFIG_DB.devisCounter=nDev; CONFIG_DB.factCounter=nFact;
+  try{ saveConfigDB(); }catch(_){ }
+}
+
 function devLoadDemo(){
   const _sel=Object.keys(DEMO_SEL).filter(k=>DEMO_SEL[k]);
   const _trades=_sel.length?_sel:Object.keys(DEMO_TRADES);
@@ -1366,6 +1474,7 @@ function devLoadDemo(){
   function mkCh(o){ const id=uid(); const age=o._age||0; delete o._age; CHANTIERS[id]={clientCode:code6(),assignes:{},createdAt:Date.now()-age*864e5,...o}; return id; }
   const ids={chef:chef,e1:e1,e2:e2};
   _trades.forEach(function(tk){ demoTradeChantiers(tk, ids, iso, et).forEach(function(o){ mkCh(o); }); });
+  try{ demoEnrichir(ids); }catch(e){ console.warn('demoEnrichir',e); }
   // ---- écriture groupée (fiable, sans course Firebase) ----
   if(useFB){
     try{
@@ -1376,7 +1485,8 @@ function devLoadDemo(){
   } else {
     lsSet('batisuivi_chantiers',CHANTIERS); lsSet('batisuivi_vehicules',VEHICULES); lsSet('batisuivi_team',TEAM);
   }
-  var _n=Object.keys(CHANTIERS).length; toast("Démo chargée ✅ "+_n+" chantier"+(_n>1?"s":""));
+  try{ localStorage.removeItem('batisuivi_resume'); }catch(_){ }
+  var _n=Object.keys(CHANTIERS).length; toast("Démo chargée ✅ "+_n+" chantier"+(_n>1?"s":"")+", avec devis, factures et heures pointées");
   SCREEN='team'; TAB='chantiers'; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; CH_SEARCH=''; CH_FILTER=''; PLAN_DAY=null;
   ME={nom:'Accès dev',role:'boss',_dev:true}; if(!AUTH_USER) AUTH_USER={uid:'dev-admin'};
   DEV_ACCESS=true;   // permet de revenir à l'espace dev sans recode
@@ -2934,37 +3044,471 @@ function viewDevisIA(){
 }
 
 /* ====================== TABLEAU DE BORD (boss) ====================== */
-function viewDashboard(){
+/* ============ TABLEAU DE BORD — 4 onglets ============ */
+function dashEur(n){ return (n||0).toLocaleString('fr-FR',{maximumFractionDigits:0})+' €'; }
+function dashBloc(ic,col,titre,tag,sous,corps){
+  return `<div class="card" style="border-left:3px solid ${col}">
+    <div class="section-title" style="margin-top:0"><h2 style="font-size:15px;display:flex;align-items:center;gap:6px">${icone(ic)} ${titre}${tag?` <span class="tag">${tag}</span>`:''}</h2></div>
+    ${sous?`<p class="note" style="margin:0 0 10px;font-size:12px">${sous}</p>`:''}
+    ${corps}</div>`;
+}
+function dashRow(titre,sous,bouton){
+  return `<div class="member-row"><div style="flex:1;min-width:0"><b style="font-size:13.5px">${titre}</b><div class="tag">${sous}</div></div>${bouton}</div>`;
+}
+function dashJoursRetard(iso){ if(!iso) return 0; const a=new Date(iso+'T00:00:00').getTime(), b=new Date(todayISO()+'T00:00:00').getTime(); return Math.max(0,Math.round((b-a)/86400000)); }
+function dashPlus(list,max){ const r=list.length-max; return r>0?`<p class="note" style="margin-top:6px;font-size:11px">+ ${r} autre${r>1?'s':''}…</p>`:''; }
+
+/* ============ MÉTÉO DES CHANTIERS (Open-Meteo, sans clé API) ============ */
+const WMO={0:['☀️','Ensoleillé'],1:['🌤️','Peu nuageux'],2:['⛅','Nuageux'],3:['☁️','Couvert'],
+  45:['🌫️','Brouillard'],48:['🌫️','Brouillard givrant'],
+  51:['🌦️','Bruine'],53:['🌦️','Bruine'],55:['🌦️','Bruine forte'],56:['🌧️','Bruine verglaçante'],57:['🌧️','Bruine verglaçante'],
+  61:['🌧️','Pluie faible'],63:['🌧️','Pluie'],65:['🌧️','Pluie forte'],66:['🌨️','Pluie verglaçante'],67:['🌨️','Pluie verglaçante'],
+  71:['🌨️','Neige faible'],73:['🌨️','Neige'],75:['❄️','Neige forte'],77:['❄️','Grains de neige'],
+  80:['🌦️','Averses'],81:['🌧️','Averses'],82:['⛈️','Fortes averses'],85:['🌨️','Averses de neige'],86:['❄️','Averses de neige'],
+  95:['⛈️','Orage'],96:['⛈️','Orage et grêle'],99:['⛈️','Orage violent']};
+function wmo(code){ return WMO[code]||['🌡️','—']; }
+let METEO_CACHE={}, METEO_LOADING=false;
+function meteoOn(){ return CONFIG_DB.meteoOff!==true; }
+function meteoVilles(){
+  const map={};
+  Object.keys(CHANTIERS).forEach(id=>{
+    const c=CHANTIERS[id]; if(!c||c.archived) return;
+    if(c.etape===ETAPES[ETAPES.length-1]) return;
+    const v=(c.ville||'').trim(); if(!v) return;
+    if(!map[v]) map[v]={ville:v, chantiers:[]};
+    map[v].chantiers.push(c.nom||'Chantier');
+  });
+  return Object.values(map).slice(0,4);
+}
+function meteoJour(iso,i){
+  if(i===0) return "Auj.";
+  const d=new Date(iso+'T12:00:00');
+  const s=d.toLocaleDateString('fr-FR',{weekday:'short'});
+  return s.charAt(0).toUpperCase()+s.slice(1).replace('.','');
+}
+async function meteoFetchVille(ville){
+  const k=ville.toLowerCase();
+  const geoLs=lsGet('batisuivi_geo',{})||{};
+  let geo=geoLs[k];
+  if(!geo||!geo.lat){
+    const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(ville)+'&count=1&language=fr&country=FR');
+    const j=await r.json();
+    const g=j&&j.results&&j.results[0];
+    if(!g) throw new Error('ville introuvable');
+    geo={lat:g.latitude, lon:g.longitude};
+    geoLs[k]=geo; lsSet('batisuivi_geo',geoLs);
+  }
+  const r2=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+geo.lat+'&longitude='+geo.lon+'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis&forecast_days=4');
+  const j2=await r2.json();
+  if(!j2||!j2.daily) throw new Error('météo indisponible');
+  return j2.daily;
+}
+async function meteoLoad(){
+  if(METEO_LOADING) return; METEO_LOADING=true;
+  const villes=meteoVilles();
+  for(let i=0;i<villes.length;i++){
+    const v=villes[i]; const c=METEO_CACHE[v.ville];
+    if(c && !c.err && (Date.now()-c.ts)<3*3600000) continue;
+    try{ const d=await meteoFetchVille(v.ville); METEO_CACHE[v.ville]={ts:Date.now(), daily:d}; }
+    catch(e){ METEO_CACHE[v.ville]={ts:Date.now(), err:true}; }
+  }
+  METEO_LOADING=false;
+  const box=document.getElementById('meteoBox'); if(box) box.innerHTML=meteoBody();
+}
+function meteoBody(){
+  const villes=meteoVilles();
+  if(!villes.length) return '<p class="note" style="margin:0">Aucun chantier en cours avec une ville renseignée.</p>';
+  return villes.map(v=>{
+    const m=METEO_CACHE[v.ville];
+    if(!m) return `<div class="task-row"><span style="flex:1"><b>${esc(v.ville)}</b></span><span class="note">Chargement…</span></div>`;
+    if(m.err||!m.daily) return `<div class="task-row"><span style="flex:1"><b>${esc(v.ville)}</b></span><span class="note">Météo indisponible</span></div>`;
+    const d=m.daily; const jours=(d.time||[]).slice(0,4);
+    let alerte='';
+    for(let i=0;i<jours.length;i++){
+      const code=(d.weather_code||[])[i]||0;
+      const pp=((d.precipitation_probability_max||[])[i])||0;
+      if(code>=51 || pp>=60){
+        const q=(i===0)?"aujourd'hui":(i===1?'demain':meteoJour(jours[i],i).toLowerCase());
+        alerte=`${wmo(code)[0]} <b>${wmo(code)[1]} ${q}</b> sur ${esc(v.chantiers.slice(0,3).join(', '))}${v.chantiers.length>3?'…':''} — pense à protéger le chantier ou à décaler les travaux extérieurs.`;
+        break;
+      }
+    }
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><b style="font-size:14px">${esc(v.ville)}</b><span class="tag">${v.chantiers.length} chantier${v.chantiers.length>1?'s':''}</span></div>
+      <div style="display:flex;gap:6px">${jours.map((t,i)=>{
+        const code=(d.weather_code||[])[i]||0; const tmax=Math.round(((d.temperature_2m_max||[])[i])||0); const tmin=Math.round(((d.temperature_2m_min||[])[i])||0);
+        const pp=((d.precipitation_probability_max||[])[i])||0;
+        return `<div style="flex:1;min-width:0;text-align:center;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:8px 4px">
+          <div class="note" style="font-size:11px;font-weight:700">${meteoJour(t,i)}</div>
+          <div style="font-size:22px;line-height:1.35">${wmo(code)[0]}</div>
+          <div style="font-size:12.5px;font-weight:700">${tmax}°</div>
+          <div class="note" style="font-size:10.5px">${tmin}°${pp>=30?` · 💧${pp}%`:''}</div>
+        </div>`;
+      }).join('')}</div>
+      ${alerte?`<p class="note" style="margin:8px 0 0;font-size:11.5px;color:var(--warn)">${alerte}</p>`:''}
+    </div>`;
+  }).join('');
+}
+function meteoCard(){
+  if(!meteoOn()) return '';
+  const villes=meteoVilles();
+  if(!villes.length) return '';
+  setTimeout(meteoLoad,60);
+  return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">☀️ Météo des chantiers</h2></div>
+    <div id="meteoBox">${meteoBody()}</div>
+    <p class="note" style="margin-top:4px;font-size:11px">Prévisions à 4 jours, par ville de chantier. Source : Open-Meteo.</p>
+  </div>`;
+}
+
+/* ============ RÉSUMÉ IA DU MATIN (Premium) ============ */
+let RESUME_BUSY=false;
+function resumeGet(){ try{ const r=lsGet('batisuivi_resume',null); return (r && r.date===todayISO() && r.txt)?r:null; }catch(_){ return null; } }
+function resumeContexte(){
+  const today=todayISO();
+  const docs=factuAllDocs();
+  const devs=docs.filter(d=>d.type!=='facture' && d.type!=='avoir');
+  const facts=docs.filter(d=>d.type==='facture' && !d.annulee);
+  const aFacturer=devs.filter(d=>d.signature && !devisConverti(d));
+  const retards=facturesEnRetard();
+  const sansRep=devs.filter(d=>!d.signature && relanceDevis(d)>0);
+  const actifs=Object.keys(CHANTIERS).map(id=>CHANTIERS[id]).filter(c=>c && !c.archived && c.etape!==ETAPES[ETAPES.length-1]);
+  const chRetard=actifs.filter(c=>c.dateFin && c.dateFin<today);
+  const reste=facts.filter(d=>!d.paye).reduce((s,d)=>s+docTotal(d),0);
+  const carnet=actifs.reduce((s,c)=>s+resteAPayer(c).reste,0);
+  const rdv=actifs.filter(c=>c.dateRdv===today);
+  const faibles=actifs.map(c=>({c,m:chantierMarge(c)})).filter(x=>x.m.calculable && x.m.pct<10);
+  const L=[];
+  L.push("Date du jour : "+frDate(today));
+  L.push("Entreprise : "+coName());
+  L.push("Chantiers en cours : "+actifs.length+(actifs.length?(" — "+actifs.slice(0,8).map(c=>c.nom||'Chantier').join(' ; ')):""));
+  if(chRetard.length) L.push("Chantiers dont la date de fin est dépassée : "+chRetard.map(c=>(c.nom||'Chantier')+" (fin prévue le "+frDate(c.dateFin)+")").join(' ; '));
+  if(rdv.length) L.push("Rendez-vous aujourd'hui : "+rdv.map(c=>(c.heureRdv||'')+" "+(c.nom||'')).join(' ; '));
+  L.push("Devis signés pas encore facturés : "+aFacturer.length+(aFacturer.length?(" pour "+Math.round(aFacturer.reduce((s,d)=>s+docTotal(d),0))+" EUR HT"):""));
+  L.push("Factures en retard de paiement : "+retards.length+(retards.length?(" pour "+Math.round(retards.reduce((s,d)=>s+docTotal(d),0))+" EUR HT, retard max "+Math.max.apply(null,retards.map(factureRetard))+" jours"):""));
+  L.push("Devis envoyés sans réponse depuis plus de 5 jours : "+sansRep.length);
+  L.push("Reste à encaisser (toutes factures impayées) : "+Math.round(reste)+" EUR HT");
+  L.push("Carnet de commandes (travail engagé restant à facturer) : "+Math.round(carnet)+" EUR HT");
+  if(faibles.length) L.push("Chantiers à marge faible (moins de 10%) : "+faibles.map(x=>(x.c.nom||'Chantier')+" ("+Math.round(x.m.pct)+"%)").join(' ; '));
+  return L.join("\n");
+}
+function genererResumeIA(){
+  if(RESUME_BUSY) return;
+  if(!isPremium()){ toast("Le résumé du jour est réservé à l'abonnement Premium."); return; }
+  if(!useFB){ toast("Le résumé IA fonctionne une fois l'app en ligne."); return; }
+  if(!(firebase.auth().currentUser)){ toast("Connecte-toi pour utiliser l'IA."); return; }
+  const ctx=resumeContexte();
+  const prompt="Tu es l'assistant de gestion d'un artisan du bâtiment. Voici l'état de son entreprise ce matin :\n\n"+ctx+
+    "\n\nÉcris-lui son résumé du jour : 4 à 6 phrases maximum, en français, en le tutoyant, ton direct, concret et bienveillant, comme un bras droit qui a tout vérifié pour lui. Commence par ce qui compte le plus. Cite des chiffres précis. Termine par UNE seule priorité claire pour aujourd'hui. Pas de titre, pas de liste à puces, pas de formule de politesse, pas d'emoji.";
+  RESUME_BUSY=true; render();
+  aiFn()({ messages:[{role:'user', content:prompt}] }).then(res=>{
+    const reply=(res&&res.data&&(res.data.reply||res.data.text))||'';
+    if(!reply) throw new Error('réponse vide');
+    lsSet('batisuivi_resume',{date:todayISO(), txt:reply, ts:Date.now()});
+  }).catch(err=>{
+    toast("Résumé indisponible : "+((err&&err.message)||'erreur'));
+  }).finally(()=>{ RESUME_BUSY=false; render(); toTop(); });
+}
+function resumeIACard(){
+  if(!isPremium()){
+    return `<div class="card" style="opacity:.75">
+      <div class="section-title" style="margin-top:0"><h2 style="font-size:15px;display:flex;align-items:center;gap:8px">${icone('robot')} Résumé du jour
+        <span style="font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></h2></div>
+      <p class="note" style="margin:0;font-size:12.5px">Chaque matin, l'IA analyse tes chantiers, tes devis et tes factures, et t'écrit en quelques phrases ce qui compte vraiment aujourd'hui. Réservé à l'abonnement Premium.</p>
+    </div>`;
+  }
+  const r=resumeGet();
+  const head=`<div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('robot')} Ton résumé du jour</h2></div>`;
+  if(RESUME_BUSY){
+    return `<div class="card" style="border-left:3px solid var(--acc)">${head}
+      <p class="note" style="margin:0">✨ L'IA analyse ta situation…</p></div>`;
+  }
+  if(!r){
+    return `<div class="card" style="border-left:3px solid var(--acc)">${head}
+      <p class="note" style="margin:0 0 10px;font-size:12.5px">L'IA regarde tes chantiers, tes devis, tes factures et tes marges, puis te dit en quelques phrases ce qui compte vraiment aujourd'hui.</p>
+      <button class="btn primary" style="width:100%" onclick="genererResumeIA()">✨ Générer mon résumé du jour</button>
+    </div>`;
+  }
+  return `<div class="card" style="border-left:3px solid var(--acc)">${head}
+    <p style="margin:0;font-size:14px;line-height:1.55">${esc(r.txt).replace(/\n/g,'<br>')}</p>
+    <div class="row" style="gap:6px;margin-top:10px"><span class="note" style="flex:1;font-size:11px;align-self:center">Généré ${esc(depuisTxt(r.ts))}</span>
+      <button class="btn ghost mini" style="flex:none" onclick="genererResumeIA()">${icone('undo','15px')} Régénérer</button></div>
+  </div>`;
+}
+
+/* ---- Fil d'activité ---- */
+function depuisTxt(ts){
+  const s=Math.floor((Date.now()-(ts||0))/1000);
+  if(s<0) return frDateTime(ts);
+  if(s<60) return "à l'instant";
+  const m=Math.floor(s/60); if(m<60) return 'il y a '+m+' min';
+  const hh=Math.floor(m/60); if(hh<24) return 'il y a '+hh+' h';
+  const j=Math.floor(hh/24); if(j===1) return 'hier';
+  if(j<7) return 'il y a '+j+' j';
+  return frDateTime(ts);
+}
+function buildActivite(){
+  const out=[];
+  Object.keys(CHANTIERS).forEach(id=>{
+    const c=CHANTIERS[id]; if(!c) return; const nom=c.nom||'Chantier';
+    if(c.createdAt) out.push({id,ts:c.createdAt,ic:'building',t:'Chantier créé',s:nom});
+    if(c.pointages) Object.keys(c.pointages).forEach(u=>{
+      const arr=c.pointages[u]||[]; const who=(TEAM[u]&&TEAM[u].nom)||(arr[0]&&arr[0].nom)||'Un équipier';
+      arr.forEach(p=>{ if(!p) return;
+        if(p.out && p.in) out.push({id,ts:p.out,ic:'timer',t:who+' a pointé '+fmtDur(p.out-p.in),s:nom});
+        else if(p.in) out.push({id,ts:p.in,ic:'timer',live:true,t:who+' pointe en ce moment',s:nom});
+      });
+    });
+    if(c.photos) Object.keys(c.photos).forEach(k=>{ const p=c.photos[k]; if(p&&p.ts) out.push({id,ts:p.ts,ic:'camera',t:(p.by?p.by+' a ajouté une photo':'Photo ajoutée'),s:nom}); });
+    if(c.crs) Object.keys(c.crs).forEach(k=>{ const r=c.crs[k]; if(r&&r.ts) out.push({id,ts:r.ts,ic:'mic',t:(r.by?r.by+' a enregistré un compte-rendu':'Compte-rendu enregistré'),s:nom}); });
+    if(c.frais) Object.keys(c.frais).forEach(k=>{ const f=c.frais[k]; if(f&&f.ts) out.push({id,ts:f.ts,ic:'receipt',t:(f.by||'Un équipier')+' a ajouté une note de frais'+(f.montant?(' de '+dashEur(f.montant)):''),s:nom}); });
+    if(c.messages) Object.values(c.messages).forEach(m=>{ if(m&&m.ts&&m.from==='client'&&!m.deleted) out.push({id,ts:m.ts,ic:'message',t:'Message du client',s:nom+' · '+String(m.txt||'').slice(0,45)}); });
+    if(c.published) Object.keys(c.published).forEach(pid=>{
+      const d=c.published[pid]; if(!d) return;
+      const lb=(d.type==='facture'?'Facture':(d.type==='avoir'?'Avoir':'Devis'));
+      const ic=(d.type==='facture'?'receipt':(d.type==='avoir'?'undo':'file'));
+      if(d.ts) out.push({id,ts:d.ts,ic:ic,t:lb+' '+(d.num||'')+' publié',s:nom});
+      if(d.signature&&d.signedAt){ const st=new Date(d.signedAt).getTime(); if(!isNaN(st)) out.push({id,ts:st,ic:'check-circle',ok:true,t:'Devis '+(d.num||'')+' signé par le client',s:nom}); }
+      if(d.paye&&d.payeAt) out.push({id,ts:d.payeAt,ic:'euro',ok:true,t:'Facture '+(d.num||'')+' encaissée'+(d.modePaiement?(' · '+modeLabel(d.modePaiement)):''),s:nom});
+    });
+  });
+  return out.filter(e=>e.ts && !isNaN(e.ts)).sort((a,b)=>b.ts-a.ts);
+}
+function dashActiviteCard(max){
+  const ev=buildActivite(); const N=max||10;
+  if(!ev.length) return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('bolt')} Activité récente</h2></div>
+    <p class="note" style="margin:0">Rien pour l'instant. Dès que ton équipe pointe, ajoute une photo ou qu'un client signe un devis, ça apparaîtra ici en direct.</p></div>`;
+  return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('bolt')} Activité récente</h2></div>
+    ${ev.slice(0,N).map(e=>`<div class="member-row" ${e.id?`onclick="openChantier('${e.id}')" style="cursor:pointer"`:''}>
+      <span style="width:32px;height:32px;flex:0 0 32px;border-radius:10px;background:var(--card2);color:${e.ok?'var(--ok)':(e.live?'var(--acc)':'var(--acc2)')};display:flex;align-items:center;justify-content:center">${icone(e.ic,'17px')}</span>
+      <span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block">${esc(e.t)}${e.live?` <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--danger);vertical-align:middle;margin-left:2px"></span>`:''}</b><small class="note" style="font-size:11.5px">${esc(e.s)} · ${esc(depuisTxt(e.ts))}</small></span>
+    </div>`).join('')}
+    ${ev.length>N?`<p class="note" style="margin-top:6px;font-size:11px">+ ${ev.length-N} événement${(ev.length-N)>1?'s':''} plus anciens…</p>`:''}
+  </div>`;
+}
+
+/* ---- Rentabilité par chantier ---- */
+function chantierMarge(c){
+  const devise=chantierHT(c);
+  const mo=chantierCost(c), mat=materielCost(c);
+  const reel=mo+mat, heures=chantierHours(c);
+  const marge=devise-reel;
+  const pct=devise>0?(marge/devise*100):0;
+  return {devise,mo,mat,reel,heures,marge,pct,calculable:(heures>0.01||mat>0) && devise>0};
+}
+function margeCoul(pct){ return pct>=20?'var(--ok)':(pct>=10?'var(--warn)':'var(--danger)'); }
+function margeFeu(pct){ return pct>=20?'🟢':(pct>=10?'🟠':'🔴'); }
+function dashRentaCard(){
+  const rows=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]}))
+    .filter(x=>x.c && !x.c.archived)
+    .map(x=>Object.assign(x,{m:chantierMarge(x.c)}));
+  const calc=rows.filter(x=>x.m.calculable).sort((a,b)=>a.m.pct-b.m.pct);
+  const nonCalc=rows.filter(x=>!x.m.calculable);
+  const head=`<div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('euro')} Rentabilité des chantiers</h2></div>`;
+  if(!calc.length){
+    return `<div class="card">${head}
+      <p class="note" style="margin:0">Aucune marge calculable pour l'instant. Il faut, sur un chantier : un <b>devis chiffré</b>, et des <b>heures pointées</b> (ou du matériel chiffré).</p>
+      <p class="note" style="margin-top:6px;font-size:11px">Pense à renseigner le <b>coût horaire</b> de chaque membre : Équipe → un membre → « Coût horaire ».</p>
+    </div>`;
+  }
+  const tDev=calc.reduce((s,x)=>s+x.m.devise,0);
+  const tReel=calc.reduce((s,x)=>s+x.m.reel,0);
+  const tMarge=tDev-tReel;
+  const tPct=tDev>0?(tMarge/tDev*100):0;
+  return `<div class="card">${head}
+    <div class="kpis" style="margin:0 0 12px">
+      <div class="kpi"><div class="big" style="font-size:20px">${dashEur(tDev)}</div><div class="lbl">Devisé</div></div>
+      <div class="kpi"><div class="big" style="font-size:20px">${dashEur(tReel)}</div><div class="lbl">Coût réel</div></div>
+      <div class="kpi ${tMarge>=0?'ok':'warn'}"><div class="big" style="font-size:20px">${dashEur(tMarge)}</div><div class="lbl">Marge estimée</div></div>
+      <div class="kpi"><div class="big" style="font-size:20px;color:${margeCoul(tPct)}">${tPct.toFixed(0)} %</div><div class="lbl">Taux de marge</div></div>
+    </div>
+    ${calc.map(x=>`<div class="member-row" onclick="openChantier('${x.id}')" style="cursor:pointer">
+      <span style="flex:1;min-width:0"><b style="font-size:13.5px">${margeFeu(x.m.pct)} ${esc(x.c.nom||'Chantier')}</b>
+        <div class="tag">Devisé ${dashEur(x.m.devise)} · Coût ${dashEur(x.m.reel)}${x.m.heures>0.01?(' · '+fmtDur(x.m.heures*3600000)):''}</div>
+        <div class="progress" style="margin-top:6px"><span style="width:${Math.max(2,Math.min(100,Math.round(x.m.reel/Math.max(1,x.m.devise)*100)))}%;background:${margeCoul(x.m.pct)}"></span></div></span>
+      <b style="flex:none;color:${margeCoul(x.m.pct)};font-size:15px;margin-left:8px">${x.m.pct.toFixed(0)}%</b>
+    </div>`).join('')}
+    ${nonCalc.length?`<p class="note" style="margin-top:8px;font-size:11px">${nonCalc.length} chantier${nonCalc.length>1?'s':''} sans marge calculable (pas d'heures pointées ou pas de devis chiffré).</p>`:''}
+    <p class="note" style="margin-top:8px;font-size:11px">🟢 ≥ 20 % · 🟠 10 à 20 % · 🔴 &lt; 10 %. Devisé = total HT des factures (ou du devis). Coût réel = heures pointées × coût horaire de chacun, + matériel chiffré. <b>Estimation indicative de gestion</b>, pas un résultat comptable.</p>
+  </div>`;
+}
+
+/* ---- Onglet 1 : À faire aujourd'hui ---- */
+function viewDashToday(){
   const all=Object.values(CHANTIERS).filter(c=>!c.archived);
+  const today=todayISO();
+  const docs=factuAllDocs();
+  const devs=docs.filter(d=>d.type!=='facture' && d.type!=='avoir');
+
+  const aFacturer=devs.filter(d=>d.signature && !devisConverti(d)).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  const mtFacturer=aFacturer.reduce((s,d)=>s+docTotal(d),0);
+  const retards=facturesEnRetard();
+  const mtRetard=retards.reduce((s,d)=>s+docTotal(d),0);
+  const sansRep=devs.filter(d=>!d.signature && relanceDevis(d)>0).sort((a,b)=>relanceDevis(b)-relanceDevis(a));
+  const chRetard=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]}))
+    .filter(x=>x.c && !x.c.archived && x.c.dateFin && x.c.dateFin<today && x.c.etape!==ETAPES[ETAPES.length-1])
+    .sort((a,b)=>(a.c.dateFin<b.c.dateFin?-1:1));
+  const msgs=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id],n:chUnread(CHANTIERS[id],id)}))
+    .filter(x=>x.c && !x.c.archived && x.n>0);
+  const soldes=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id],r:resteAPayer(CHANTIERS[id])}))
+    .filter(x=>x.c && !x.c.archived && x.r.total>0 && x.r.paye>0 && x.r.reste>0)
+    .sort((a,b)=>b.r.reste-a.r.reste);
+  const mtSoldes=soldes.reduce((s,x)=>s+x.r.reste,0);
+  const rdv=all.filter(c=>c.dateRdv===today);
+
+  const nbActions=aFacturer.length+retards.length+sansRep.length+chRetard.length+msgs.length+soldes.length;
+  const argentDort=mtFacturer+mtRetard+mtSoldes;
+
+  let h=`<div class="card" style="position:relative;overflow:hidden">
+    <div style="position:absolute;width:170px;height:170px;right:-55px;top:-75px;border-radius:50%;background:radial-gradient(circle,${nbActions?'var(--acc)':'var(--ok)'},transparent 70%);opacity:.3;pointer-events:none"></div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700;position:relative">À faire</div>
+    <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;line-height:1.15;margin:4px 0 0;position:relative">${nbActions?(nbActions+' action'+(nbActions>1?'s':'')+' en attente'):'Tout est à jour ✅'}</div>
+    ${(nbActions&&argentDort>0)?`<div style="margin-top:10px;position:relative"><span class="note" style="font-size:12px">Argent qui dort : </span><b style="font-size:17px;color:var(--acc2)">${dashEur(argentDort)}</b></div>`:''}
+    ${!nbActions?`<p class="note" style="margin:8px 0 0;font-size:12.5px;position:relative">Rien ne traîne : pas de devis à facturer, pas de facture en retard, pas de message sans réponse. Beau boulot 👏</p>`:''}
+  </div>`;
+
+  h+=resumeIACard();
+
+  if(aFacturer.length){
+    h+=dashBloc('receipt','var(--acc2)','Devis signés à facturer',aFacturer.length,
+      `<b style="color:var(--acc2)">${dashEur(mtFacturer)} HT</b> déjà acceptés par tes clients, mais pas encore facturés.`,
+      aFacturer.slice(0,4).map(d=>dashRow(esc(d.num||'Devis'), esc(d.nom||'')+' · '+dashEur(docTotal(d))+' HT · signé il y a '+joursDepuis(d.signedAt?new Date(d.signedAt).getTime():d.ts)+' j',
+        `<button class="btn primary mini" onclick="devisVersFacture('${d.id}','${d.pid}')">Facturer</button>`)).join('')+dashPlus(aFacturer,4));
+  }
+  if(retards.length){
+    h+=dashBloc('alert','var(--danger)','Factures en retard',retards.length,
+      `<b style="color:var(--danger)">${dashEur(mtRetard)} HT</b> échus et toujours pas encaissés.`,
+      retards.slice(0,4).map(d=>dashRow(esc(d.num||'Facture'), esc(d.nom||'')+' · '+dashEur(docTotal(d))+' HT · <span style="color:var(--danger)">'+factureRetard(d)+' j de retard</span>',
+        `<button class="btn mini" onclick="relanceFacture('${d.id}','${d.pid}')">Relancer</button>`)).join('')+dashPlus(retards,4));
+  }
+  if(soldes.length){
+    h+=dashBloc('euro','var(--warn)','Soldes à facturer',soldes.length,
+      `<b style="color:var(--warn)">${dashEur(mtSoldes)} HT</b> de travaux engagés dont le solde n'est pas encore parti.`,
+      soldes.slice(0,4).map(x=>dashRow(esc(x.c.nom||'Chantier'), 'Facturé '+Math.round(x.r.paye/x.r.total*100)+'% · reste '+dashEur(x.r.reste),
+        `<button class="btn primary mini" onclick="publishFactureSolde('${x.id}')">Facturer</button>`)).join('')+dashPlus(soldes,4));
+  }
+  if(sansRep.length){
+    h+=dashBloc('file','var(--warn)','Devis sans réponse',sansRep.length,
+      `Envoyés il y a plus de 5 jours et toujours pas signés.`,
+      sansRep.slice(0,4).map(d=>dashRow(esc(d.num||'Devis'), esc(d.nom||'')+' · '+dashEur(docTotal(d))+' HT · en attente depuis '+relanceDevis(d)+' j',
+        `<button class="btn mini" onclick="emailDoc('${d.id}','${d.pid}')">Relancer</button>`)).join('')+dashPlus(sansRep,4));
+  }
+  if(msgs.length){
+    h+=dashBloc('message','var(--acc)','Messages clients sans réponse',msgs.reduce((s,x)=>s+x.n,0),'',
+      msgs.slice(0,4).map(x=>dashRow(esc(x.c.nom||'Chantier'), x.n+' message'+(x.n>1?'s':'')+' non lu'+(x.n>1?'s':''),
+        `<button class="btn ghost mini" onclick="openChantier('${x.id}')">Répondre</button>`)).join('')+dashPlus(msgs,4));
+  }
+  if(chRetard.length){
+    h+=dashBloc('clock','var(--danger)','Chantiers en retard',chRetard.length,
+      `La date de fin prévue est dépassée.`,
+      chRetard.slice(0,4).map(x=>dashRow(esc(x.c.nom||'Chantier'), esc(clientFull(x.c))+' · fin prévue le '+frDate(x.c.dateFin)+' · <span style="color:var(--danger)">'+dashJoursRetard(x.c.dateFin)+' j de retard</span>',
+        `<button class="btn ghost mini" onclick="openChantier('${x.id}')">Ouvrir</button>`)).join('')+dashPlus(chRetard,4));
+  }
+  if(rdv.length){
+    h+=dashBloc('calendar','var(--acc)','Rendez-vous du jour',rdv.length,'',
+      rdv.map(c=>{ const id=Object.keys(CHANTIERS).find(k=>CHANTIERS[k]===c); return dashRow(esc(c.nom||'Chantier'), (c.heureRdv?esc(c.heureRdv)+' · ':'')+esc(c.noteRdv||clientFull(c)),
+        `<button class="btn ghost mini" onclick="openChantier('${id}')">Ouvrir</button>`); }).join(''));
+  }
+  h+=meteoCard();
+  h+=dashActiviteCard(10);
+  return h;
+}
+
+/* ---- Onglet 2 : Argent ---- */
+function viewDashArgent(){
+  const all=Object.values(CHANTIERS).filter(c=>!c.archived);
+  const facts=factuAllDocs().filter(d=>d.type==='facture' && !d.annulee);
+  const now=new Date();
+  const prev=new Date(now.getFullYear(),now.getMonth()-1,1);
+  const inMois=(ts,ref)=>{ const t=new Date(ts||0); return t.getMonth()===ref.getMonth() && t.getFullYear()===ref.getFullYear(); };
+  const factMois=facts.filter(d=>inMois(d.ts,now)).reduce((s,d)=>s+docTotal(d),0);
+  const factPrec=facts.filter(d=>inMois(d.ts,prev)).reduce((s,d)=>s+docTotal(d),0);
+  const encMois=facts.filter(d=>d.paye && inMois(d.payeAt||d.ts,now)).reduce((s,d)=>s+docTotal(d),0);
+  const reste=facts.filter(d=>!d.paye).reduce((s,d)=>s+docTotal(d),0);
+  const mtRetard=facturesEnRetard().reduce((s,d)=>s+docTotal(d),0);
+  const evo = factPrec>0 ? Math.round((factMois-factPrec)/factPrec*100) : null;
+
+  const actifs=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id]}))
+    .filter(x=>x.c && !x.c.archived && x.c.etape!==ETAPES[ETAPES.length-1])
+    .map(x=>Object.assign(x,{r:resteAPayer(x.c)}))
+    .filter(x=>x.r.reste>0)
+    .sort((a,b)=>b.r.reste-a.r.reste);
+  const carnet=actifs.reduce((s,x)=>s+x.r.reste,0);
+
+  let h=`<div class="kpis">
+    <div class="kpi ok"><div class="big">${dashEur(encMois)}</div><div class="lbl">Encaissé ce mois</div></div>
+    <div class="kpi acc"><div class="big">${dashEur(factMois)}</div><div class="lbl">Facturé ce mois</div></div>
+    <div class="kpi"><div class="big">${dashEur(reste)}</div><div class="lbl">Reste à encaisser</div></div>
+    <div class="kpi ${mtRetard>0?'warn':''}"><div class="big">${dashEur(mtRetard)}</div><div class="lbl">Dont en retard</div></div>
+  </div>`;
+
+  h+=`<div class="card" style="position:relative;overflow:hidden">
+    <div style="position:absolute;width:170px;height:170px;right:-55px;top:-75px;border-radius:50%;background:radial-gradient(circle,var(--acc2),transparent 70%);opacity:.3;pointer-events:none"></div>
+    <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);font-weight:700;position:relative">Carnet de commandes</div>
+    <div style="font-family:'Sora',sans-serif;font-size:32px;font-weight:800;line-height:1;margin:5px 0 0;color:var(--acc2);position:relative">${dashEur(carnet)}</div>
+    <p class="note" style="margin:6px 0 0;font-size:11.5px;position:relative">Travail engagé qu'il te reste à facturer, sur ${actifs.length} chantier${actifs.length>1?'s':''} en cours. C'est ce que tu as « devant toi ».</p>
+    ${actifs.length?`<div style="margin-top:10px;position:relative">${actifs.slice(0,5).map(x=>`<div class="task-row"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.c.nom||'Chantier')}</span><b style="font-size:13px">${dashEur(x.r.reste)}</b></div>`).join('')}${dashPlus(actifs,5)}</div>`:''}
+  </div>`;
+
+  if(factPrec>0 || factMois>0){
+    const col = (evo===null)?'var(--muted)':(evo>=0?'var(--ok)':'var(--danger)');
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('chart')} Ce mois-ci vs le mois dernier</h2></div>
+      <div style="display:flex;align-items:baseline;gap:10px">
+        <div style="font-family:'Sora';font-size:28px;font-weight:800">${dashEur(factMois)}</div>
+        ${evo===null?'':`<b style="color:${col};font-size:15px">${evo>=0?'▲ +':'▼ '}${evo}%</b>`}
+      </div>
+      <p class="note" style="margin-top:2px;font-size:11.5px">${moisFr(prev.getMonth())} : ${dashEur(factPrec)} facturés.${evo===null?' Pas de comparaison possible (aucune facture le mois dernier).':''}</p>
+    </div>`;
+  }
+
+  h+=caChartCard(all,dashEur);
+  h+=`<div class="card"><button class="btn primary" style="width:100%" onclick="openFactu()">${icone('receipt','16px')} Ouvrir le Hub Facturation</button>
+    <p class="note" style="margin-top:8px;font-size:11px">Devis, factures, avoirs, statistiques et réglages de facturation.</p></div>`;
+  return h;
+}
+
+/* ---- Vue simple (employés / chefs, ancien écran) ---- */
+function viewDashboard(){ const all=Object.values(CHANTIERS).filter(c=>!c.archived); return viewDashChantiers()+laborCard(all,dashEur); }
+
+/* ---- Onglet 3 : Chantiers ---- */
+function viewDashChantiers(){
+  const all=Object.values(CHANTIERS).filter(c=>!c.archived);
+  const today=todayISO();
   const enCours=all.filter(c=>c.etape&&c.etape!==ETAPES[ETAPES.length-1]).length;
   const termines=all.filter(c=>c.etape===ETAPES[ETAPES.length-1]).length;
-  const today=todayISO();
   const retard=all.filter(c=>c.dateFin&&c.dateFin<today&&c.etape!==ETAPES[ETAPES.length-1]).length;
-  const nbEquipe=Object.keys(TEAM).length;
-  const devisHT=c=>((c.devis&&c.devis.items)||[]).reduce((s,it)=>s+(it.qty*it.pu),0);
-  const caPrev=all.reduce((s,c)=>s+devisHT(c),0);
-  const caEnCours=all.filter(c=>c.etape!==ETAPES[ETAPES.length-1]).reduce((s,c)=>s+devisHT(c),0);
-  const caFacture=all.reduce((s,c)=>{ const p=c.published?Object.values(c.published):[]; return s+p.filter(d=>d.type==='facture').reduce((ss,d)=>ss+d.items.reduce((x,it)=>x+it.qty*it.pu,0),0); },0);
-  const eur=n=>n.toLocaleString('fr-FR',{maximumFractionDigits:0})+' €';
-  let h=`  <div class="kpis">
+  let h=`<div class="kpis">
     <div class="kpi acc"><div class="big">${all.length}</div><div class="lbl">Chantiers au total</div></div>
     <div class="kpi"><div class="big">${enCours}</div><div class="lbl">En cours</div></div>
     <div class="kpi ok"><div class="big">${termines}</div><div class="lbl">Terminés</div></div>
     <div class="kpi warn"><div class="big">${retard}</div><div class="lbl">En retard</div></div>
   </div>
-  ${laborCard(all,eur)}
-  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Vue d'ensemble</h2></div>`;
-  if(!all.length){ h+=`<p class="note">Aucun chantier pour l'instant.</p>`; }
+  `;
+  h+= (typeof isChef==='function' && isChef()) ? dashRentaCard() : '';
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('building')} Avancement</h2></div>`;
+  if(!all.length){ h+=`<p class="note" style="margin:0">Aucun chantier pour l'instant.</p>`; }
   else {
-    Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
+    Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.archived) return;
+      const idx=ETAPES.indexOf(c.etape||ETAPES[0]); const pct=Math.round((idx/(ETAPES.length-1))*100);
       const late=c.dateFin&&c.dateFin<today&&c.etape!==ETAPES[ETAPES.length-1];
       h+=`<div class="task-row" onclick="openChantier('${id}')" style="cursor:pointer">
-        <div style="flex:1"><b>${esc(c.nom)}</b><div class="tag">${esc(clientFull(c))} ${late?'· <span style="color:var(--danger)"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.5 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.5a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> en retard</span>':''}</div>
+        <div style="flex:1"><b>${esc(c.nom)}</b><div class="tag">${esc(clientFull(c))}${late?' · <span style="color:var(--danger)">en retard</span>':''}</div>
         <div class="progress" style="margin-top:6px"><span style="width:${pct}%"></span></div></div>
         <span class="tag" style="flex:none">${pct}%</span></div>`;
     });
   }
   h+=`</div>`;
+  return h;
+}
+
+/* ---- Onglet 4 : Équipe ---- */
+function viewDashEquipe(){
+  const all=Object.values(CHANTIERS).filter(c=>!c.archived);
+  const lc=laborCard(all,dashEur);
+  let h=`<div class="kpis">
+    <div class="kpi acc"><div class="big">${Object.keys(TEAM).length}</div><div class="lbl">Membres</div></div>
+    <div class="kpi"><div class="big">${Object.values(TEAM).filter(t=>t&&t.role==='chef').length}</div><div class="lbl">Chefs de chantier</div></div>
+  </div>`;
+  h+= lc || `<div class="card"><p class="note" style="margin:0">Aucune heure pointée pour l'instant. Le suivi de la main-d'œuvre apparaîtra ici dès que ton équipe pointera.</p></div>`;
   return h;
 }
 function delDashDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi retiré de l'espace client.")) return; unpublishDoc(id,pid); }
@@ -2984,7 +3528,7 @@ function groupByMonthHTML(list){
 }
 let HUB=null, HTAB='';
 const HUBS={
-  dashboard:{title:'Tableau de bord',icon:'chart',tabs:[['vue','chart',"Vue d'ensemble"]]},
+  dashboard:{title:'Tableau de bord',icon:'chart',tabs:[['aujourdhui','alert',"Aujourd'hui"],['argent','euro','Argent'],['chantiers','building','Chantiers'],['equipe','users','Équipe']]},
   chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','message','Messages'],['carte','map-pin','Carte']]},
   equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['messagerie','message','Messages'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
   planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
@@ -3060,7 +3604,7 @@ function renderHub(){
   const cfg=HUBS[HUB]; if(!cfg){ HUB=null; return renderAccueil(); }
   if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]) return renderBossChantier();
   if(HUB==='params') return renderParamsPage();
-  const hideNav = (HUB==='dashboard') || (HUB==='ia' && HTAB==='assistant' && CHAT_OPEN==='ai') || (CHAT_OPEN && ((HUB==='equipe'&&HTAB==='messagerie') || (HUB==='chantiers'&&HTAB==='clients'&&(CLIENTS_SUB||'annuaire')==='messagerie')));
+  const hideNav = (HUB==='ia' && HTAB==='assistant' && CHAT_OPEN==='ai') || (CHAT_OPEN && ((HUB==='equipe'&&HTAB==='messagerie') || (HUB==='chantiers'&&HTAB==='clients'&&(CLIENTS_SUB||'annuaire')==='messagerie')));
   if(hideNav){ navEl.classList.add('hidden'); }
   else { navEl.classList.remove('hidden'); navEl.classList.add('compact');
     navEl.innerHTML=cfg.tabs.map(([t,ic,lb])=>`<button class="${HTAB===t?'on':''}" onclick="setHTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join(''); }
@@ -3095,7 +3639,12 @@ function hubReady(title,desc,extra){ return `<div class="card"><div class="secti
 let CLIENTS_SUB='annuaire';
 function setClientsSub(x){ CLIENTS_SUB=x; render(); }
 function hubBody(hub,tab){
-  if(hub==='dashboard') return viewDashboard();
+  if(hub==='dashboard'){
+    if(tab==='argent') return viewDashArgent();
+    if(tab==='chantiers') return viewDashChantiers();
+    if(tab==='equipe') return viewDashEquipe();
+    return viewDashToday();
+  }
   if(hub==='chantiers'){
     if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
@@ -3142,7 +3691,11 @@ function hubBody(hub,tab){
     if(tab==='apparence') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('palette')} Apparence</h2></div>
       <p class="tag" style="margin-bottom:8px">Couleur de l’app</p>${themeSwatches(40)}
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
-    if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
+    if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">☀️ Météo des chantiers</h2></div>
+      <p class="note" style="margin:0 0 8px;font-size:12px">Affiche les prévisions à 4 jours sur le tableau de bord, pour chaque ville où tu as un chantier en cours.</p>
+      <div class="row" style="gap:6px"><button class="btn ${meteoOn()?'primary':'ghost'} mini" onclick="setMeteoOn(true)">Affichée</button><button class="btn ${!meteoOn()?'primary':'ghost'} mini" onclick="setMeteoOn(false)">Masquée</button></div>
+      <p class="note" style="font-size:11px;margin-top:6px">Utile pour les métiers d'extérieur (couverture, façade, maçonnerie). Masque-la si tu travailles uniquement en intérieur.</p></div>
+    <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="resetCache()">Vider le cache &amp; recharger la derniere version</button>
       <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
@@ -4208,7 +4761,7 @@ const HUB_GUIDES={
   planning:{t:"Planning",b:["Calendrier : la vue mensuelle. Aujourd'hui : ce qui se passe ce jour.","RDV : les rendez-vous clients à venir. Échéances : les chantiers en retard ou proches de la fin.","Charge : qui est sur quels chantiers, et qui est libre."]},
   facturation:{t:"Facturation",b:["Devis : crée et suis tes devis (en cours / passés).","Factures : tes factures (Pros / Particuliers), avec la facture électronique pour les pros.","Clients : ton annuaire. Résumé : la vue d'ensemble."]},
   ia:{t:"Intelligence artificielle",b:["Assistant : pose tes questions à l'IA.","Projection : transforme une photo (existant + inspiration) en rendu.","Devis IA : propose des lignes de devis. Rédaction : rédige tes messages."]},
-  dashboard:{t:"Tableau de bord",b:["Ta vue d'ensemble : chiffre d'affaires, chantiers en cours, retards, coût main-d'œuvre.","Tout se met à jour automatiquement à partir de tes chantiers."]},
+  dashboard:{t:"Tableau de bord",b:["Aujourd'hui : tout ce qui t'attend, avec un bouton pour agir tout de suite (facturer, relancer, répondre).","Argent : encaissé, facturé, reste à encaisser, et ton carnet de commandes (le travail qu'il te reste à facturer).","Chantiers : l'avancement de chacun. Équipe : les heures pointées et leur coût.","Tout se met à jour automatiquement à partir de tes chantiers, devis et factures."]},
   params:{t:"Paramètres",b:["Entreprise : ton identité et ton logo.","Facturation : préfixes, numéros, TVA, plateforme agréée.","Rôles : les permissions de chaque membre.","Apparence : couleur de l'app et thème clair/sombre."]}
 };
 function openHubGuide(h){
@@ -4323,6 +4876,7 @@ function openMenu(){
 function menuOpen(){ return !!document.getElementById('menuModalMark'); }
 /* ===== Paramètres de facturation (patron) ===== */
 function setFactuOn(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); openFacturationSettings(); }
+function setMeteoOn(v){ CONFIG_DB.meteoOff=!v; saveConfigDB(); render(); toast(v?'Météo affichée sur le tableau de bord':'Météo masquée'); }
 function openFacturationSettings(){
   if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
   const y=new Date().getFullYear();
@@ -5109,7 +5663,7 @@ function garantieDates(dateISO){
   const mk=(n)=>{ const e=addYears(dateISO,n); if(!e) return '—'; const exp=(e-new Date())<=0; return (exp?'Expirée le ':"Jusqu'au ")+e.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); };
   return { gpaTxt:mk(1), bieTxt:mk(2), decTxt:mk(10) };
 }
-function chantierHT(c){ let ht=0; if(c.published){ Object.values(c.published).forEach(d=>{ if(d.type==='facture') ht+=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); }); } if(!ht && c.devis && c.devis.items){ ht=c.devis.items.reduce((s,it)=>s+it.qty*it.pu,0); } return ht; }
+function chantierHT(c){ let ht=0; if(c.published){ Object.values(c.published).forEach(d=>{ if(d.type==='facture' && !d.annulee) ht+=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); }); } if(!ht && c.devis && c.devis.items){ ht=c.devis.items.reduce((s,it)=>s+it.qty*it.pu,0); } return ht; }
 
 /* ===== Compression image partagée (900px) ===== */
 function compresse900(file,cb){ if(!file) return; const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ const cv=document.createElement('canvas'); const S=900; let w=img.width,hh=img.height; if(w>hh){ if(w>S){hh=hh*S/w;w=S;} } else { if(hh>S){w=w*S/hh;hh=S;} } cv.width=w;cv.height=hh; cv.getContext('2d').drawImage(img,0,0,w,hh); cb(cv.toDataURL('image/jpeg',0.7)); }; img.src=e.target.result; }; r.readAsDataURL(file); }
