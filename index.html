@@ -296,6 +296,7 @@ body.big-text{zoom:1.18}
 @supports not (zoom:1){ body.big-text{font-size:118%} }
 .pill.adv{background:rgba(47,209,122,.18);color:var(--ok);border:none;font-size:10px;margin-left:4px;vertical-align:middle}
 .pill.relance{background:rgba(255,176,32,.18);color:var(--warn);border:none;font-size:10px;vertical-align:middle}
+.pill.retard{background:rgba(255,77,79,.16);color:var(--danger);border:none;font-size:10px;font-weight:800;vertical-align:middle}
 .nav-badge.amber{background:var(--warn);color:#3a2700}
 .ib{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:1;vertical-align:middle}
 .perm-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);cursor:pointer;font-size:14px}
@@ -836,7 +837,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v156 · 08/07";
+const APP_VERSION="v162 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2984,7 +2985,7 @@ function groupByMonthHTML(list){
 let HUB=null, HTAB='';
 const HUBS={
   dashboard:{title:'Tableau de bord',icon:'chart',tabs:[['vue','chart',"Vue d'ensemble"]]},
-  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','users','Clients'],['carte','map-pin','Carte']]},
+  chantiers:{title:'Chantiers',icon:'building',tabs:[['liste','building','Chantiers'],['archives','package','Archivés'],['clients','message','Messages'],['carte','map-pin','Carte']]},
   equipe:{title:'Équipe',icon:'users',tabs:[['membres','users','Membres'],['messagerie','message','Messages'],['pointage','timer','Pointage'],['frais','receipt','Frais'],['stats','chart','Stats']]},
   planning:{title:'Planning',icon:'calendar',tabs:[['cal','calendar','Calendrier'],['jour','clock','Aujourd’hui'],['rdv','message','RDV'],['echeances','alert','Échéances'],['charge','chart','Charge']]},
   ia:{title:'IA',icon:'robot',tabs:[['assistant','robot','Assistant'],['projection','eye','Projection'],['devisia','file','Devis IA'],['redaction','edit','Rédaction']]},
@@ -3098,7 +3099,7 @@ function hubBody(hub,tab){
   if(hub==='chantiers'){
     if(tab==='liste'){ ARCH_VIEW=false; CLIENTS_VIEW=false; return viewChantiersList(); }
     if(tab==='archives'){ ARCH_VIEW=true; CLIENTS_VIEW=false; return viewChantiersList(); }
-    if(tab==='clients'){ ARCH_VIEW=false; CLIENTS_VIEW=false; if(CHAT_OPEN) return '<div class="chat-full">'+chatThreadView()+'</div>'; const _cs=CLIENTS_SUB||'annuaire'; const _ch=`<div class="row" style="margin-bottom:12px;gap:6px"><button class="btn ${_cs==='annuaire'?'primary':'ghost'}" style="flex:1" onclick="setClientsSub('annuaire')">${icone('users')} Annuaire</button><button class="btn ${_cs==='messagerie'?'primary':'ghost'}" style="flex:1" onclick="setClientsSub('messagerie')">${icone('message')} Messagerie</button></div>`; return _ch+(_cs==='messagerie'?messagerieClients():factuClients()); }
+    if(tab==='clients'){ ARCH_VIEW=false; CLIENTS_VIEW=false; if(CHAT_OPEN) return '<div class="chat-full">'+chatThreadView()+'</div>'; return messagerieClients(); }
     if(tab==='carte') return viewCarte();
   }
   if(hub==='equipe'){
@@ -3143,8 +3144,6 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="toggleBigText()">${icone('textsize')} Gros texte : ${bigText()?'activé':'désactivé'}</button></div>`;
     if(tab==='systeme') return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('settings')} Système</h2></div>
       <button class="btn ghost" style="width:100%" onclick="exportData()">${icone('save')} Sauvegarder / exporter les données</button>
-      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="downloadAllDocs('facture')">${icone('download')} Télécharger toutes les factures</button>
-      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="downloadAllDocs('devis')">${icone('download')} Télécharger tous les devis</button>
       <button class="btn ghost" style="width:100%;margin-top:10px" onclick="resetCache()">Vider le cache &amp; recharger la derniere version</button>
       <p class="note" style="text-align:center;margin-top:12px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p></div>`;
   }
@@ -3158,16 +3157,17 @@ function factuAllDocs(){ const out=[]; Object.keys(CHANTIERS).forEach(id=>{ cons
 function docTotal(d){ return (d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); }
 
 function renderFactuApp(){
-  const tabs=[['resume','chart','Résumé'],['devis','file','Devis'],['factures','receipt','Factures'],['clients','users','Clients'],['params','settings','Paramètres']];
+  const tabs=[['resume','home','Résumé'],['devis','file','Devis'],['factures','receipt','Factures'],['stats','chart','Stats'],['clients','users','Clients'],['params','settings','Réglages']];
   navEl.classList.remove('hidden'); navEl.classList.add('compact');
   navEl.innerHTML=tabs.map(([t,ic,lb])=>`<button class="${FTAB===t?'on':''}" onclick="setFTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join('');
   let body='';
   if(FTAB==='devis') body=factuDevis();
   else if(FTAB==='factures') body=factuFactures();
+  else if(FTAB==='stats') body=factuStats();
   else if(FTAB==='clients') body=factuClients();
   else if(FTAB==='params') body=factuParams();
   else body=factuResume();
-  const titles={resume:'Résumé',devis:'Devis',factures:'Factures',clients:'Clients',params:'Paramètres'};
+  const titles={resume:'Résumé',devis:'Devis',factures:'Factures',stats:'Statistiques',clients:'Clients',params:'Paramètres'};
   app.innerHTML=`
   <div class="top"><div class="brand" style="min-width:0">
     <button class="burger" onclick="closeFactu()" aria-label="Retour" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
@@ -3181,15 +3181,16 @@ function renderFactuApp(){
 function factuResume(){
   const all=Object.values(CHANTIERS).filter(c=>!c.archived);
   const docs=factuAllDocs();
-  const facts=docs.filter(d=>d.type==='facture');
-  const devs=docs.filter(d=>d.type!=='facture');
+  const facts=docs.filter(d=>d.type==='facture' && !d.annulee);
+  const devs=docs.filter(d=>d.type!=='facture' && d.type!=='avoir');
   const totFact=facts.reduce((s,d)=>s+docTotal(d),0);
+  const resteEncaisser=facts.filter(d=>!d.paye).reduce((s,d)=>s+docTotal(d),0);
   const devEnAttente=devs.filter(d=>!d.signature).length;
   const devSignes=devs.filter(d=>d.signature).length;
   const caPrev=Object.values(CHANTIERS).reduce((s,c)=>s+(((c.devis&&c.devis.items)||[]).reduce((x,it)=>x+it.qty*it.pu,0)),0);
   let h=`<div class="kpis">
     <div class="kpi ok"><div class="big">${eurF(totFact)}</div><div class="lbl">CA facturé (HT)</div></div>
-    <div class="kpi acc"><div class="big">${facts.length}</div><div class="lbl">Factures émises</div></div>
+    <div class="kpi acc"><div class="big">${eurF(resteEncaisser)}</div><div class="lbl">Reste à encaisser</div></div>
     <div class="kpi"><div class="big">${devEnAttente}</div><div class="lbl">Devis en attente</div></div>
     <div class="kpi"><div class="big">${devSignes}</div><div class="lbl">Devis signés</div></div>
   </div>
@@ -3197,34 +3198,259 @@ function factuResume(){
     <div class="big" style="font-family:'Sora';font-size:32px;font-weight:800;color:var(--acc2)">${eurF(caPrev)}</div>
     <p class="note" style="margin-top:2px;font-size:11px">Total HT de tous les devis enregistrés. Estimation indicative, pas un montant comptable.</p>
   </div>`;
+  const encaissees=facts.filter(d=>d.paye);
+  if(encaissees.length){
+    const parMode={};
+    encaissees.forEach(d=>{ const k=d.modePaiement||'_np'; parMode[k]=(parMode[k]||0)+docTotal(d); });
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('euro')} Encaissements par mode de paiement</h2></div>
+      ${Object.keys(parMode).sort((a,b)=>parMode[b]-parMode[a]).map(k=>`<div class="task-row"><span style="flex:1">${esc(modeLabel(k)||'Non précisé')}</span><b>${eurF(parMode[k])}</b></div>`).join('')}
+      <p class="note" style="margin-top:8px;font-size:11px">Total HT des factures marquées payées. Le mode est demandé au moment de l'encaissement.</p>
+    </div>`;
+  }
+  const lates=facturesEnRetard();
+  if(lates.length){
+    const totLate=lates.reduce((s,d)=>s+docTotal(d),0);
+    h+=`<div class="card" style="border:1px solid var(--danger)"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px;color:var(--danger)">${icone('alert')} Factures en retard <span class="tag">${lates.length}</span></h2></div>
+      <p class="note" style="margin:0 0 10px;font-size:12px">${eurF(totLate)} HT échus et non encaissés. Relance-les avec le bouton ${icone('send')}.</p>
+      ${lates.slice(0,5).map(factuDocRow).join('')}
+      ${lates.length>5?`<p class="note" style="margin-top:8px;font-size:11px">+ ${lates.length-5} autre${lates.length-5>1?'s':''} — voir l'onglet Factures › Impayées.</p>`:''}
+    </div>`;
+  }
   h+=caChartCard(all,eurF);
-  h+=ereportingCard(all);
   return h;
 }
 
+/* ===== Avoirs (notes de crédit) ===== */
+function avoirPrefix(){ return (CONFIG_DB.avoirPrefix||'AV').toUpperCase(); }
+function nextAvoirNum(){ const y=new Date().getFullYear(); CONFIG_DB.avoirCounter=(CONFIG_DB.avoirCounter||0)+1; saveConfigDB(); return avoirPrefix()+'-'+y+'-'+String(CONFIG_DB.avoirCounter).padStart(3,'0'); }
+function creerAvoir(id,pid){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const c=CHANTIERS[id]; const f=c&&c.published&&c.published[pid];
+  if(!f||f.type!=='facture'){ toast("Facture introuvable."); return; }
+  if(f.annulee && f.avoirId && c.published[f.avoirId]){ toast("Cette facture est déjà annulée par un avoir."); return; }
+  const items=(f.items||[]).filter(it=>it&&it.desc); if(!items.length){ toast("Cette facture n'a aucune ligne."); return; }
+  if(!confirm("Créer un avoir qui annule la facture "+(f.num||'')+" ("+eurF(docTotal(f))+" HT) ?\n\nLa facture sera marquée « Annulée » et retirée de ton chiffre d'affaires.")) return;
+  const snap=docSnapshot(id,'facture');
+  snap.type='avoir';
+  snap.items=items.map(it=>({desc:it.desc,qty:it.qty,pu:it.pu}));
+  snap.num=nextAvoirNum(); snap.ts=Date.now(); snap.echeance=null;
+  snap.factureNum=f.num||''; snap.factureId=pid;
+  const aid=uid();
+  c.published[aid]=snap; f.annulee=true; f.avoirId=aid; f.paye=false; f.payeAt=null; f.modePaiement=null;
+  saveChantier(id); render();
+  toast("Avoir "+snap.num+" créé ✅ La facture est annulée.");
+}
+
+/* ===== Mode de paiement des factures ===== */
+const MODES_PAIEMENT=[['virement','Virement','send'],['cheque','Chèque','file'],['especes','Espèces','euro'],['cb','Carte bancaire','id'],['autre','Autre','tool']];
+function modeLabel(k){ const m=MODES_PAIEMENT.find(x=>x[0]===k); return m?m[1]:''; }
+function openPaiement(id,pid){
+  const c=CHANTIERS[id]; const d=c&&c.published&&c.published[pid]; if(!d) return;
+  openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('euro')} Encaisser la facture</h2>
+    <p class="note" style="margin:0 0 12px">${esc(d.num||'')} · ${esc(d.chantier||'')} · <b>${eurF(docTotal(d))} HT</b></p>
+    <label>Date du paiement</label><input id="pm_date" type="date" value="${todayISO()}">
+    <label style="margin-top:12px;display:block">Comment as-tu été payé ?</label>
+    ${MODES_PAIEMENT.map(m=>`<button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start;text-align:left" onclick="setPaiement('${id}','${pid}','${m[0]}')">${icone(m[2],'16px')} ${m[1]}</button>`).join('')}
+    <button class="btn ghost mini" style="width:100%;margin-top:4px" onclick="closeModal()">Annuler</button>`);
+}
+function setPaiement(id,pid,mode){
+  const c=CHANTIERS[id]; const d=c&&c.published&&c.published[pid]; if(!d) return;
+  const dt=val('pm_date'); let ts=Date.now();
+  if(dt){ const p=new Date(dt+'T12:00:00').getTime(); if(!isNaN(p)) ts=p; }
+  d.paye=true; d.payeAt=ts; d.modePaiement=mode;
+  saveChantier(id); closeModal(); render(); toast("Facture encaissée ("+modeLabel(mode)+") ✅");
+}
+
+/* ===== PDF du document (devis ou facture) — réutilisé pour l'envoi par email ===== */
+function pdfTxt(s){ return String(s==null?'':s).replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/[\u2013\u2014]/g,'-').replace(/\u2026/g,'...').replace(/\u20AC/g,'EUR').replace(/[^\x20-\xFF]/g,''); }
+async function docPdfBytes(d){
+  const PL=await loadPdfLib();
+  const {PDFDocument,StandardFonts,rgb}=PL;
+  const isF=(d.type==='facture'); const isA=(d.type==='avoir'); const sgn=isA?-1:1;
+  const ht=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0)*sgn, tva=ht*tvaFactor(), ttc=ht+tva;
+  const pdf=await PDFDocument.create();
+  let page=pdf.addPage([595.28,841.89]);
+  const font=await pdf.embedFont(StandardFonts.Helvetica), bold=await pdf.embedFont(StandardFonts.HelveticaBold);
+  const M=50; let y=800;
+  const dark=rgb(0.1,0.1,0.1), grey=rgb(0.42,0.42,0.42), vert=rgb(0.12,0.62,0.34);
+  const t=(s,x,yy,fo,sz,col)=>page.drawText(pdfTxt(s),{x,y:yy,size:sz||10,font:fo||font,color:col||dark});
+  const nl=(px)=>{ y-=px; if(y<90){ page=pdf.addPage([595.28,841.89]); y=800; } };
+  t(coName(),M,y,bold,16); nl(18);
+  if(CONFIG_DB.adr){ t(CONFIG_DB.adr,M,y,font,9); nl(12); }
+  const cpv=[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).join(' '); if(cpv){ t(cpv,M,y,font,9); nl(12); }
+  if(CONFIG_DB.siren){ t('SIREN '+CONFIG_DB.siren+(CONFIG_DB.tvaIntra?(' - TVA '+CONFIG_DB.tvaIntra):''),M,y,font,9); nl(12); }
+  nl(10);
+  t((isF?'FACTURE ':(isA?'AVOIR ':'DEVIS '))+(d.num||''),M,y,bold,14); nl(16);
+  if(isA && d.factureNum){ t('Annule la facture '+d.factureNum,M,y,font,10); nl(13); }
+  t('Date : '+(d.date||new Date(d.ts||Date.now()).toLocaleDateString('fr-FR')),M,y,font,10); nl(13);
+  if(isF && factureEcheance(d)){ t('Echeance de paiement : '+frDateTs(factureEcheance(d)),M,y,bold,10); nl(13); }
+  if(d.chantier){ t('Chantier : '+d.chantier,M,y,font,10); nl(12); }
+  t('Client : '+(d.client||'-'),M,y,font,10); nl(12);
+  if(d.adresse){ t(d.adresse,M,y,font,9); nl(12); }
+  nl(12);
+  t('Designation',M,y,bold,10); t('Qte',360,y,bold,10); t('PU HT',420,y,bold,10); t('Total HT',500,y,bold,10); nl(14);
+  (d.items||[]).forEach(it=>{ t(String(it.desc||'').slice(0,58),M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); nl(13); });
+  nl(8);
+  t('Total HT : '+fxAmt(ht)+' EUR',360,y,font,10); nl(13);
+  t((isFranchiseTva()?'TVA non applicable':('TVA '+tvaPct()+'%'))+' : '+fxAmt(tva)+' EUR',360,y,font,10); nl(13);
+  t('Total TTC : '+fxAmt(ttc)+' EUR',360,y,bold,11); nl(18);
+  if(isFranchiseTva()){ t(tvaMention(),M,y,font,8,grey); nl(14); }
+  if(isA){ t('Montant porte au credit du client. Cet avoir annule et remplace la facture citee.',M,y,font,9,grey); nl(14); }
+  if(isF && d.paye){ t('FACTURE ACQUITTEE le '+frDateTs(d.payeAt||d.ts)+(d.modePaiement?(' - '+modeLabel(d.modePaiement)):''),M,y,bold,11,vert); nl(16); }
+  else if(isF){ t('En cas de retard : penalites au taux de 3 fois le taux d\'interet legal'+(d.clientType==='pro'?', et indemnite forfaitaire de 40 EUR pour frais de recouvrement (art. L441-10 du code de commerce).':'.'),M,y,font,8,grey); nl(14); }
+  if(isF && CONFIG_DB.iban){
+    nl(6); t('Reglement par virement',M,y,bold,10); nl(13);
+    t('Titulaire : '+(CONFIG_DB.ibanTitu||coName()),M,y,font,9); nl(12);
+    t('IBAN : '+CONFIG_DB.iban+(CONFIG_DB.bic?('   BIC : '+CONFIG_DB.bic):''),M,y,font,9); nl(14);
+  }
+  if(isF && CONFIG_DB.conditions){ String(CONFIG_DB.conditions).split('\n').slice(0,6).forEach(function(l){ t(l.slice(0,105),M,y,font,8,grey); nl(11); }); }
+  if(!isF && !isA){
+    t('Devis valable 30 jours. Bon pour accord (date + signature) :',M,y,font,9,grey); nl(16);
+    if(d.signature){ try{ const png=await pdf.embedPng(d.signature); const dim=png.scale(60/png.height); page.drawImage(png,{x:M,y:y-dim.height+10,width:dim.width,height:dim.height}); nl(dim.height+4); t('Signe par '+(d.signedBy||'')+(d.signedAt?(' le '+new Date(d.signedAt).toLocaleDateString('fr-FR')):''),M,y,font,8,grey); nl(12); }catch(_){ } }
+  }
+  pdf.setProducer('BatiSuivi'); pdf.setCreator('BatiSuivi'); pdf.setTitle((isF?'Facture ':(isA?'Avoir ':'Devis '))+(d.num||''));
+  return await pdf.save();
+}
+
+/* ===== Envoi d'un devis / d'une facture par email (avec le PDF) ===== */
+function emailDoc(id,pid,kind){
+  const c=CHANTIERS[id]; const d=c&&c.published&&c.published[pid]; if(!d) return;
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const isF=(d.type==='facture'); const isA=(d.type==='avoir');
+  const ttc=docTotal(d)*(1+tvaFactor());
+  const ret=isF?factureRetard(d):0; const ech=isF?factureEcheance(d):0;
+  let sujet, corps;
+  if(isA){
+    sujet='Avoir '+(d.num||'')+' · '+coName();
+    corps='Bonjour,\n\nVous trouverez ci-joint l\'avoir '+(d.num||'')+(d.factureNum?(' annulant la facture '+d.factureNum):'')+", d'un montant de "+eurF2(ttc)+" TTC porté à votre crédit.\n\nJe reste à votre disposition pour toute question.\n\nCordialement,\n"+coName();
+  } else if(kind==='relance'){
+    sujet='Relance — facture '+(d.num||'')+' · '+coName();
+    corps='Bonjour,\n\nSauf erreur de notre part, la facture '+(d.num||'')+" d'un montant de "+eurF2(ttc)+' TTC reste en attente de règlement'+(ret?(', son échéance du '+frDateTs(ech)+' étant dépassée de '+ret+' jour'+(ret>1?'s':'')):'')+".\nVous en trouverez une copie ci-jointe.\n\nMerci de bien vouloir nous confirmer son paiement.\n\nCordialement,\n"+coName();
+  } else if(isF){
+    sujet='Facture '+(d.num||'')+' · '+coName();
+    corps='Bonjour,\n\nVous trouverez ci-joint la facture '+(d.num||'')+" d'un montant de "+eurF2(ttc)+' TTC'+(ech?(', à régler avant le '+frDateTs(ech)):'')+".\n\nJe reste à votre disposition pour toute question.\n\nCordialement,\n"+coName();
+  } else {
+    sujet='Devis '+(d.num||'')+' · '+coName();
+    corps='Bonjour,\n\nVous trouverez ci-joint le devis '+(d.num||'')+" d'un montant de "+eurF2(ttc)+' TTC pour le chantier « '+(d.chantier||'')+" ».\nVous pouvez également le consulter et le signer directement en ligne depuis votre espace client.\n\nJe reste à votre disposition pour toute question.\n\nCordialement,\n"+coName();
+  }
+  openModal(`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('mail')} ${kind==='relance'?'Relancer par email':'Envoyer par email'}</h2>
+    <p class="note" style="margin:0 0 12px">${esc(d.num||'')} · ${esc(d.chantier||'')}</p>
+    <label>Email du client</label><input id="em_to" type="email" inputmode="email" value="${esc(c.clientEmail||'')}" placeholder="client@email.fr">
+    <label style="margin-top:10px">Objet</label><input id="em_sub" type="text" value="${esc(sujet)}">
+    <label style="margin-top:10px">Message</label><textarea id="em_body" rows="8">${esc(corps)}</textarea>
+    <button class="btn primary" style="width:100%;margin-top:12px" onclick="emailDocSend('${id}','${pid}')">${icone('send')} Préparer l'envoi (avec le PDF)</button>
+    <p class="note" style="font-size:11px;margin-top:8px">BatiSuivi fabrique le PDF puis ouvre ton application email avec le message pré-rempli. Sur téléphone, le PDF est joint automatiquement ; sur ordinateur, il est téléchargé — il te reste à le glisser dans l'email.</p>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closeModal()">Annuler</button>`);
+}
+async function emailDocSend(id,pid){
+  const c=CHANTIERS[id]; const d=c&&c.published&&c.published[pid]; if(!d) return;
+  const to=(val('em_to')||'').trim(); const sub=(val('em_sub')||'').trim(); const body=(val('em_body')||'');
+  if(!to || to.indexOf('@')<1){ toast("Renseigne un email valide."); return; }
+  if(c.clientEmail!==to){ c.clientEmail=to; saveChantier(id); }
+  closeModal(); toast("Préparation du PDF…");
+  let bytes=null; try{ bytes=await docPdfBytes(d); }catch(e){ bytes=null; }
+  const nom=(d.type==='facture'?'Facture_':(d.type==='avoir'?'Avoir_':'Devis_'))+fxSafe(d.num||'document')+'.pdf';
+  if(bytes){
+    try{
+      const file=new File([bytes],nom,{type:'application/pdf'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:sub,text:body});
+        toast("Document partagé ✅"); return;
+      }
+    }catch(e){ if(e && e.name==='AbortError') return; }
+    try{ const blob=new Blob([bytes],{type:'application/pdf'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=nom; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(_){ } },20000); }catch(_){ }
+  }
+  window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body);
+  toast(bytes?"PDF téléchargé — glisse-le en pièce jointe 📎":"Email ouvert (PDF indisponible : vérifie ta connexion)");
+}
+
+/* ===== Échéance de paiement & factures en retard ===== */
+function delaiPaiement(){ const n=parseInt(CONFIG_DB.delaiPaiement,10); return (isNaN(n)||n<0)?30:n; }
+function frDateTs(ts){ return ts?new Date(ts).toLocaleDateString('fr-FR'):''; }
+function factureEcheance(d){ if(!d||d.type!=='facture') return 0; if(d.echeance) return d.echeance; const base=d.ts||0; return base?(base+delaiPaiement()*86400000):0; }
+function factureRetard(d){ if(!d||d.type!=='facture'||d.paye||d.annulee) return 0; const e=factureEcheance(d); if(!e) return 0; const j=Math.floor((Date.now()-e)/86400000); return j>0?j:0; }
+function facturesEnRetard(){ return factuAllDocs().filter(d=>d.type==='facture'&&factureRetard(d)>0).sort((a,b)=>factureRetard(b)-factureRetard(a)); }
+/* un devis est "facturé" si sa facture liée existe encore */
+function devisConverti(d){ const c=CHANTIERS[d.id]; return !!(d.factureId && c && c.published && c.published[d.factureId]); }
+function devisVersFacture(id,pid){
+  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  const c=CHANTIERS[id]; const dv=c&&c.published&&c.published[pid];
+  if(!dv||dv.type==='facture'){ toast("Devis introuvable."); return; }
+  if(!dv.signature){ toast("Ce devis n'est pas encore signé par le client."); return; }
+  if(dv.factureId && c.published[dv.factureId]){ toast("Ce devis a déjà été transformé en facture."); return; }
+  const items=(dv.items||[]).filter(it=>it&&it.desc); if(!items.length){ toast("Ce devis n'a aucune ligne."); return; }
+  const tot=items.reduce((s,it)=>s+it.qty*it.pu,0);
+  if(!confirm("Créer une facture reprenant les "+items.length+" ligne"+(items.length>1?'s':'')+" du devis "+(dv.num||'')+" ("+eurF(tot)+" HT) ?")) return;
+  const snap=docSnapshot(id,'facture');
+  snap.items=items.map(it=>({desc:it.desc,qty:it.qty,pu:it.pu}));
+  snap.num=nextFactureNum(); snap.ts=Date.now();
+  snap.echeance=snap.ts+delaiPaiement()*86400000;
+  snap.devisNum=dv.num||''; snap.devisId=pid;
+  const fid=uid(); if(!c.published) c.published={};
+  c.published[fid]=snap; dv.factureId=fid;
+  saveChantier(id); render();
+  toast("Facture "+snap.num+" créée depuis le devis ✅");
+}
 function factuDocRow(d){
   const tot=docTotal(d);
   const key=((d.num||'')+' '+(d.client||'')+' '+(d.nom||'')).toLowerCase();
+  const totTxt=(d.type==='avoir'?'− ':'')+eurF(tot)+' HT';
   let status='';
-  if(d.type==='facture'){ status = d.acompte?`<span class="pill">Acompte ${d.acompte===true?30:d.acompte}%</span>`:(d.solde?`<span class="pill">Solde</span>`:`<span class="pill">Émise</span>`); }
-  else { status = d.signature?`<span class="pill" style="color:var(--ok)">${icone('check-circle')} Signé</span>`:(relanceDevis(d)?`<span class="pill relance">${icone('clock')} ${relanceDevis(d)} j</span>`:`<span class="pill">En attente</span>`); }
+  if(d.type==='avoir'){
+    status=`<span class="pill" style="color:var(--acc2);background:rgba(61,139,255,.14)">${icone('undo')} Avoir</span>`+(d.factureNum?`<span class="pill">annule ${esc(d.factureNum)}</span>`:'');
+  }
+  else if(d.type==='facture'){
+    const ret=factureRetard(d); const ech=factureEcheance(d);
+    const base=(d.acompte?`<span class="pill" style="color:var(--warn);background:rgba(255,176,32,.16)">Acompte ${d.acompte===true?30:d.acompte}%</span>`:(d.solde?`<span class="pill" style="color:var(--acc2);background:rgba(61,139,255,.14)">Solde</span>`:`<span class="pill">Émise</span>`));
+    const pay = d.annulee ? `<span class="pill" style="opacity:.75">${icone('undo')} Annulée</span>`
+      : (d.paye ? `<span class="pill" style="color:var(--ok)">${icone('check-circle')} Payée${d.modePaiement?(' · '+modeLabel(d.modePaiement)):''}</span>`
+      : (ret ? `<span class="pill retard">${icone('alert')} En retard de ${ret} j</span>`
+             : `<span class="pill" style="color:#e6a700;background:rgba(230,167,0,.13)">Impayée${ech?(' · éch. '+frDateTs(ech)):''}</span>`));
+    status = base + pay;
+  }
+  else { status = (d.signature?`<span class="pill" style="color:var(--ok)">${icone('check-circle')} Signé</span>`:(relanceDevis(d)?`<span class="pill relance">${icone('clock')} ${relanceDevis(d)} j</span>`:`<span class="pill">En attente</span>`)) + (devisConverti(d)?`<span class="pill" style="color:var(--acc2)">${icone('receipt')} Facturé</span>`:''); }
   return `<div class="member-row" data-q="${esc(key)}">
     <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾':'📄'} ${esc(d.num||'')}</b>
-      <div class="tag">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''} · ${eurF(tot)} HT ${status}</div></div>
+      <div class="tag">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''} · ${totTxt} ${status}</div></div>
     <button class="iconbtn" title="Voir / imprimer" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">${icone('eye')}</button>
+    <button class="iconbtn" title="Envoyer par email" onclick="emailDoc('${d.id}','${d.pid}')">${icone('mail')}</button>
+    ${(d.type!=='facture' && d.signature && !devisConverti(d))?`<button class="iconbtn" title="Transformer en facture" onclick="devisVersFacture('${d.id}','${d.pid}')" style="color:var(--acc2);border-color:var(--acc2)">${icone('receipt')}</button>`:''}
+    ${(d.type==='facture'&&!d.annulee)?`<button class="iconbtn" title="${d.paye?'Marquer comme impayée':'Marquer comme payée'}" onclick="togglePaye('${d.id}','${d.pid}')" style="${d.paye?'color:var(--ok);border-color:var(--ok)':''}">${icone('euro')}</button>`:''}
+    ${(d.type==='facture'&&!d.paye&&!d.annulee)?`<button class="iconbtn" title="Relancer le client" onclick="relanceFacture('${d.id}','${d.pid}')">${icone('send')}</button>`:''}
+    ${(d.type==='facture'&&!d.annulee)?`<button class="iconbtn" title="Créer un avoir (annuler cette facture)" onclick="creerAvoir('${d.id}','${d.pid}')">${icone('undo')}</button>`:''}
     ${(facturXOn() && d.type==='facture' && (CHANTIERS[d.id]||{}).clientType==='pro')?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
     <button class="iconbtn danger" title="Supprimer" onclick="delFactuDoc('${d.id}','${d.pid}')">${icone('trash')}</button>
   </div>`;
 }
 function factuFilter(kind){ const inp=document.getElementById('fq_'+kind); const ql=((inp&&inp.value)||'').toLowerCase().trim(); const list=document.getElementById('list_'+kind); if(!list) return; Array.from(list.children).forEach(el=>{ const k=el.getAttribute('data-q')||''; el.style.display=(!ql||k.indexOf(ql)>=0)?'':'none'; }); }
-function delFactuDoc(id,pid){ if(!confirm("Supprimer ce document ? Il sera aussi retiré de l'espace client.")) return; unpublishDoc(id,pid); }
+function delFactuDoc(id,pid){
+  const c=CHANTIERS[id]; const d=c&&c.published&&c.published[pid]; if(!d) return;
+  if(!confirm("Supprimer ce document ? Il sera aussi retiré de l'espace client.")) return;
+  if(d.type==='avoir' && d.factureId){ const f=c.published[d.factureId]; if(f){ f.annulee=false; f.avoirId=null; } }
+  unpublishDoc(id,pid);
+}
+function togglePaye(id,pid){ const c=CHANTIERS[id]; const d=c&&c.published&&c.published[pid]; if(!d) return;
+  if(d.paye){ d.paye=false; d.payeAt=null; d.modePaiement=null; saveChantier(id); render(); toast('Facture remise en impayée'); return; }
+  openPaiement(id,pid);
+}
+function relanceFacture(id,pid){ emailDoc(id,pid,'relance'); }
 
+function factuNouveau(type){
+  const chs=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived).map(function(id){return Object.assign({id:id},CHANTIERS[id]);}).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});
+  const mot=(type==='facture')?'facture':'devis';
+  var h='<div class="grabber"></div><h2 style="margin:0 0 4px">Nouveau '+mot+'</h2><p class="note" style="margin:0 0 12px">Un '+mot+' se crée depuis un chantier : choisis-en un (ou crée-le), ajoute tes lignes, puis publie-le.</p>';
+  if(chs.length){ h+=chs.map(function(c){ return '<button class="btn ghost" style="width:100%;margin-bottom:8px;justify-content:flex-start;text-align:left" onclick="closeModal();openChantier(\''+c.id+'\')">'+icone('building','16px')+' '+esc(c.nom||'Chantier')+'</button>'; }).join(''); }
+  else { h+='<p class="note" style="margin:0 0 10px">Aucun chantier en cours pour l\'instant.</p>'; }
+  h+='<button class="btn primary" style="width:100%;margin-top:6px" onclick="closeModal();newChantier()">+ Créer un nouveau chantier</button>';
+  openModal(h);
+}
 function factuDevis(){
-  const devs=factuAllDocs().filter(d=>d.type!=='facture');
+  const devs=factuAllDocs().filter(d=>d.type!=='facture' && d.type!=='avoir');
   const sub=FDEVIS_SUB;
   const now=devs.filter(docEnCours);
   const past=devs.filter(d=>d.signature);
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Devis</h2></div>
+    <button class="btn primary" style="width:100%;margin-bottom:8px" onclick="factuNouveau('devis')">+ Nouveau devis</button>
     <div class="row" style="gap:6px"><button class="btn ${sub==='now'?'primary':'ghost'}" style="flex:1" onclick="setFDevisSub('now')">En ce moment</button><button class="btn ${sub==='past'?'primary':'ghost'}" style="flex:1" onclick="setFDevisSub('past')">Passés</button></div>`;
   if(sub==='now'){
     if(!now.length) h+=`<p class="note" style="margin-top:10px">Aucun devis en cours. Ouvre un chantier, ajoute des lignes, puis « Publier le devis ».</p>`;
@@ -3237,19 +3463,106 @@ function factuDevis(){
   return h;
 }
 function factuFactures(){
-  const facts=factuAllDocs().filter(d=>d.type==='facture');
+  const facts=factuAllDocs().filter(d=>d.type==='facture' || d.type==='avoir');
   const type=FFACT_TYPE, sub=FFACT_SUB;
   const isPro=d=>((CHANTIERS[d.id]||{}).clientType==='pro');
   const byType=facts.filter(d=> type==='pro'? isPro(d) : !isPro(d));
-  const rows = sub==='now' ? byType.filter(docEnCours) : byType.filter(d=>!docEnCours(d));
+  const rows = sub==='impayees' ? byType.filter(d=>d.type==='facture' && !d.paye && !d.annulee).sort((a,b)=>factureRetard(b)-factureRetard(a)) : (sub==='now' ? byType.filter(docEnCours) : byType.filter(d=>!docEnCours(d)));
+  const nbRetard = rows.filter(d=>factureRetard(d)>0).length;
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Factures</h2></div>
+    <button class="btn primary" style="width:100%;margin-bottom:8px" onclick="factuNouveau('facture')">+ Nouvelle facture</button>
     <div class="row" style="gap:6px"><button class="btn ${type==='pro'?'primary':'ghost'}" style="flex:1" onclick="setFFactType('pro')">Pros</button><button class="btn ${type==='part'?'primary':'ghost'}" style="flex:1" onclick="setFFactType('part')">Particuliers</button></div>
-    <div class="row" style="gap:6px;margin-top:8px"><button class="btn ${sub==='now'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('now')">En ce moment</button><button class="btn ${sub==='past'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('past')">Passées</button></div>`;
-  if(!rows.length) h+=`<p class="note" style="margin-top:10px">Aucune facture ${sub==='now'?'en cours':'passée'} pour ce type de client.</p>`;
-  else if(sub==='now') h+=`<div style="margin-top:10px">`+rows.map(factuDocRow).join('')+`</div>`;
-  else h+=`<div style="margin-top:10px">`+groupByMonthHTML(rows)+`</div>`;
+    <div class="row" style="gap:6px;margin-top:8px"><button class="btn ${sub==='now'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('now')">En cours</button><button class="btn ${sub==='past'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('past')">Passées</button><button class="btn ${sub==='impayees'?'primary':'ghost'}" style="flex:1" onclick="setFFactSub('impayees')">Impayées</button></div>`;
+  if(sub==='impayees' && nbRetard) h+=`<p class="note" style="margin-top:8px;font-size:12px;color:var(--danger)"><b>${nbRetard} facture${nbRetard>1?'s':''} en retard</b> (échéance dépassée) — affichées en premier.</p>`;
+  if(!rows.length) h+=`<p class="note" style="margin-top:10px">${sub==='impayees'?'Aucune facture impayée pour ce type de client.':('Aucune facture '+(sub==='now'?'en cours':'passée')+' pour ce type de client.')}</p>`;
+  else if(sub==='past') h+=`<div style="margin-top:10px">`+groupByMonthHTML(rows)+`</div>`;
+  else h+=`<div style="margin-top:10px">`+rows.map(factuDocRow).join('')+`</div>`;
   if(type==='pro' && facturXOn()) h+=`<p class="note" style="margin-top:8px;font-size:11px">${icone('download')} = facture électronique Factur-X (clients pros).</p>`;
   h+=`</div>`;
+  return h;
+}
+function statBar(pct){ return `<span style="flex:1;display:block;height:9px;border-radius:6px;background:var(--card2);overflow:hidden"><span style="display:block;height:100%;width:${Math.max(0,Math.min(100,pct))}%;background:var(--acc)"></span></span>`; }
+function factuStats(){
+  const docs=factuAllDocs();
+  const facts=docs.filter(d=>d.type==='facture' && !d.annulee);
+  const devs=docs.filter(d=>d.type!=='facture' && d.type!=='avoir');
+  const nbAvoirs=docs.filter(d=>d.type==='avoir').length;
+  const Y=new Date().getFullYear();
+  const factsY=facts.filter(d=>new Date(d.ts||0).getFullYear()===Y);
+  const caY=factsY.reduce((s,d)=>s+docTotal(d),0);
+  const encY=factsY.filter(d=>d.paye).reduce((s,d)=>s+docTotal(d),0);
+  const reste=facts.filter(d=>!d.paye).reduce((s,d)=>s+docTotal(d),0);
+  const panier=factsY.length?Math.round(caY/factsY.length):0;
+
+  let h=`<div class="kpis">
+    <div class="kpi ok"><div class="big">${eurF(caY)}</div><div class="lbl">CA facturé ${Y} (HT)</div></div>
+    <div class="kpi"><div class="big">${eurF(encY)}</div><div class="lbl">Déjà encaissé ${Y}</div></div>
+    <div class="kpi acc"><div class="big">${eurF(reste)}</div><div class="lbl">Reste à encaisser</div></div>
+    <div class="kpi"><div class="big">${eurF(panier)}</div><div class="lbl">Facture moyenne</div></div>
+  </div>`;
+
+  /* --- CA mois par mois (12 mois glissants) --- */
+  const MOIS=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  const now=new Date(); const buckets=[];
+  for(let i=11;i>=0;i--){ const dt=new Date(now.getFullYear(),now.getMonth()-i,1); buckets.push({y:dt.getFullYear(),m:dt.getMonth(),label:MOIS[dt.getMonth()]+' '+String(dt.getFullYear()).slice(2),val:0}); }
+  facts.forEach(d=>{ const dt=new Date(d.ts||0); const b=buckets.find(x=>x.y===dt.getFullYear()&&x.m===dt.getMonth()); if(b) b.val+=docTotal(d); });
+  const maxB=Math.max(1,...buckets.map(b=>b.val));
+  const totB=buckets.reduce((s,b)=>s+b.val,0);
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('chart')} CA facturé mois par mois</h2></div>
+    ${totB?buckets.map(b=>`<div class="task-row" style="gap:10px"><span style="width:56px;font-size:12px" class="note">${b.label}</span>${statBar(b.val/maxB*100)}<b style="width:82px;text-align:right;font-size:13px">${b.val?eurF(b.val):'—'}</b></div>`).join(''):`<p class="note" style="margin:0">Aucune facture pour l'instant.</p>`}
+    <p class="note" style="margin-top:8px;font-size:11px">12 derniers mois · total ${eurF(totB)} HT${nbAvoirs?(' · '+nbAvoirs+' avoir'+(nbAvoirs>1?'s':'')+' déduit'+(nbAvoirs>1?'s':'')):''}</p>
+  </div>`;
+
+  /* --- Transformation devis -> facture --- */
+  const nbDev=devs.length;
+  const nbSign=devs.filter(d=>d.signature).length;
+  const nbConv=devs.filter(d=>devisConverti(d)).length;
+  const txSign=nbDev?Math.round(nbSign/nbDev*100):0;
+  const txConv=nbSign?Math.round(nbConv/nbSign*100):0;
+  const mtDev=devs.reduce((s,d)=>s+docTotal(d),0);
+  const mtSign=devs.filter(d=>d.signature).reduce((s,d)=>s+docTotal(d),0);
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('file')} Transformation devis → facture</h2></div>
+    ${nbDev?`
+    <div class="task-row" style="gap:10px"><span style="flex:1">Devis signés</span>${statBar(txSign)}<b style="width:70px;text-align:right">${txSign}%</b></div>
+    <p class="note" style="margin:0 0 8px;font-size:11px">${nbSign} devis signés sur ${nbDev} émis · ${eurF(mtSign)} signés sur ${eurF(mtDev)} proposés</p>
+    <div class="task-row" style="gap:10px"><span style="flex:1">Signés → facturés</span>${statBar(txConv)}<b style="width:70px;text-align:right">${txConv}%</b></div>
+    <p class="note" style="margin:0;font-size:11px">${nbConv} devis signés sur ${nbSign} ont été transformés en facture.${(nbSign-nbConv)>0?` <b style="color:var(--warn)">${nbSign-nbConv} restent à facturer.</b>`:''}</p>`
+    :`<p class="note" style="margin:0">Aucun devis publié pour l'instant.</p>`}
+  </div>`;
+
+  /* --- Délai moyen d'encaissement --- */
+  const payes=facts.filter(d=>d.paye && d.payeAt && d.ts);
+  if(payes.length){
+    const dmoy=Math.round(payes.reduce((s,d)=>s+Math.max(0,(d.payeAt-d.ts)/86400000),0)/payes.length);
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('clock')} Délai moyen d'encaissement</h2></div>
+      <div style="font-family:'Sora';font-size:32px;font-weight:800;color:${dmoy>delaiPaiement()?'var(--danger)':'var(--ok)'}">${dmoy} jour${dmoy>1?'s':''}</div>
+      <p class="note" style="margin-top:2px;font-size:11px">Entre l'émission et le paiement, sur ${payes.length} facture${payes.length>1?'s':''} encaissée${payes.length>1?'s':''}. Ton délai annoncé est de ${delaiPaiement()} jours.</p>
+    </div>`;
+  }
+
+  /* --- Top clients --- */
+  const map={};
+  facts.forEach(d=>{ const c=CHANTIERS[d.id]||{}; const nom=(c.clientType==='pro'?((c.clientSociete||'').trim()||clientFull(c)):clientFull(c))||'—'; if(!nom||nom==='—') return; map[nom]=(map[nom]||0)+docTotal(d); });
+  const top=Object.keys(map).map(k=>({k,v:map[k]})).sort((a,b)=>b.v-a.v).slice(0,5);
+  const maxT=Math.max(1,...top.map(t=>t.v));
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('users')} Top clients (CA facturé)</h2></div>
+    ${top.length?top.map((t,i)=>`<div class="task-row" style="gap:10px"><span style="width:18px;font-weight:800;color:var(--acc2)">${i+1}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.k)}</span>${statBar(t.v/maxT*100)}<b style="width:82px;text-align:right;font-size:13px">${eurF(t.v)}</b></div>`).join(''):`<p class="note" style="margin:0">Aucun client facturé pour l'instant.</p>`}
+  </div>`;
+
+  /* --- Chantiers partiellement facturés (acompte / solde) --- */
+  const partiels=Object.keys(CHANTIERS).map(id=>({id,c:CHANTIERS[id],r:resteAPayer(CHANTIERS[id])}))
+    .filter(x=>x.c && !x.c.archived && x.r.total>0 && x.r.paye>0 && x.r.reste>0)
+    .sort((a,b)=>b.r.reste-a.r.reste);
+  if(partiels.length){
+    h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Chantiers partiellement facturés <span class="tag">${partiels.length}</span></h2></div>
+      <p class="note" style="margin:0 0 10px;font-size:11px">Un acompte a été facturé, mais le solde ne l'est pas encore.</p>
+      ${partiels.map(x=>{ const pct=Math.round(x.r.paye/x.r.total*100); return `<div style="margin-bottom:12px">
+        <div class="task-row" style="gap:10px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${esc(x.c.nom||'Chantier')}</b></span><b style="font-size:13px">${eurF(x.r.reste)} restants</b></div>
+        <div class="task-row" style="gap:10px;padding-top:0">${statBar(pct)}<span class="note" style="width:44px;text-align:right;font-size:11px">${pct}%</span></div>
+        <button class="btn ghost mini" style="width:100%" onclick="publishFactureSolde('${x.id}')">${icone('receipt','16px')} Facturer le solde (${eurF(x.r.reste)})</button>
+      </div>`; }).join('')}
+    </div>`;
+  }
   return h;
 }
 function factuClients(){
@@ -3287,6 +3600,10 @@ function factuParams(){
     <div class="task-row"><span style="flex:1">TVA</span><b>${esc(tvaTxt)}</b></div>
     <div class="task-row"><span style="flex:1">Préfixe devis / facture</span><b>${esc(devisPrefix())} / ${esc(factPrefix())}</b></div>
     <button class="btn primary" style="width:100%;margin-top:10px" onclick="openFacturationSettings()">${icone('settings')} Modifier les paramètres de facturation</button>
+  </div>
+  <div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('download')} Export comptable</h2></div>
+    <button class="btn ghost" style="width:100%" onclick="downloadAllDocs('facture')">${icone('download')} Télécharger toutes les factures</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="downloadAllDocs('devis')">${icone('download')} Télécharger tous les devis</button>
   </div>
   ${isPremium()?`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>${facturXOn()?`<button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button>`:`<p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) sera <b>disponible le 5 août</b>.</p>`}
   </div>`:`<div class="card" style="opacity:.7"><div class="section-title" style="margin-top:0;display:flex;align-items:center;gap:8px"><h2 style="font-size:15px;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2.5px">${icone('receipt')} Déclaration & plateforme</h2><span style="flex:0 0 auto;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></div><p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) est réservée à l'abonnement Premium.</p></div>`}`;
@@ -3626,7 +3943,7 @@ function caChartCard(all,eur){
   const now=new Date(); const buckets=[];
   for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); buckets.push({y:d.getFullYear(),m:d.getMonth(),label:MOIS[d.getMonth()],val:0}); }
   all.forEach(c=>{ const pub=c.published?Object.values(c.published):[];
-    pub.filter(d=>d.type==='facture').forEach(d=>{ const dt=new Date(d.ts||0); const b=buckets.find(x=>x.y===dt.getFullYear()&&x.m===dt.getMonth()); if(b) b.val+=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); });
+    pub.filter(d=>d.type==='facture' && !d.annulee).forEach(d=>{ const dt=new Date(d.ts||0); const b=buckets.find(x=>x.y===dt.getFullYear()&&x.m===dt.getMonth()); if(b) b.val+=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0); });
   });
   const max=Math.max(1,...buckets.map(b=>b.val));
   const tot=buckets.reduce((s,b)=>s+b.val,0);
@@ -3648,7 +3965,7 @@ function fxRate(){ return tvaRate().toFixed(2); }
 function ereportingRows(all){
   const map={};
   all.forEach(c=>{ const pub=c.published?Object.values(c.published):[];
-    pub.filter(d=>d.type==='facture').forEach(d=>{ const dt=new Date(d.ts||0); const y=dt.getFullYear(), m=dt.getMonth(); const key=y+'-'+String(m+1).padStart(2,'0');
+    pub.filter(d=>d.type==='facture' && !d.annulee).forEach(d=>{ const dt=new Date(d.ts||0); const y=dt.getFullYear(), m=dt.getMonth(); const key=y+'-'+String(m+1).padStart(2,'0');
       const ht=(d.items||[]).reduce((s,it)=>s+it.qty*it.pu,0);
       if(!map[key]) map[key]={key,y,m,ht:0,n:0}; map[key].ht+=ht; map[key].n++; });
   });
@@ -3964,7 +4281,10 @@ function buildNotifs(){
   try{ var un=totalChatUnread(); if(un>0){ var lg=chatLast('group'); var mts=(lg&&lg.ts)||now; out.push({key:'msg:group', ts:mts, ic:'message', nw:mts>seen, t:"Messages \u00e9quipe", s:un+" message"+(un>1?'s':'')+" non lu"+(un>1?'s':''), go:"goHub('equipe');setHTab('messagerie')"}); } }catch(_){ }
   Object.keys(CHANTIERS).forEach(function(id){ var c=CHANTIERS[id]; if(!c) return;
     if(c.messages){ var seenC=((typeof MSG_SEEN!=='undefined'&&MSG_SEEN)?MSG_SEEN[id]:0)||0; var arr=Object.values(c.messages).filter(function(m){ return m&&m.from!==me&&m.from!=='patron'; }).sort(function(a,b){return (a.ts||0)-(b.ts||0);}); var unc=arr.filter(function(m){ return (m.ts||0)>seenC; }).length; if(unc>0){ var lts=arr.length?(arr[arr.length-1].ts||now):now; out.push({key:'msgc:'+id, ts:lts, ic:'message', nw:lts>seen, t:"Message client", s:(c.nom||"Chantier")+" \u00b7 "+unc+" non lu"+(unc>1?'s':''), go:"goHub('chantiers')"}); } }
-    if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid]; if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; out.push({key:'devis:'+id+':'+pid, ts:ts, ic:'check', nw:ts>seen, t:"Devis sign\u00e9", s:(c.nom||"Chantier")+" \u00b7 "+(d.num||''), go:"goHub('facturation')"}); } }); }
+    if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid];
+      if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; var dj=(typeof devisConverti==='function')&&devisConverti({id:id,factureId:d.factureId}); out.push({key:'devis:'+id+':'+pid, ts:ts, ic:'check', nw:ts>seen, t:"Devis sign\u00e9", s:(c.nom||"Chantier")+" \u00b7 "+(d.num||'')+(dj?"":" \u00b7 \u00e0 transformer en facture"), go:"goHub('facturation');setFTab('devis')"}); }
+      if(d&&d.type==='facture'&&!d.paye){ var r=(typeof factureRetard==='function')?factureRetard(d):0; if(r>0){ out.push({key:'factret:'+id+':'+pid, ts:factureEcheance(d), nw:false, ic:'alert', t:"Facture en retard", s:(d.num||'')+" \u00b7 "+(c.nom||"Chantier")+" \u00b7 "+r+" j de retard", go:"setFFactSub('impayees');goHub('facturation');setFTab('factures')"}); } }
+    }); }
     if(c.frais){ Object.keys(c.frais).forEach(function(k){ var f=c.frais[k]; if(f&&f.by&&f.by!==myn){ out.push({key:'frais:'+id+':'+k, ts:f.ts||0, ic:'receipt', nw:(f.ts||0)>seen, t:"Note de frais", s:(f.montant||0)+" \u20ac \u00b7 "+f.by, go:"goHub('equipe');setHTab('frais')"}); } }); }
     if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var days=Math.round((fin-now)/86400000); if(days<=7){ out.push({key:'deadline:'+id, ts:fin, ic:'clock', nw:false, t:(days<0?"Chantier en retard":"\u00c9ch\u00e9ance proche"), s:(c.nom||"Chantier")+(days<0?(" \u00b7 en retard de "+(-days)+" j"):(days===0?" \u00b7 aujourd'hui":(" \u00b7 dans "+days+" j"))), go:"goHub('planning');setHTab('echeances')"}); } } }
   });
@@ -4022,12 +4342,23 @@ function openFacturationSettings(){
     <label style="margin-top:10px;display:block">Identité légale (pour la facture électronique)</label>
     <div class="row" style="margin-top:10px"><div><label>SIREN</label><input id="fs_siren" type="text" inputmode="numeric" value="${esc(CONFIG_DB.siren||'')}" placeholder="9 chiffres" maxlength="11"></div>
       <div><label>N° TVA intracom.</label><input id="fs_tva" type="text" value="${esc(CONFIG_DB.tvaIntra||'')}" placeholder="FR…" maxlength="15"></div></div>
-    <div class="row" style="margin-top:10px"><div><label>Taux de TVA (%)</label><input id="fs_taux" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(String(tvaRate()))}" placeholder="20"></div><div></div></div>
+    <div class="row" style="margin-top:10px"><div><label>Taux de TVA (%)</label><input id="fs_taux" type="number" inputmode="decimal" step="0.1" min="0" value="${esc(String(tvaRate()))}" placeholder="20"></div>
+      <div><label>Délai de paiement (jours)</label><input id="fs_delai" type="number" inputmode="numeric" min="0" max="365" value="${delaiPaiement()}" placeholder="30"></div></div>
+    <p class="note" style="font-size:11px;margin-top:4px">Échéance appliquée aux nouvelles factures (30 jours par défaut). Une facture impayée après cette date passe automatiquement en <b style="color:var(--danger)">« En retard »</b>.</p>
     <p class="note" style="font-size:11px;margin-top:4px">Taux appliqué à tes devis et factures. Mets <b>0</b> si tu n'es pas assujetti à la TVA (franchise en base, art. 293 B du CGI) : la mention « TVA non applicable » s'affichera automatiquement.</p>
     <div style="margin-top:8px"><label>Adresse de l'entreprise</label><input id="fs_adr" type="text" value="${esc(CONFIG_DB.adr||'')}" placeholder="N° et rue"></div>
     <div class="row" style="margin-top:10px"><div><label>Code postal</label><input id="fs_cp" type="text" inputmode="numeric" value="${esc(CONFIG_DB.cp||'')}" maxlength="5"></div>
       <div><label>Ville</label><input id="fs_ville" type="text" value="${esc(CONFIG_DB.ville||'')}"></div></div>
     <p class="note" style="font-size:11px;margin-top:4px">Obligatoires pour générer une facture électronique conforme (format Factur-X) à destination des professionnels.</p>
+    <label style="margin-top:14px;display:block">Coordonnées bancaires (imprimées sur tes factures)</label>
+    <div style="margin-top:6px"><label>IBAN</label><input id="fs_iban" type="text" value="${esc(CONFIG_DB.iban||'')}" placeholder="FR76 …" maxlength="40"></div>
+    <div class="row" style="margin-top:10px"><div><label>BIC</label><input id="fs_bic" type="text" value="${esc(CONFIG_DB.bic||'')}" placeholder="AGRIFRPP…" maxlength="15"></div>
+      <div><label>Titulaire du compte</label><input id="fs_titu" type="text" value="${esc(CONFIG_DB.ibanTitu||'')}" placeholder="${esc(coName())}"></div></div>
+    <div style="margin-top:10px"><label>Conditions de paiement (texte libre sur la facture)</label><textarea id="fs_cond" rows="3" placeholder="Ex : Paiement par virement sous 30 jours. Escompte pour paiement anticipé : néant.">${esc(CONFIG_DB.conditions||'')}</textarea></div>
+    <p class="note" style="font-size:11px;margin-top:4px">Laisse vide si tu ne veux rien afficher. Les pénalités de retard légales sont ajoutées automatiquement.</p>
+    <div class="row" style="margin-top:12px"><div><label>Préfixe avoir</label><input id="fs_avpre" type="text" value="${avoirPrefix()}" maxlength="6"></div>
+      <div><label>Prochain n° d'avoir</label><input id="fs_avnum" type="number" min="1" value="${(CONFIG_DB.avoirCounter||0)+1}"></div></div>
+    <p class="note" style="font-size:11px;margin-top:4px">Un avoir annule une facture (erreur, annulation de chantier). Il se crée depuis le bouton ${icone('undo')} sur une facture.</p>
     <button class="btn ghost" style="width:100%;margin-top:10px" onclick="openEreportingExport()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Récap & export e-reporting (HT + TVA par mois)</button>
     <div class="row" style="margin-top:14px"><button class="btn ghost" style="flex:1" onclick="closeModal()">Annuler</button><button class="btn primary" style="flex:2" onclick="saveFacturationSettings()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button></div>`);
 }
@@ -4040,6 +4371,13 @@ function saveFacturationSettings(){
   CONFIG_DB.siren=(val('fs_siren')||'').trim();
   CONFIG_DB.tvaIntra=(val('fs_tva')||'').trim().toUpperCase();
   const tx=val('fs_taux'); CONFIG_DB.tvaRate=(tx===''||tx===null||tx===undefined)?20:Math.max(0,Number(String(tx).replace(',','.'))||0);
+  const dl=parseInt(val('fs_delai'),10); CONFIG_DB.delaiPaiement=(isNaN(dl)||dl<0)?30:Math.min(365,dl);
+  CONFIG_DB.iban=(val('fs_iban')||'').trim().toUpperCase();
+  CONFIG_DB.bic=(val('fs_bic')||'').trim().toUpperCase();
+  CONFIG_DB.ibanTitu=(val('fs_titu')||'').trim();
+  CONFIG_DB.conditions=(val('fs_cond')||'').trim();
+  const ap=(val('fs_avpre')||'').trim().toUpperCase(); if(ap) CONFIG_DB.avoirPrefix=ap;
+  const nextA=parseInt(val('fs_avnum'),10); if(!isNaN(nextA)&&nextA>0) CONFIG_DB.avoirCounter=nextA-1;
   CONFIG_DB.adr=(val('fs_adr')||'').trim();
   CONFIG_DB.cp=(val('fs_cp')||'').trim();
   CONFIG_DB.ville=(val('fs_ville')||'').trim();
@@ -4381,7 +4719,8 @@ function docSnapshot(id,type){
   };
 }
 function buildDocHTML(doc){
-  const total=doc.items.reduce((s,it)=>s+(it.qty*it.pu),0); const tva=total*tvaFactor(); const ttc=total+tva;
+  const sgn=(doc.type==='avoir')?-1:1;
+  const total=doc.items.reduce((s,it)=>s+(it.qty*it.pu),0)*sgn; const tva=total*tvaFactor(); const ttc=total+tva;
   const logo=coLogo()?`<img src="${coLogo()}" style="width:60px;height:60px;object-fit:contain;border-radius:10px">`:`<div style="width:60px;height:60px;border-radius:10px;background:#3d8bff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:30px">B</div>`;
   const rows=doc.items.map(it=>`<tr><td>${esc(it.desc)}</td><td style="text-align:center">${it.qty}</td><td style="text-align:right">${it.pu.toFixed(2)} €</td><td style="text-align:right">${(it.qty*it.pu).toFixed(2)} €</td></tr>`).join('');
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${doc.num}</title>
@@ -4400,15 +4739,18 @@ function buildDocHTML(doc){
   @media print{body{padding:20px}.toolbar{display:none}}</style></head><body>
   <div class="toolbar"><button class="tb-close" onclick="window.close()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg> Fermer</button><button class="tb-print" onclick="window.print()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg> Imprimer / Enregistrer en PDF</button></div>
   <div class="head"><div style="display:flex;gap:14px;align-items:center">${logo}<div><h1>${esc(coName())}</h1><div class="muted">${esc(coSlogan()||'')}</div></div></div>
-    <div class="muted" style="text-align:right"><b>${doc.type==='facture'?'FACTURE':'DEVIS'}</b><br>${doc.num}<br>${doc.date}</div></div>
+    <div class="muted" style="text-align:right"><b>${doc.type==='facture'?'FACTURE':(doc.type==='avoir'?'AVOIR':'DEVIS')}</b><br>${doc.num}<br>${doc.date}</div></div>
   <div class="muted"><b>Chantier :</b> ${esc(doc.chantier)}<br><b>Client :</b> ${esc(doc.client||'—')}${(doc.clientType==='pro'&&doc.clientSiren)?(' (SIREN '+esc(doc.clientSiren)+')'):''}<br><b>Adresse :</b> ${esc(doc.adresse||'—')}</div>
-  <div class="doc-title">${doc.type==='facture'?(doc.acompte?`Facture d'acompte (${doc.acompte===true?30:doc.acompte}%)`:(doc.solde?'Facture de solde':'Facture')):'Devis'}</div>
+  <div class="doc-title">${doc.type==='avoir'?('Avoir (note de crédit)'+(doc.factureNum?(' — annule la facture '+esc(doc.factureNum)):'')):(doc.type==='facture'?(doc.acompte?`Facture d'acompte (${doc.acompte===true?30:doc.acompte}%)`:(doc.solde?'Facture de solde':'Facture')):'Devis')}</div>
   <table><thead><tr><th>Description</th><th style="text-align:center">Qté</th><th style="text-align:right">P.U. HT</th><th style="text-align:right">Total HT</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="totals"><div><span>Total HT</span><span>${total.toFixed(2)} €</span></div>
     <div><span>${isFranchiseTva()?'TVA':('TVA '+tvaPct()+'%')}</span><span>${tva.toFixed(2)} €</span></div>
     <div class="ttc"><span>TOTAL TTC</span><span>${ttc.toFixed(2)} €</span></div></div>
   ${isFranchiseTva()?'<p class="muted" style="margin-top:10px">TVA non applicable, art. 293 B du CGI.</p>':''}
-  ${doc.type==='devis'?`<p class="muted" style="margin-top:30px">Devis valable 30 jours. Bon pour accord (date + signature) :</p>${doc.signature?`<div style="margin-top:8px"><img src="${doc.signature}" style="max-height:90px;border:1px solid #eee;border-radius:8px;background:#fff"><div class="muted" style="margin-top:4px">Signé par ${esc(doc.signedBy||'')} le ${doc.signedAt?frSignAt(doc.signedAt):''}</div></div>`:`<div style="height:70px;border:1px dashed #ccc;border-radius:8px;margin-top:8px"></div>`}`:`<p class="muted" style="margin-top:30px">Facture payable à réception. Merci de votre confiance.</p>`}
+  ${doc.type==='avoir'?`<p class="muted" style="margin-top:30px"><b>Avoir${doc.factureNum?(' annulant la facture '+esc(doc.factureNum)):''}.</b> Montant porté au crédit du client. Cet avoir annule et remplace la facture citée.</p>`:(doc.type==='devis'?`<p class="muted" style="margin-top:30px">Devis valable 30 jours. Bon pour accord (date + signature) :</p>${doc.signature?`<div style="margin-top:8px"><img src="${doc.signature}" style="max-height:90px;border:1px solid #eee;border-radius:8px;background:#fff"><div class="muted" style="margin-top:4px">Signé par ${esc(doc.signedBy||'')} le ${doc.signedAt?frSignAt(doc.signedAt):''}</div></div>`:`<div style="height:70px;border:1px dashed #ccc;border-radius:8px;margin-top:8px"></div>`}`:`${doc.paye?`<div style="margin-top:28px;display:inline-block;border:2px solid #1f9d57;color:#1f9d57;font-weight:bold;border-radius:8px;padding:9px 16px">FACTURE ACQUITTÉE le ${new Date(doc.payeAt||doc.ts||Date.now()).toLocaleDateString('fr-FR')}${doc.modePaiement?(' — '+modeLabel(doc.modePaiement)):''}</div>`:''}
+  <p class="muted" style="margin-top:${doc.paye?'14px':'30px'}">${doc.echeance?('<b>Échéance de paiement : '+new Date(doc.echeance).toLocaleDateString('fr-FR')+'</b>. '):'Facture payable à réception. '}Merci de votre confiance.<br>En cas de retard : pénalités au taux de 3 fois le taux d'intérêt légal${doc.clientType==='pro'?", et indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du code de commerce)":""}.</p>
+  ${(CONFIG_DB.iban)?`<div style="margin-top:16px;border:1px solid #e0e0e0;border-radius:8px;padding:12px 14px"><b style="font-size:13px">Règlement par virement</b><div class="muted" style="margin-top:4px">Titulaire : ${esc(CONFIG_DB.ibanTitu||coName())}<br>IBAN : ${esc(CONFIG_DB.iban)}${CONFIG_DB.bic?('<br>BIC : '+esc(CONFIG_DB.bic)):''}</div></div>`:''}
+  ${(CONFIG_DB.conditions)?`<p class="muted" style="margin-top:12px">${esc(CONFIG_DB.conditions).replace(/\n/g,'<br>')}</p>`:''}`)}
   <div class="foot">${esc(coName())} · Document généré le ${doc.date}</div>
   </body></html>`;
 }
@@ -4682,7 +5024,7 @@ function publishDoc(id,type){
   const c=CHANTIERS[id]; if(!(c.devis&&c.devis.items&&c.devis.items.length)){ toast("Ajoute des lignes d'abord"); return; }
   if(!c.published) c.published={};
   const snap=docSnapshot(id,type); const pid=uid(); snap.ts=Date.now();
-  if(type==='devis') snap.num=nextDevisNum();
+  if(type==='devis') snap.num=nextDevisNum(); else snap.echeance=snap.ts+delaiPaiement()*86400000;
   c.published[pid]=snap; saveChantier(id); render();
   toast((type==='facture'?'Facture':'Devis')+" publié au client ✅");
 }
@@ -4702,7 +5044,7 @@ function publishFacture(id,mode,pct){
   if(mode==='acompte'){ p=pct||30; factItems=[{desc:`Acompte ${p}% sur devis`,qty:1,pu:Math.round(total*p/100*100)/100}]; }
   else factItems=items.slice();
   if(!c.published) c.published={};
-  const snap=docSnapshot(id,'facture'); snap.items=factItems; snap.num=nextFactureNum(); snap.ts=Date.now(); if(mode==='acompte') snap.acompte=p;
+  const snap=docSnapshot(id,'facture'); snap.items=factItems; snap.num=nextFactureNum(); snap.ts=Date.now(); snap.echeance=snap.ts+delaiPaiement()*86400000; if(mode==='acompte') snap.acompte=p;
   const pid=uid(); c.published[pid]=snap; saveChantier(id); render();
   toast(mode==='acompte'?`Acompte de ${p}% publié ✅`:"Facture publiée ✅");
 }
@@ -4714,7 +5056,7 @@ function publishFactureAcompte(id){
 function factureTotal(d){ return ((d&&d.items)||[]).reduce((s,it)=>s+it.qty*it.pu,0); }
 function resteAPayer(c){
   const total=((c.devis&&c.devis.items)||[]).reduce((s,it)=>s+it.qty*it.pu,0);
-  let paye=0; if(c.published) Object.values(c.published).forEach(d=>{ if(d.type==='facture') paye+=factureTotal(d); });
+  let paye=0; if(c.published) Object.values(c.published).forEach(d=>{ if(d.type==='facture' && !d.annulee) paye+=factureTotal(d); });
   return { total, paye:Math.round(paye*100)/100, reste:Math.max(0,Math.round((total-paye)*100)/100) };
 }
 function publishFactureSolde(id){
@@ -4722,7 +5064,7 @@ function publishFactureSolde(id){
   if(r.total<=0){ toast("Ajoute des lignes d'abord"); return; }
   if(r.reste<=0){ toast("Ce chantier est déjà soldé ✅"); return; }
   if(!c.published) c.published={};
-  const snap=docSnapshot(id,'facture'); snap.items=[{desc:'Solde du devis',qty:1,pu:r.reste}]; snap.num=nextFactureNum(); snap.ts=Date.now(); snap.solde=true;
+  const snap=docSnapshot(id,'facture'); snap.items=[{desc:'Solde du devis',qty:1,pu:r.reste}]; snap.num=nextFactureNum(); snap.ts=Date.now(); snap.echeance=snap.ts+delaiPaiement()*86400000; snap.solde=true;
   const pid=uid(); c.published[pid]=snap; saveChantier(id); render();
   toast("Facture de solde publiée ✅");
 }
