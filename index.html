@@ -356,6 +356,42 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
 .chip{flex:none;font-size:12px;font-weight:600;padding:7px 13px;border-radius:20px;background:var(--card2);border:1px solid var(--line);color:var(--muted);cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--acc);border-color:var(--acc);color:var(--accText)}
 .chip svg{vertical-align:-2px;margin-right:2px}
+.cdoc{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;margin-bottom:6px;transition:.12s}
+.cdoc:active{transform:scale(.98)}
+.cdoc-ic{font-size:24px;flex:none;line-height:1}
+.cdoc-in{flex:1;min-width:0;display:block}
+.cdoc-in b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cdoc-in small{display:block;font-size:11px;opacity:.7;margin-top:1px}
+.cdoc-dl{flex:none;opacity:.7}
+
+/* ---- Ligne de document (devis / facture / avoir) ---- */
+.doc-row{border-bottom:1px solid var(--line);padding:13px 0}
+.doc-row:last-child{border-bottom:none;padding-bottom:2px}
+.doc-head{display:flex;align-items:flex-start;gap:9px}
+.doc-ic{flex:none;font-size:17px;line-height:1.35}
+.doc-main{flex:1;min-width:0}
+.doc-num{display:block;font-size:14.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-sub{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-amt{flex:none;font-size:14px;font-weight:800;white-space:nowrap;margin-left:8px;align-self:flex-start}
+.doc-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.doc-pills .pill{margin:0}
+.doc-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.doc-acts .iconbtn{width:36px;height:36px;border-radius:11px}
+
+/* ---- Boutons en grille (2 colonnes) : types de rédaction, choix multiples ---- */
+.btngrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.btngrid .btn{width:100%;justify-content:center;text-align:center;white-space:normal;line-height:1.25;min-height:40px;padding:8px 10px}
+
+/* ---- Carte « par personne » (stats équipe) ---- */
+.pstat{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.pstat-top{display:flex;align-items:center;gap:11px}
+.pstat-in{flex:1;min-width:0}
+.pstat-in b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pstat-in small{display:block;font-size:11.5px;color:var(--muted);margin-top:1px}
+.pstat-h{flex:none;font-family:'Sora';font-size:16px;font-weight:800;white-space:nowrap}
+.pstat-bar{display:flex;align-items:center;gap:9px;margin-top:9px}
+.pstat-pct{flex:none;width:40px;text-align:right;font-size:11.5px;color:var(--muted);font-weight:700}
+.pstat-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
 .pill.late{background:rgba(255,90,90,.16);color:#ff8a8a;border:none;font-size:10px;margin-left:4px;vertical-align:middle}
 .pill.msg{background:rgba(61,139,255,.18);color:var(--acc2);border:none;font-size:10px;margin-left:4px;vertical-align:middle}
 .nav-badge{position:absolute;top:-6px;right:-12px;background:var(--danger);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 3px;border:1.5px solid var(--bg2);line-height:1}
@@ -399,8 +435,8 @@ body.big-text{zoom:1.18}
 .step-dot.done{background:var(--acc)}
 .ch-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
-.kpi .big{font-family:'Sora';font-size:26px;font-weight:800}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:center;min-height:86px;box-sizing:border-box}
+.kpi .big{font-family:'Sora';font-size:clamp(17px,5.4vw,26px);font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi .lbl{font-size:11px;color:var(--muted);margin-top:2px}
 .kpi.acc .big{color:var(--acc2)} .kpi.ok .big{color:var(--ok)} .kpi.warn .big{color:var(--warn)}
 .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
@@ -484,6 +520,7 @@ body.big-text{zoom:1.18}
 <div class="nav hidden" id="nav"></div>
 <input type="file" id="photoFile" accept="image/*" style="display:none">
 <input type="file" id="chatPhotoFile" accept="image/*" style="display:none">
+<input type="file" id="chatDocFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,application/pdf" style="display:none">
 
 <script>
 /* ==================================================================
@@ -992,7 +1029,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v190 · 13/07";
+const APP_VERSION="v195 · 13/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1170,7 +1207,7 @@ function devSetFactu(v){ CONFIG_DB.factuOff=!v; saveConfigDB(); renderDev(); }
 function devSetIA(v){ CONFIG_DB.iaOff=!v; saveConfigDB(); renderDev(); }
 function devSetFacturX(v){ CONFIG_DB.facturXOff=!v; saveConfigDB(); renderDev(); }
 function devSetPlan(p){ CONFIG_DB.plan=p; saveConfigDB(); renderDev(); }
-function devSetFacturXSuspend(v){ CONFIG_DB.facturXSuspendu=v; saveConfigDB(); renderDev(); }
+function devSetFacturXSuspend(v){ CONFIG_DB.facturXSuspendu=v; saveConfigDB(); renderDev(); toast(v?("Factur-X suspendu — réactivation automatique le "+facturXDateFr()):"Factur-X activé"); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
 function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } cfgRerender(); }
 function devColorPicker(){
@@ -1911,9 +1948,17 @@ function teamSignup(){
         return refTeam(user.uid).set(prof).then(()=>user.updateProfile({displayName:finalNom}).catch(()=>{}));
       };
       if(isFirst) return finish({role:'boss'});
+      const _max=(CONFIG_DB.plan==='basique')?TEAM_MAX_BASIQUE:0;
+      if(_max>0 && Object.keys(team).length>=_max) throw {code:'team-full'};
       return refInvite(invite).once('value').then(si=>{ const v=si.val(); if(!v) throw {code:'bad-invite'}; return finish(v); });
     });
-  }).catch(e=>{ if(e&&e.code==='bad-invite') tErr("Code d'invitation invalide. Demande-le au patron (tu peux aussi entrer ton code sur l'écran suivant)."); else tErr(authMsg(e&&e.code)); });
+  }).catch(e=>{
+    if(e&&e.code==='team-full'){
+      try{ const u=firebase.auth().currentUser; if(u) u.delete(); }catch(_){ }
+      tErr("L'équipe est complète ("+TEAM_MAX_BASIQUE+" personnes maximum sur la formule Basique). Demande au patron de passer en Premium.");
+      return;
+    }
+    if(e&&e.code==='bad-invite') tErr("Code d'invitation invalide. Demande-le au patron (tu peux aussi entrer ton code sur l'écran suivant)."); else tErr(authMsg(e&&e.code)); });
 }
 function teamReset(){ const email=val('t_email'); if(!email) return tErr("Entre ton email puis re-clique."); firebase.auth().sendPasswordResetEmail(email).then(()=>{tErr('');toast("Email de réinitialisation envoyé 📧");}).catch(e=>tErr(authMsg(e.code))); }
 function teamGoogle(){
@@ -3135,7 +3180,19 @@ function viewMembersReadonly(){
 function viewEquipe(){
   const members=Object.keys(TEAM).map(u=>({u,...TEAM[u]}));
   let h='';
-  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Membres (${members.length})</h2></div>`;
+  const _max=teamMax();
+  if(_max>0 && isBoss()){
+    const _plein=teamPleine();
+    const _pct=Math.min(100,Math.round(members.length/_max*100));
+    h+=`<div class="card" style="border-left:3px solid ${_plein?'#d4af37':'var(--acc)'}">
+      <div class="task-row"><span style="flex:1"><b style="font-size:13.5px">Équipe · formule Basique</b><div class="tag">${members.length} / ${_max} personnes · ${esc(teamResteTxt())}</div></span>
+        <b style="color:${_plein?'#d4af37':'var(--acc)'}">${_pct}%</b></div>
+      <div class="progress" style="margin-top:6px"><span style="width:${_pct}%;background:${_plein?'#d4af37':'var(--acc)'}"></span></div>
+      ${_plein?`<p class="note" style="margin:8px 0 0;font-size:11.5px">Ton équipe est complète. <b>Écris-nous pour passer en Premium</b> : équipe illimitée, et toute l'IA débloquée.</p>
+      <button class="btn primary mini" style="width:100%;margin-top:8px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00;border:none" onclick="demanderPremium()">✉️ Nous écrire</button>`:''}
+    </div>`;
+  }
+  h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">Membres (${members.length}${_max?(' / '+_max):''})</h2></div>`;
   members.sort((a,b)=>({boss:0,chef:1,employe:2}[niveauOf(a.role)]-{boss:0,chef:1,employe:2}[niveauOf(b.role)])).forEach(m=>{
     const nb=isBoss()?nbNotesUnseen(m.u):0;
     const clickable=isBoss();
@@ -3162,6 +3219,23 @@ function viewEquipe(){
 }
 function removeMember(u){ if(!confirm("Retirer ce membre de l'équipe ?")) return; if(useFB) refTeam(u).remove(); else { delete TEAM[u]; lsSet('batisuivi_team',TEAM); } render(); }
 function genInvite(){
+  if(teamPleine()){
+    openModal(`<div class="grabber"></div>
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:32px">👥</div>
+        <h2 style="margin:8px 0 4px">Ton équipe est complète</h2>
+        <p class="note" style="margin:0;font-size:12.5px">La formule <b>Basique</b> permet <b>${TEAM_MAX_BASIQUE} personnes</b> (toi compris). Tu en as déjà ${teamNb()}.</p>
+      </div>
+      <div class="card" style="box-shadow:none;padding:12px 14px;margin-bottom:12px;border:1px solid #d4af37">
+        <b style="font-size:13.5px">Passe en Premium pour une équipe illimitée <span style="font-size:9.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00;margin-left:4px">PREMIUM</span></b>
+        <p class="note" style="margin:4px 0 0;font-size:11.5px">Tu débloques aussi l'assistant IA qui connaît ton entreprise, les projections à montrer au client, le devis par photo et la facturation électronique.</p>
+      </div>
+      <button class="btn primary" style="width:100%;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00;border:none" onclick="closeModal();setTimeout(demanderPremium,80)">✉️ Nous écrire pour passer en Premium</button>
+      <p class="note" style="text-align:center;margin:8px 0 0;font-size:11.5px">Réponse sous 24 h. On active tout à distance.</p>
+      <button class="btn ghost" style="width:100%;margin-top:10px" onclick="closeModal();setTimeout(openAbonnement,80)">Voir ma formule</button>
+      <button class="btn ghost mini" style="width:100%;margin-top:8px" onclick="closeModal()">Plus tard</button>`);
+    return;
+  }
   const r=document.getElementById('inviteRole').value;
   const prenom=val('invitePrenom'), nom=val('inviteNom');
   const c=code6();
@@ -3964,8 +4038,57 @@ function chatToggleRec(){
   }).catch(_=>{ toast("Micro non autorisé. Autorise le micro pour envoyer un vocal."); });
 }
 function chatStopRec(){ if(CHAT_REC_TIMER){ clearInterval(CHAT_REC_TIMER); CHAT_REC_TIMER=null; } if(CHAT_REC && CHAT_REC.state!=='inactive'){ try{ CHAT_REC.stop(); }catch(_){} } }
-function chatBody(m){ let b=''; if(m.img) b+=`<img class="cimg" src="${m.img}" onclick="viewPhoto('${m.img}')">`; if(m.audio) b+=`<audio class="caud" controls preload="metadata" src="${m.audio}"></audio>${m.dur?`<div class="adur">🎤 ${m.dur}s</div>`:''}`; if(m.txt) b+=`<div>${esc(m.txt)}</div>`; return b||esc(m.txt||''); }
-function chatPreview(m){ if(!m) return ''; if(m.img) return '📷 Photo'; if(m.audio) return '🎤 Message vocal'; return m.txt||''; }
+/* ---- Partage de documents dans les conversations internes ---- */
+const CHAT_DOC_MAX=1200000; // ~1,2 Mo : au-delà, la base refuse ou rame
+function docIcone(nom){
+  const e=String(nom||'').toLowerCase().split('.').pop();
+  if(e==='pdf') return '📕';
+  if(e==='doc'||e==='docx') return '📘';
+  if(e==='xls'||e==='xlsx'||e==='csv') return '📗';
+  if(e==='jpg'||e==='jpeg'||e==='png') return '🖼️';
+  return '📄';
+}
+function docTaille(o){ if(!o) return ''; if(o<1024) return o+' o'; if(o<1048576) return Math.round(o/1024)+' Ko'; return (Math.round(o/104857.6)/10)+' Mo'; }
+function chatPickDoc(){
+  const inp=document.getElementById('chatDocFile'); if(!inp) return;
+  inp.value='';
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    if(f.size>CHAT_DOC_MAX){
+      toast("Fichier trop lourd ("+docTaille(f.size)+"). Maximum "+docTaille(CHAT_DOC_MAX)+".");
+      return;
+    }
+    const r=new FileReader();
+    r.onload=e=>{
+      const url=e.target.result;
+      if(!url || String(url).indexOf('data:')!==0){ toast("Fichier illisible."); return; }
+      chatSendMedia({ doc:url, docNom:(f.name||'document').slice(0,80), docPoids:f.size });
+      toast("Document envoyé 📎");
+    };
+    r.onerror=()=>toast("Lecture du fichier impossible.");
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+function ouvrirDoc(k, convKey){
+  try{
+    const o=chatConvObj(convKey||CHAT_OPEN)||{};
+    const m=o[k]; if(!m||!m.doc){ toast("Document introuvable."); return; }
+    const a=document.createElement('a');
+    a.href=m.doc; a.download=m.docNom||'document';
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ toast("Ouverture impossible."); }
+}
+function chatDocHTML(m){
+  if(!m||!m.doc) return '';
+  return `<div class="cdoc" onclick="ouvrirDoc('${m.k}')">
+    <span class="cdoc-ic">${docIcone(m.docNom)}</span>
+    <span class="cdoc-in"><b>${esc(m.docNom||'Document')}</b><small>${esc(docTaille(m.docPoids))} · toucher pour ouvrir</small></span>
+    <span class="cdoc-dl">${icone('download','16px')}</span>
+  </div>`;
+}
+function chatBody(m){ let b=''; if(m.doc) b+=chatDocHTML(m); if(m.img) b+=`<img class="cimg" src="${m.img}" onclick="viewPhoto('${m.img}')">`; if(m.audio) b+=`<audio class="caud" controls preload="metadata" src="${m.audio}"></audio>${m.dur?`<div class="adur">🎤 ${m.dur}s</div>`:''}`; if(m.txt) b+=`<div>${esc(m.txt)}</div>`; return b||esc(m.txt||''); }
+function chatPreview(m){ if(!m) return ''; if(m.doc) return '📎 '+(m.docNom||'Document'); if(m.img) return '📷 Photo'; if(m.audio) return '🎤 Message vocal'; return m.txt||''; }
 function chatTime(ts){ const d=new Date(ts||0); const now=new Date(); const sameDay=d.toDateString()===now.toDateString();
   return sameDay ? d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function viewMessagerie(teamOnly){
@@ -4024,7 +4147,7 @@ function chatThreadView(){
   if(!msgs.length){ h+=`<p class="note" style="text-align:center;margin:24px 0">Aucun message. Écris le premier ! 💬</p>`; }
   msgs.forEach(m=>{ const mine=m.from===me; const canDel=mine||isBoss(); h+=`<div class="cbub ${mine?'me':'them'}">${(!mine&&isGroup)?`<div class="who">${esc((m.nom||'').split(' ')[0]||'?')}</div>`:''}${chatBody(m)}<div class="tm">${chatTime(m.ts)}${canDel?` · <button class="cdel" onclick="chatDeleteMsg('${CHAT_OPEN}','${m.k}')">Supprimer</button>`:''}</div></div>`; });
   h+=`</div>`;
-  h+=`<div class="chat-bar"><button class="iconbtn" title="Envoyer une photo" onclick="chatPickPhoto()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button><button id="chatRecBtn" class="iconbtn" title="Message vocal" onclick="chatToggleRec()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/></svg></button><input id="chat_in" placeholder="Écris un message…" onkeydown="if(event.key==='Enter'){event.preventDefault();chatSend();}"><button class="btn primary" onclick="chatSend()">Envoyer</button></div>`;
+  h+=`<div class="chat-bar"><button class="iconbtn" title="Envoyer une photo" onclick="chatPickPhoto()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button><button class="iconbtn" title="Envoyer un document" onclick="chatPickDoc()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05 12.25 20.24a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button><button id="chatRecBtn" class="iconbtn" title="Message vocal" onclick="chatToggleRec()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/></svg></button><input id="chat_in" placeholder="Écris un message…" onkeydown="if(event.key==='Enter'){event.preventDefault();chatSend();}"><button class="btn primary" onclick="chatSend()">Envoyer</button></div>`;
   return h;
 }
 
@@ -4176,7 +4299,7 @@ function redacCopy(){ if(!REDAC.out){ toast("Rien à copier."); return; } if(nav
 function viewRedaction(){
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('edit')} Rédaction</h2></div>
     <p class="note" style="margin:0 0 8px">Choisis un type de texte, décris le contexte, et l'IA te propose une rédaction professionnelle en français.</p>
-    <div class="row" style="gap:6px;flex-wrap:wrap">${REDAC_TYPES.map(([t,lb])=>`<button class="btn ${REDAC.type===t?'primary':'ghost'} mini" onclick="redacSetType('${t}')">${esc(lb)}</button>`).join('')}</div>
+    <div class="btngrid" style="margin-bottom:10px">${REDAC_TYPES.map(([t,lb])=>`<button class="btn ${REDAC.type===t?'primary':'ghost'} mini" onclick="redacSetType('${t}')">${esc(lb)}</button>`).join('')}</div>
     <textarea id="redac_ctx" rows="3" placeholder="ex: prévenir M. Martin que le chantier prend 2 jours de retard à cause de la pluie" oninput="REDAC.ctx=this.value" style="width:100%;resize:vertical;margin-top:10px">${esc(REDAC.ctx||'')}</textarea>
     <button class="btn primary" style="width:100%;margin-top:10px" ${REDAC.busy?'disabled style="opacity:.6;width:100%;margin-top:10px"':''} onclick="redacGen()">${REDAC.busy?'… en cours':'Rédiger'}</button></div>`;
   if(REDAC.err) h+=`<div class="card"><p class="note" style="margin:0;color:var(--danger)">${esc(REDAC.err)}</p></div>`;
@@ -5169,6 +5292,10 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openFactuTva()">${icone('euro','16px')} TVA & délai de paiement</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openFactuBanque()">${icone('id','16px')} Coordonnées bancaires & conditions</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openFactuLegal()">${icone('shield','16px')} Identité légale & assurance décennale</button>
+      ${facturXSuspenduMaintenant()?`<div class="card" style="box-shadow:none;padding:11px 13px;margin-top:12px;border-left:3px solid var(--acc)">
+        <b style="font-size:13px;color:var(--acc)">📑 Facturation électronique — disponible le ${facturXDateFr()}</b>
+        <p class="note" style="margin:4px 0 0;font-size:11.5px">La réforme oblige à passer par une <b>plateforme agréée</b> et à s'y inscrire. BatiSuivi ouvrira le module (Factur-X + transmission) <b>le ${facturXDateFr()}</b> : ton inscription se fera à ce moment-là, on t'accompagne. D'ici là, tes factures PDF restent parfaitement valables.</p>
+      </div>`:''}
       ${facturXOn()?`<button class="btn ghost" style="width:100%;margin-top:8px" onclick="openEreportingExport()">${icone('save','16px')} Récap & export e-reporting</button>`:''}
       <button class="btn primary" style="width:100%;margin-top:12px" onclick="openFactu()">${icone('receipt','16px')} Ouvrir le Hub Facturation</button></div>`;
     if(tab==='client') return espaceClientCard()+avisSettingsCard()+rgpdCard()+bossClientPreview();
@@ -5454,9 +5581,18 @@ function factuDocRow(d){
     status = base + pay;
   }
   else { status = (d.signature?`<span class="pill" style="color:var(--ok)">${icone('check-circle')} Signé</span>`:(relanceDevis(d)?`<span class="pill relance">${icone('clock')} ${relanceDevis(d)} j</span>`:`<span class="pill">En attente</span>`)) + (devisConverti(d)?`<span class="pill" style="color:var(--acc2)">${icone('receipt')} Facturé</span>`:''); }
-  return `<div class="member-row" data-q="${esc(key)}">
-    <div style="flex:1;min-width:0"><b>${d.type==='facture'?'🧾':'📄'} ${esc(d.num||'')}</b>
-      <div class="tag">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''} · ${totTxt} ${status}</div></div>
+  const ic = d.type==='facture' ? '🧾' : (d.type==='avoir' ? '↩️' : '📄');
+  return `<div class="doc-row" data-q="${esc(key)}">
+    <div class="doc-head">
+      <span class="doc-ic">${ic}</span>
+      <span class="doc-main">
+        <b class="doc-num">${esc(d.num||'Document')}</b>
+        <span class="doc-sub">${esc(d.nom||'')}${d.client?(' · '+esc(d.client)):''}</span>
+      </span>
+      <b class="doc-amt">${totTxt}</b>
+    </div>
+    ${status?`<div class="doc-pills">${status}</div>`:''}
+    <div class="doc-acts">
     <button class="iconbtn" title="Voir / imprimer" onclick="openDocWindow(CHANTIERS['${d.id}'].published['${d.pid}'])">${icone('eye')}</button>
     <button class="iconbtn" title="Envoyer par email" onclick="emailDoc('${d.id}','${d.pid}')">${icone('mail')}</button>
     ${(d.type!=='facture' && d.signature && !devisConverti(d))?`<button class="iconbtn" title="Transformer en facture" onclick="devisVersFacture('${d.id}','${d.pid}')" style="color:var(--acc2);border-color:var(--acc2)">${icone('receipt')}</button>`:''}
@@ -5465,6 +5601,7 @@ function factuDocRow(d){
     ${(d.type==='facture'&&!d.annulee)?`<button class="iconbtn" title="Créer un avoir (annuler cette facture)" onclick="creerAvoir('${d.id}','${d.pid}')">${icone('undo')}</button>`:''}
     ${(facturXOn() && d.type==='facture' && (CHANTIERS[d.id]||{}).clientType==='pro')?`<button class="iconbtn" title="Télécharger le Factur-X" onclick="facturXPdf('${d.id}','${d.pid}')">${icone('download')}</button>`:''}
     <button class="iconbtn danger" title="Supprimer" onclick="delFactuDoc('${d.id}','${d.pid}')">${icone('trash')}</button>
+    </div>
   </div>`;
 }
 function factuFilter(kind){ const inp=document.getElementById('fq_'+kind); const ql=((inp&&inp.value)||'').toLowerCase().trim(); const list=document.getElementById('list_'+kind); if(!list) return; Array.from(list.children).forEach(el=>{ const k=el.getAttribute('data-q')||''; el.style.display=(!ql||k.indexOf(ql)>=0)?'':'none'; }); }
@@ -5869,7 +6006,12 @@ async function fraisLireTicket(){
 }
 function openFrais(){
   window._fraisPhoto='';
-  const opts=Object.keys(CHANTIERS).filter(id=>!CHANTIERS[id].archived).map(id=>`<option value="${id}">${esc(CHANTIERS[id].nom||'Chantier')}</option>`).join('');
+  const _chef=(typeof isChef==='function')&&isChef();
+  const _me=myUid();
+  const opts=Object.keys(CHANTIERS)
+    .filter(id=>!CHANTIERS[id].archived)
+    .filter(id=>_chef || (CHANTIERS[id].assignes && CHANTIERS[id].assignes[_me]))
+    .map(id=>`<option value="${id}">${esc(CHANTIERS[id].nom||'Chantier')}</option>`).join('');
   if(!opts){ toast("Crée d'abord un chantier."); return; }
   openModal(`<div class="grabber"></div>
     <h2 style="margin:0 0 12px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg> Nouvelle note de frais</h2>
@@ -5903,7 +6045,16 @@ function saveFraisEntry(){
   window._fraisPhoto='';
   saveChantier(cid); closeModal(); toast("Note de frais ajoutée ✅"); render();
 }
-function delFrais(id,k){ if(!confirm("Supprimer cette note de frais ?")) return; const c=CHANTIERS[id]; if(c&&c.frais) delete c.frais[k]; saveChantier(id); render(); }
+function delFrais(id,k){
+  const c=CHANTIERS[id]; const f=c&&c.frais&&c.frais[k]; if(!f) return;
+  const moi=((f.by||'')===((ME&&ME.nom)||''));
+  if(!isBoss()){
+    if(!moi){ toast("Tu ne peux supprimer que tes propres notes de frais."); return; }
+    if(fraisStatut(f)!=='attente'){ toast("Cette note a déjà été traitée par le patron."); return; }
+  }
+  if(!confirm("Supprimer cette note de frais ?")) return;
+  delete c.frais[k]; saveChantier(id); render();
+}
 /* ===== Vue « Avis & satisfaction » (hub Clients) : un avis client par chantier ===== */
 function avisStars(note){ const n=Math.max(0,Math.min(5,Math.round(note||0))); return '★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n); }
 function viewAvis(){
@@ -6520,7 +6671,8 @@ function openMenu(){
     <h3 style="font-size:14px;margin:20px 0 8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1.1.9-2 2-2h2.5c2.5 0 4.5-2 4.5-4.5C22 6 17.5 2 12 2Z"/></svg> Couleur de l'app</h3>
     ${themeSwatches(40)}
     ${_hg?`<h3 style="font-size:14px;margin:20px 0 8px">${icone('help')} Guide - ${esc(_hg.t)}</h3>`+_hg.b.map(x=>`<div style="display:flex;gap:9px;margin-bottom:8px;align-items:flex-start"><span style="color:var(--acc);font-weight:800;line-height:1.4">&bull;</span><span style="flex:1;font-size:13px;line-height:1.45">${esc(x)}</span></div>`).join(''):''}
-    <button class="btn ghost" style="width:100%;margin-top:14px" onclick="closeModal();setTimeout(openAide,80)">${icone('help','16px')} Aide & support</button>
+    <button class="btn ghost" style="width:100%;margin-top:14px" onclick="closeModal();setTimeout(openMesFrais,80)">${icone('receipt','16px')} Mes notes de frais${(()=>{ const a=mesFrais().filter(f=>fraisStatut(f)==='attente').length; return a?` <span class="pill" style="color:var(--warn);margin-left:6px">${a} en attente</span>`:''; })()}</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closeModal();setTimeout(openAide,80)">${icone('help','16px')} Aide & support</button>
     <button class="btn danger" style="width:100%;margin-top:8px" onclick="teamSignOut()">${DEV_ACCESS?'↩ Revenir à l\'espace dev':'Se déconnecter'}</button>
     <p class="note" style="text-align:center;margin-top:10px;font-size:11px">${esc(coName())} · BatiSuivi · ${APP_VERSION}</p>`);
 }
@@ -6608,6 +6760,8 @@ function aideCard(){
 
 /* ============ Mon abonnement ============ */
 function supportEmail(){ return (CONFIG_DB.supportEmail||'massiliaconsulting1@gmail.com').trim(); }
+function supportTel(){ return (CONFIG_DB.supportTel||'0759574033').replace(/\s/g,''); }
+function supportTelFr(){ const t=supportTel(); return t.replace(/(\d{2})(?=\d)/g,'$1 ').trim(); }
 const PREMIUM_FEATURES=[
   {ic:'🤖', l:"L'assistant IA qui connaît ton entreprise", d:"Il voit tes chantiers, tes marges, tes impayés. Demande-lui quel chantier te coûte de l'argent."},
   {ic:'✨', l:"Le résumé du jour", d:"Chaque matin, l'IA te dit en 5 phrases ce qui compte vraiment."},
@@ -6645,17 +6799,37 @@ function openAbonnement(){
         <span style="flex:1;min-width:0"><b style="font-size:13px;display:block;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2px">${esc(f.l)}</b>
           <small class="note" style="font-size:11.5px">${esc(f.d)}</small></span>
       </div>`).join('')}
-      <button class="btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00;border:none" onclick="demanderPremium()">✨ Passer en Premium</button>
+      <button class="btn primary" style="width:100%;margin-top:14px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00;border:none" onclick="demanderPremium()">✉️ Nous écrire pour passer en Premium</button>
+      <p class="note" style="text-align:center;margin:8px 0 0;font-size:11.5px">Le Premium s'active <b>à distance</b>, de notre côté. Tu n'as rien à installer : ça apparaît au prochain lancement de l'app.</p>
     </div>`:`<p class="note" style="text-align:center;margin:0 0 12px;font-size:12.5px">Tu profites de <b>toutes</b> les fonctionnalités de BatiSuivi. 🎉</p>`}
     <button class="btn ghost" style="width:100%" onclick="contacterSupport()">${icone('mail','16px')} Une question ? Contacter le support</button>
     <button class="btn ghost mini" style="width:100%;margin-top:8px" onclick="closeModal()">Fermer</button>`);
 }
+function premiumMsgTexte(){
+  return "Bonjour,\n\nJe souhaite passer mon abonnement BatiSuivi en Premium.\n\nEntreprise : "+coName()+"\nMerci de me recontacter.\n\nCordialement";
+}
 function demanderPremium(){
-  const to=supportEmail();
-  const sujet='Passer en Premium — '+coName();
-  const corps='Bonjour,\n\nJe souhaite passer mon abonnement BatiSuivi en Premium.\n\nEntreprise : '+coName()+'\nVersion de l\'app : '+APP_VERSION+'\n\nPouvez-vous me recontacter ?\n\nCordialement';
-  closeModal();
-  window.location.href='mailto:'+encodeURIComponent(to)+'?subject='+encodeURIComponent(sujet)+'&body='+encodeURIComponent(corps);
+  openModal(`<div class="grabber"></div>
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:34px">✉️</div>
+      <h2 style="margin:8px 0 4px">Envoie-nous un message</h2>
+      <p class="note" style="margin:0;font-size:12.5px">Le passage en Premium se fait <b>avec nous</b>, par message. On te répond <b>sous 24 h</b>.</p>
+    </div>
+    <div class="card" style="box-shadow:none;padding:12px 14px;margin-bottom:14px">
+      <b style="font-size:13px">Ce qui se passe ensuite</b>
+      <div class="task-row" style="padding:5px 0"><span style="width:22px;flex:none;color:var(--acc);font-weight:800">1</span><span style="flex:1;font-size:12.5px">Tu nous écris (email ou téléphone).</span></div>
+      <div class="task-row" style="padding:5px 0"><span style="width:22px;flex:none;color:var(--acc);font-weight:800">2</span><span style="flex:1;font-size:12.5px">On te rappelle, on cale la formule ensemble.</span></div>
+      <div class="task-row" style="padding:5px 0"><span style="width:22px;flex:none;color:var(--acc);font-weight:800">3</span><span style="flex:1;font-size:12.5px"><b>On active le Premium à distance.</b> Rien à réinstaller, tes données ne bougent pas — tout apparaît au prochain lancement.</span></div>
+    </div>
+    <a class="btn primary" style="width:100%;text-decoration:none;justify-content:center" href="mailto:${esc(supportEmail())}?subject=${encodeURIComponent('Passer en Premium — '+coName())}&body=${encodeURIComponent(premiumMsgTexte())}">${icone('mail','16px')} Écrire un email</a>
+    <a class="btn ghost" style="width:100%;margin-top:8px;text-decoration:none;justify-content:center" href="tel:${esc(supportTel())}">${icone('phone','16px')} Appeler le ${esc(supportTelFr())}</a>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="copierContactPremium()">${icone('clipboard','16px')} Copier notre email</button>
+    <p class="note" style="text-align:center;margin-top:10px;font-size:11.5px">${esc(supportEmail())}</p>
+    <button class="btn ghost mini" style="width:100%;margin-top:8px" onclick="closeModal()">Plus tard</button>`);
+}
+function copierContactPremium(){
+  try{ navigator.clipboard.writeText(supportEmail()); toast("Email copié ✅ Écris-nous quand tu veux."); }
+  catch(_){ toast("Notre email : "+supportEmail()); }
 }
 function contacterSupport(){
   const to=supportEmail();
@@ -6669,7 +6843,14 @@ function supportCard(){
   return `<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('mail')} Email du support</h2></div>
     <p class="note" style="margin:0 0 8px;font-size:12px">L'adresse à laquelle tes messages d'aide sont envoyés.</p>
     <div class="row" style="gap:6px"><input id="sup_mail" type="email" value="${esc(supportEmail())}" style="flex:1"><button class="btn primary mini" style="flex:none;align-self:flex-end" onclick="saveSupportEmail()">OK</button></div>
+    <label style="margin-top:12px">Téléphone du support</label>
+    <div class="row" style="gap:6px"><input id="sup_tel" type="tel" inputmode="tel" value="${esc(supportTelFr())}" style="flex:1"><button class="btn primary mini" style="flex:none;align-self:flex-end" onclick="saveSupportTel()">OK</button></div>
+    <p class="note" style="font-size:11px;margin-top:6px">Utilisés partout où l'artisan peut nous joindre : aide, signalement de bug, et passage en Premium.</p>
   </div>`;
+}
+function saveSupportTel(){
+  if(!isBoss()){ toast("Réservé au patron."); return; }
+  CONFIG_DB.supportTel=(val('sup_tel')||'').trim(); saveConfigDB(); render(); toast("Téléphone du support enregistré ✅");
 }
 function saveSupportEmail(){
   if(!isBoss()){ toast("Réservé au patron."); return; }
@@ -6682,6 +6863,7 @@ function abonnementCard(){
   return `<div class="card" style="border-left:3px solid ${prem?'#d4af37':'var(--line)'}">
     <div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${prem?'🥇':'🥈'} Mon abonnement ${planTag()}</h2></div>
     <p class="note" style="margin:0 0 10px;font-size:12px">${prem?"Tu profites de toutes les fonctionnalités, IA comprise.":`<b>${manque} fonctionnalités</b> te sont encore fermées, dont l'assistant IA qui connaît ton entreprise et les projections à montrer au client.`}</p>
+    ${!prem?`<p class="note" style="margin:0 0 10px;font-size:11.5px;color:var(--acc)"><b>✉️ Pour passer en Premium, écris-nous.</b> On active tout à distance, sans que tu aies à réinstaller quoi que ce soit.</p>`:''}
     <button class="btn ${prem?'ghost':'primary'}" style="width:100%${prem?'':';background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00;border:none'}" onclick="openAbonnement()">${prem?'Voir ma formule':'✨ Voir ce que j\'ai et ce qui me manque'}</button>
   </div>`;
 }
@@ -7782,6 +7964,21 @@ function caFactureMois(ym){
   });
   return s;
 }
+/* 🟢 85-100% : bien occupé · 🟠 100-120% : en surcharge · 🔴 >120% ou <60% : problème */
+function occColor(p){
+  if(p>120) return 'var(--danger)';
+  if(p>100) return 'var(--warn)';
+  if(p>=85) return 'var(--ok)';
+  if(p>=60) return 'var(--warn)';
+  return 'var(--danger)';
+}
+function occLabel(p){
+  if(p>120) return 'très en surcharge';
+  if(p>100) return 'en surcharge';
+  if(p>=85) return 'bien occupé';
+  if(p>=60) return 'sous-occupé';
+  return 'très sous-occupé';
+}
 function viewEquipeStats(){
   if(!isChef()) return `<div class="card"><p class="note" style="margin:0">Réservé au patron et aux chefs.</p></div>`;
   const ym=statsMois();
@@ -7798,7 +7995,7 @@ function viewEquipeStats(){
   const jo=joursOuvresMois(ym);
   const dispo=membres.reduce((s,u)=>s+Math.max(0,(jo-absJoursOuvresMois(u,ym))*7),0);
   const occ=dispo>0?Math.round(totH/dispo*100):0;
-  const occCol=occ>=85?'var(--ok)':(occ>=60?'var(--warn)':'var(--danger)');
+  const occCol=occColor(occ);
 
   let h=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('chart')} Statistiques de l'équipe</h2></div>
     <label style="margin-top:0">Mois analysé</label>
@@ -7816,7 +8013,7 @@ function viewEquipeStats(){
     <div style="display:flex;align-items:baseline;gap:10px"><div style="font-family:'Sora';font-size:34px;font-weight:800;color:${occCol}">${occ} %</div>
       <span class="note" style="font-size:12px">${fmtH(totH)} pointées sur ${fmtH(dispo)} travaillables</span></div>
     <div class="progress" style="margin-top:8px"><span style="width:${Math.min(100,occ)}%;background:${occCol}"></span></div>
-    <p class="note" style="margin-top:8px;font-size:11px">Base : ${jo} jours ouvrés × 7 h × ${membres.length} personne${membres.length>1?'s':''}, moins les absences. En dessous de 60 %, tu paies des heures qui ne produisent rien.</p>
+    <p class="note" style="margin-top:8px;font-size:11px">Base : ${jo} jours ouvrés × 7 h × ${membres.length} personne${membres.length>1?'s':''}, moins les absences. <b>🟢 85-100 %</b> = bien occupé · <b>🟠 au-delà de 100 %</b> = ton équipe est en surcharge (heures sup) · <b>🔴 en dessous de 60 %</b> = tu paies des heures qui ne produisent rien.</p>
   </div>`;
 
   /* --- Heure vendue vs heure coûtée --- */
@@ -7862,21 +8059,24 @@ function viewEquipeStats(){
   h+=`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('users')} Par personne — ${esc(moisLabel(ym))}</h2></div>
     ${rows.map(x=>{
       const part=totH>0?Math.round(x.r.heures/totH*100):0;
-      const oc=x.occ>=85?'var(--ok)':(x.occ>=60?'var(--warn)':'var(--danger)');
-      return `<div style="margin-bottom:14px">
-        <div class="member-row" style="padding-bottom:4px" onclick="openMemberNotes('${x.u}')" ${isBoss()?'style="cursor:pointer"':''}>
+      const oc=occColor(x.occ);
+      const sansCout=(memberCout(x.u)<=0);
+      return `<div class="pstat" ${isBoss()?`onclick="openMemberNotes('${x.u}')" style="cursor:pointer"`:''}>
+        <div class="pstat-top">
           ${avatarTag(TEAM[x.u])}
-          <span style="flex:1;min-width:0"><b style="font-size:13.5px;display:block">${esc(x.nom)}</b>
-            <small class="note" style="font-size:11.5px">${roleLabel(x.role)}${memberCout(x.u)>0?(' · '+memberCout(x.u)+' €/h'):' · coût horaire non renseigné'}</small></span>
-          <b style="flex:none;font-size:14px">${fmtH(x.r.heures)}</b>
+          <span class="pstat-in">
+            <b>${esc(x.nom)}</b>
+            <small>${roleLabel(x.role)}${sansCout?' · <span style="color:var(--warn)">coût horaire non renseigné</span>':(' · '+memberCout(x.u)+' €/h')}</small>
+          </span>
+          <b class="pstat-h">${fmtH(x.r.heures)}</b>
         </div>
-        <div class="task-row" style="gap:10px;padding-top:0">${statBar(part)}<span class="note" style="width:38px;text-align:right;font-size:11px">${part}%</span></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <span class="pill" style="color:${oc}">${icone('timer')} ${x.occ}% occupé</span>
-          ${x.r.supH>0?`<span class="pill" style="color:var(--warn)">${fmtH(x.r.supH)} sup.</span>`:''}
-          ${memberCout(x.u)>0?`<span class="pill">${eurF(x.r.cout)} de coût</span>`:''}
-          ${x.r.totFrais>0?`<span class="pill">${eurF(x.r.totFrais)} de frais</span>`:''}
-          ${x.r.abs.length?`<span class="pill">${x.r.abs.length} absence${x.r.abs.length>1?'s':''}</span>`:''}
+        <div class="pstat-bar">${statBar(part)}<span class="pstat-pct">${part}%</span></div>
+        <div class="pstat-tags">
+          <span class="pill" style="color:${oc};background:rgba(127,127,127,.10)">${icone('timer')} ${x.occ}% · ${esc(occLabel(x.occ))}</span>
+          ${x.r.supH>0?`<span class="pill" style="color:var(--warn)">⏱️ ${fmtH(x.r.supH)} sup.</span>`:''}
+          ${!sansCout?`<span class="pill">${eurF(x.r.cout)} de coût</span>`:''}
+          ${x.r.totFrais>0?`<span class="pill">🧾 ${eurF(x.r.totFrais)}</span>`:''}
+          ${x.r.abs.length?`<span class="pill">🏖️ ${x.r.abs.length}</span>`:''}
         </div>
       </div>`;
     }).join('')}
@@ -8309,6 +8509,51 @@ function chantierHabilitations(c){
   });
   return Object.keys(out);
 }
+/* ---- Mes notes de frais : accessible à toute l'équipe ---- */
+function mesFrais(){
+  const nom=(ME&&ME.nom)||'';
+  const out=[];
+  Object.keys(CHANTIERS).forEach(id=>{
+    const c=CHANTIERS[id]; if(!c||!c.frais) return;
+    Object.keys(c.frais).forEach(k=>{
+      const f=c.frais[k]; if(!f) return;
+      if((f.by||'')!==nom) return;
+      out.push(Object.assign({id,k,nomChantier:c.nom||'Chantier'},f));
+    });
+  });
+  return out.sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
+function openMesFrais(){
+  const list=mesFrais();
+  const enAttente=list.filter(f=>fraisStatut(f)==='attente');
+  const tot=list.filter(f=>fraisStatut(f)!=='refuse').reduce((s,f)=>s+(parseFloat(f.montant)||0),0);
+  let h=`<div class="grabber"></div><h2 style="margin:0 0 4px">${icone('receipt')} Mes notes de frais</h2>
+    <p class="note" style="margin:0 0 12px;font-size:12px">Ce que tu as avancé, et où ça en est.</p>
+    <button class="btn primary" style="width:100%;margin-bottom:12px" onclick="closeModal();setTimeout(openFrais,80)">+ Ajouter une note de frais</button>`;
+  if(!list.length){
+    h+=`<p class="note" style="margin:0">Aucune note de frais pour l'instant. Prends ton ticket en photo, et le patron la validera.</p>`;
+  } else {
+    h+=`<div class="kpis" style="margin:0 0 12px">
+      <div class="kpi acc"><div class="big" style="font-size:20px">${eurFmt(tot)}</div><div class="lbl">Total (hors refusées)</div></div>
+      <div class="kpi ${enAttente.length?'warn':'ok'}"><div class="big" style="font-size:20px">${enAttente.length}</div><div class="lbl">En attente</div></div>
+    </div>`;
+    h+=list.map(f=>{
+      const st=fraisStatut(f); const si=fraisStatutInfo(st); const ct=fraisCat(f.cat);
+      return `<div class="task-row" style="align-items:flex-start;${st==='refuse'?'opacity:.55':''}">
+        <div style="flex:1;min-width:0">
+          <b>${eurFmt(parseFloat(f.montant)||0)}</b> <span class="pill" style="color:${si.col};font-size:10px">${si.ic} ${si.l}</span>
+          ${f.desc?`<div style="margin-top:1px;font-size:13px">${esc(f.desc)}</div>`:''}
+          <div class="tag">${ct.ic} ${esc(ct.l)} · ${esc(f.nomChantier)} · ${frDateTime(f.ts)}</div>
+          ${f.photo?`<img src="${f.photo}" alt="justificatif" style="max-height:110px;border:1px solid var(--line);border-radius:10px;margin-top:6px;display:block">`:''}
+        </div>
+        ${st==='attente'?`<button class="iconbtn danger" onclick="delFrais('${f.id}','${f.k}');closeModal();setTimeout(openMesFrais,150)"><svg class="x-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>`:''}
+      </div>`;
+    }).join('');
+    h+=`<p class="note" style="margin-top:10px;font-size:11px">Une note <b>en attente</b> peut encore être supprimée. Une fois validée ou refusée par le patron, elle est figée.</p>`;
+  }
+  h+=`<button class="btn ghost" style="width:100%;margin-top:12px" onclick="closeModal()">Fermer</button>`;
+  openModal(h);
+}
 function nbNotes(u){ return NOTES_FRAIS[u]?Object.keys(NOTES_FRAIS[u]).length:0; }
 function nbNotesUnseen(u){ const seen=NOTES_SEEN[u]||0; const o=NOTES_FRAIS[u]||{}; return Object.keys(o).filter(k=>((o[k].ts)||0)>seen).length; }
 function markNotesSeen(u){ NOTES_SEEN[u]=Date.now(); lsSet('notes_seen',NOTES_SEEN); pushSeen('notes',NOTES_SEEN); }
@@ -8320,7 +8565,7 @@ function openMemberNotes(u){
   const totMs=memberHoursMs(u); const cout=memberCout(u);
   openModal(`<div class="grabber"></div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avatarTag(t)}<div style="flex:1"><b style="font-family:'Sora';font-size:17px">${esc(t.nom||'?')}</b><div class="note">${esc(t.email||'')} · ${roleLabel(t.role)}</div></div></div>
-    <button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="previewEmployeeView('${u}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Voir son compte (aperçu)</button>
+    ${(u===myUid())?'':`<button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="previewEmployeeView('${u}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Voir son compte (aperçu)</button>`}
     ${isBoss()?`<div class="card" style="box-shadow:none;margin-bottom:12px;padding:12px 14px">
       <label style="margin-top:0"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 7a7 7 0 1 0 0 10"/><path d="M3 11h9M3 15h7"/></svg> Coût horaire (€/h) — visible par toi seul</label>
       <div class="row" style="gap:6px"><input id="mc_${u}" type="number" inputmode="decimal" value="${cout||''}" placeholder="ex: 22" style="flex:1"><button class="btn primary mini" onclick="setMemberCout('${u}')"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Enregistrer</button></div>
@@ -8820,9 +9065,23 @@ function factPrefix(){ return (CONFIG_DB.factPrefix||'FACT').toUpperCase(); }
 function devisPrefix(){ return (CONFIG_DB.devisPrefix||'DEV').toUpperCase(); }
 function factuOn(){ return CONFIG_DB.factuOff!==true; } // facturation active par défaut
 function isPremium(){ return (CONFIG_DB.plan||'premium')!=='basique'; }
+/* Basique : 5 personnes maximum (patron compris). Premium : illimité. */
+const TEAM_MAX_BASIQUE=5;
+function teamMax(){ return isPremium()?0:TEAM_MAX_BASIQUE; }   // 0 = illimité
+function teamNb(){ return Object.keys(TEAM||{}).length; }
+function teamPleine(){ const m=teamMax(); return m>0 && teamNb()>=m; }
+function teamResteTxt(){
+  const m=teamMax();
+  if(!m) return '';
+  const reste=Math.max(0, m-teamNb());
+  return reste?(reste+' place'+(reste>1?'s':'')+' restante'+(reste>1?'s':'')):'aucune place restante';
+}
 function planTag(){ const p=isPremium(); return `<span style="display:inline-block;vertical-align:middle;font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;${p?'background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00':'background:linear-gradient(135deg,#e9ebef,#b7bbc4);color:#2a2e35'}">${p?'PREMIUM':'BASIQUE'}</span>`; }
 function iaOn(){ return isPremium(); } // IA = abonnement Premium
-function facturXOn(){ return isPremium() && !(CONFIG_DB.facturXSuspendu && Date.now() < new Date('2026-08-05T00:00:00').getTime()); } // Factur-X : Premium + non suspendu (auto le 5 août)
+const FACTURX_DATE = '2026-08-10';
+function facturXDateFr(){ return '10 août 2026'; }
+function facturXSuspenduMaintenant(){ return !!CONFIG_DB.facturXSuspendu && Date.now() < new Date(FACTURX_DATE+'T00:00:00').getTime(); }
+function facturXOn(){ return isPremium() && !facturXSuspenduMaintenant(); } // Factur-X : Premium + non suspendu (auto le 5 août)
 function nextFactureNum(){ const y=new Date().getFullYear(); CONFIG_DB.factCounter=(CONFIG_DB.factCounter||0)+1; saveConfigDB(); return factPrefix()+'-'+y+'-'+String(CONFIG_DB.factCounter).padStart(3,'0'); }
 function nextDevisNum(){ const y=new Date().getFullYear(); CONFIG_DB.devisCounter=(CONFIG_DB.devisCounter||0)+1; saveConfigDB(); return devisPrefix()+'-'+y+'-'+String(CONFIG_DB.devisCounter).padStart(3,'0'); }
 function publishFacture(id,mode,pct){
