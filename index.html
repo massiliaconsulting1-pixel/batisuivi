@@ -1029,7 +1029,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v196 · 15/07";
+const APP_VERSION="v197 · 15/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -5789,7 +5789,7 @@ function factuParams(){
     <button class="btn ghost" style="width:100%" onclick="downloadAllDocs('facture')">${icone('download')} Télécharger toutes les factures</button>
     <button class="btn ghost" style="width:100%;margin-top:8px" onclick="downloadAllDocs('devis')">${icone('download')} Télécharger tous les devis</button>
   </div>
-  ${isPremium()?`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>${facturXOn()?`<button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button>`:`<p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) sera <b>disponible le 5 août</b>.</p>`}
+  ${isPremium()?`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>${facturXOn()?`<button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button><button class="btn ghost" style="width:100%;margin-top:8px" onclick="openPaTest()">Tester la facturation électronique (Sandbox)</button>`:`<p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) sera <b>disponible le 5 août</b>.</p>`}
   </div>`:`<div class="card" style="opacity:.7"><div class="section-title" style="margin-top:0;display:flex;align-items:center;gap:8px"><h2 style="font-size:15px;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2.5px">${icone('receipt')} Déclaration & plateforme</h2><span style="flex:0 0 auto;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></div><p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) est réservée à l'abonnement Premium.</p></div>`}`;
 }
 /* ===== Vue « Aujourd'hui » (hub Planning) : RDV du jour + chantiers actifs à cette date ===== */
@@ -6526,7 +6526,7 @@ function facturXTestXml(em, dest, inv, addDocsXml){
   return xml;
 }
 async function facturXTestPdf(){
-  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  if(!( (typeof isDevSpace==='function' && isDevSpace()) || perm('gerer_reglages') )){ toast("Réservé au patron ou à l'espace dev."); return; }
   const destKey=(val('pa_dest')||'imaginer');
   const dest=PA_TEST_DESTINATAIRES[destKey]||PA_TEST_DESTINATAIRES.imaginer;
   const em=PA_TEST_EMETTEUR;
@@ -7802,7 +7802,7 @@ function _paErr(e){ _paShow('<p class="note" style="margin:0;color:var(--danger)
 function _paJson(obj){ return '<pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0;max-height:240px;overflow:auto">'+esc(JSON.stringify(obj,null,2))+'</pre>'; }
 
 function openPaTest(){
-  if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; }
+  if(!( (typeof isDevSpace==='function' && isDevSpace()) || perm('gerer_reglages') )){ toast("Réservé au patron ou à l'espace dev."); return; }
   openModal(`<div class="grabber"></div>
     <h2 style="margin:0 0 4px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3M6 16a4 4 0 0 1-2-4 4 4 0 0 1 4-4h8a4 4 0 0 1 4 4 4 4 0 0 1-2 4"/></svg> Facturation électronique — test</h2>
     <p class="note" style="margin:0 0 10px">Bac à sable (Sandbox). Pour <b>créer</b> un artisan de test, son SIREN doit être dans l'<b>Hérault (34)</b>. Destinataires de test fournis : IMAGINE'R (routage 0225:432429819) et URBAT PROMOTION (routage 0225:352588727).</p>
