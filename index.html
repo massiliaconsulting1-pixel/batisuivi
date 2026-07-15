@@ -1029,7 +1029,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v195 · 13/07";
+const APP_VERSION="v196 · 15/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1148,6 +1148,8 @@ function renderDev(){
       <label style="margin-top:14px">Facturation électronique — suspension (démo)</label>
       <div class="row" style="gap:6px"><button class="btn ${!CONFIG_DB.facturXSuspendu?'primary':'ghost'} mini" onclick="devSetFacturXSuspend(false)">Active</button><button class="btn ${CONFIG_DB.facturXSuspendu?'primary':'ghost'} mini" onclick="devSetFacturXSuspend(true)">Suspendue</button></div>
       <p class="note" style="font-size:11px;margin-top:4px">Suspendue = masque toute la Factur-X / e-reporting (pour la démo). Réactivation automatique le 5 août.</p>
+      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openPaTest()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3"/></svg> Tester la facturation électronique (Sandbox BCSolutions)</button>
+      <p class="note" style="font-size:11px;margin-top:4px">Génère une facture Factur-X de test (émetteur + destinataire du bac à sable), à déposer dans le validateur FNFE ou le portail BCSolutions.</p>
       <p class="note" style="font-size:11px;margin-top:4px">Désactive si le client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
       <div class="row" style="margin-top:10px"><div><label>Préfixe devis</label><input id="cfg_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
         <div><label>Prochain n° devis</label><input id="cfg_devnum" type="number" min="1" value="${(CONFIG_DB.devisCounter||0)+1}"></div></div>
@@ -6312,7 +6314,50 @@ function fallbackCopy(txt,done){ try{ const ta=document.createElement('textarea'
 /* ---- Factur-X : facture électronique structurée (format CII, profil EN 16931) ---- */
 function fxAmt(n){ return (Math.round((n||0)*100)/100).toFixed(2); }
 function fxSafe(s){ return String(s||'').replace(/[^A-Za-z0-9_-]/g,''); }
-function facturXXml(snap){
+/* Encode des octets en base64 (compatible navigateur, sans dépasser la pile) */
+function fxBytesToB64(bytes){
+  let bin=''; const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk)); }
+  return btoa(bin);
+}
+/* Retrouve le devis signé lié à une facture, pour le joindre à la facture électronique.
+   Méthode BCSolutions/Philippe : les pièces jointes voyagent DANS le XML (BG-24), en base64. */
+function fxPiecesJointes(id, snap){
+  const c=CHANTIERS[id]; if(!c||!c.published) return [];
+  const out=[];
+  // 1) le devis explicitement lié (snap.devisId), sinon le dernier devis signé du chantier
+  let dev=null;
+  if(snap.devisId && c.published[snap.devisId]) dev=Object.assign({pid:snap.devisId},c.published[snap.devisId]);
+  if(!dev){
+    const devis=Object.keys(c.published).map(pid=>Object.assign({pid},c.published[pid]))
+      .filter(d=>d.type==='devis' && d.signature).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(devis.length) dev=devis[0];
+  }
+  if(dev) out.push({ doc:dev, kind:'devis', id:dev.num||('DEVIS-'+dev.pid), nom:'Devis '+(dev.signature?'accepté':'')+' '+(dev.num||'') });
+  return out;
+}
+/* Génère le bloc XML BG-24 (AdditionalReferencedDocument) pour chaque pièce jointe.
+   Chaque doc est rendu en PDF puis encodé base64 et embarqué dans le CII.
+   TypeCode 916 = "document justificatif lié". */
+async function fxAdditionalDocsXml(id, snap){
+  const pjs=fxPiecesJointes(id, snap);
+  if(!pjs.length) return '';
+  const X=esc; let xml='';
+  for(const p of pjs){
+    let b64='';
+    try{ const bytes=await docPdfBytes(p.doc); b64=fxBytesToB64(bytes); }
+    catch(e){ continue; } // si une pièce échoue, on continue sans elle plutôt que de tout bloquer
+    const fname=fxSafe(p.id)+'.pdf';
+    xml+=`      <ram:AdditionalReferencedDocument>`
+       + `<ram:IssuerAssignedID>${X(p.id)}</ram:IssuerAssignedID>`
+       + `<ram:TypeCode>916</ram:TypeCode>`
+       + `<ram:Name>${X(p.nom.trim())}</ram:Name>`
+       + `<ram:AttachmentBinaryObject mimeCode="application/pdf" filename="${X(fname)}">${b64}</ram:AttachmentBinaryObject>`
+       + `</ram:AdditionalReferencedDocument>\n`;
+  }
+  return xml;
+}
+function facturXXml(snap, addDocsXml){
   const X=esc;
   const num=snap.num||'';
   const dt=new Date(snap.ts||Date.now());
@@ -6328,13 +6373,14 @@ function facturXXml(snap){
   let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
   xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
   xml+=`  <rsm:ExchangedDocument><ram:ID>${X(num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${ymd}</udt:DateTimeString></ram:IssueDateTime><ram:IncludedNote><ram:Content>Penalites de retard : en cas de retard de paiement, application de penalites au taux de 3 fois le taux d'interet legal.</ram:Content><ram:SubjectCode>PMD</ram:SubjectCode></ram:IncludedNote><ram:IncludedNote><ram:Content>Indemnite forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 euros (art. D441-5 du Code de commerce).</ram:Content><ram:SubjectCode>PMT</ram:SubjectCode></ram:IncludedNote><ram:IncludedNote><ram:Content>Escompte pour paiement anticipe : neant.</ram:Content><ram:SubjectCode>AAB</ram:SubjectCode></ram:IncludedNote></rsm:ExchangedDocument>\n`;
-  xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      <ram:SellerTradeParty><ram:Name>${X(coName())}</ram:Name>`;
+  xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      ${(snap.clientSociete||snap.client)?`<ram:BuyerReference>${X(snap.clientSociete||snap.client)}</ram:BuyerReference>\n      `:''}<ram:SellerTradeParty><ram:Name>${X(coName())}</ram:Name>`;
   if(siren) xml+=`<ram:SpecifiedLegalOrganization><ram:ID schemeID="0002">${X(siren)}</ram:ID></ram:SpecifiedLegalOrganization>`;
   xml+=`<ram:PostalTradeAddress>`;
   if(cp) xml+=`<ram:PostcodeCode>${X(cp)}</ram:PostcodeCode>`;
   if(adr) xml+=`<ram:LineOne>${X(adr)}</ram:LineOne>`;
   if(ville) xml+=`<ram:CityName>${X(ville)}</ram:CityName>`;
   xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
+  if(siren) xml+=`<ram:URIUniversalCommunication><ram:URIID schemeID="0225">${X(siren)}</ram:URIID></ram:URIUniversalCommunication>`;
   if(tvaId) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="VA">${X(tvaId)}</ram:ID></ram:SpecifiedTaxRegistration>`; else if(siren) xml+=`<ram:SpecifiedTaxRegistration><ram:ID schemeID="FC">${X(siren)}</ram:ID></ram:SpecifiedTaxRegistration>`;
   xml+=`</ram:SellerTradeParty>\n      <ram:BuyerTradeParty><ram:Name>${X(snap.clientSociete||snap.client||'Client')}</ram:Name>`;
   const bSiren=(snap.clientType==='pro')?((snap.clientSiren||'').replace(/\s/g,'')):'';
@@ -6343,9 +6389,32 @@ function facturXXml(snap){
   if(snap.adresse) xml+=`<ram:LineOne>${X(snap.adresse)}</ram:LineOne>`;
   xml+=`<ram:CountryID>FR</ram:CountryID></ram:PostalTradeAddress>`;
   if(bSiren) xml+=`<ram:URIUniversalCommunication><ram:URIID schemeID="0225">${X(bSiren)}</ram:URIID></ram:URIUniversalCommunication>`;
-  xml+=`</ram:BuyerTradeParty>\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery><ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format="102">${ymd}</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent></ram:ApplicableHeaderTradeDelivery>\n`;
-  xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
+  xml+=`</ram:BuyerTradeParty>\n`;
+  const _devNum=(function(){ const c=CHANTIERS[snap.id]; if(!c||!c.published) return ''; if(snap.devisId&&c.published[snap.devisId]) return c.published[snap.devisId].num||''; const dv=Object.values(c.published).filter(d=>d&&d.type==='devis'&&d.signature).sort((a,b)=>(b.ts||0)-(a.ts||0))[0]; return dv?(dv.num||''):''; })();
+  if(_devNum) xml+=`      <ram:BuyerOrderReferencedDocument><ram:IssuerAssignedID>${X(_devNum)}</ram:IssuerAssignedID></ram:BuyerOrderReferencedDocument>\n`;
+  if(addDocsXml) xml+=addDocsXml;   // BG-24 : pièces jointes (devis, bon de commande) intégrées au XML
+  xml+=`    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery><ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format="102">${ymd}</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent></ram:ApplicableHeaderTradeDelivery>\n`;
+  xml+=`    <ram:ApplicableHeaderTradeSettlement>`;
+  xml+=`<ram:PaymentReference>${X(num)}</ram:PaymentReference>`;
+  xml+=`<ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
+  // Moyens de paiement : virement (58) avec IBAN si renseigné, sinon non spécifié (1)
+  const iban=(CONFIG_DB.iban||'').replace(/\s/g,''), bic=(CONFIG_DB.bic||'').replace(/\s/g,'');
+  if(iban){
+    xml+=`<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode>`
+       + `<ram:PayeePartyCreditorFinancialAccount><ram:IBANID>${X(iban)}</ram:IBANID>`
+       + (CONFIG_DB.ibanTitu||coName()?`<ram:AccountName>${X(CONFIG_DB.ibanTitu||coName())}</ram:AccountName>`:'')
+       + `</ram:PayeePartyCreditorFinancialAccount>`
+       + (bic?`<ram:PayeeSpecifiedCreditorFinancialInstitution><ram:BICID>${X(bic)}</ram:BICID></ram:PayeeSpecifiedCreditorFinancialInstitution>`:'')
+       + `</ram:SpecifiedTradeSettlementPaymentMeans>`;
+  } else {
+    xml+=`<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>1</ram:TypeCode></ram:SpecifiedTradeSettlementPaymentMeans>`;
+  }
   xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode>${isFranchiseTva()?'<ram:ExemptionReason>'+X(tvaMention())+'</ram:ExemptionReason>':''}<ram:BasisAmount>${fxAmt(ht)}</ram:BasisAmount><ram:CategoryCode>${fxCat()}</ram:CategoryCode><ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  // Conditions de paiement : échéance (date limite de règlement)
+  const ech=factureEcheance(snap);
+  if(ech){ const ed=new Date(ech); const eymd=ed.getFullYear()+String(ed.getMonth()+1).padStart(2,'0')+String(ed.getDate()).padStart(2,'0');
+    xml+=`<ram:SpecifiedTradePaymentTerms><ram:DueDateDateTime><udt:DateTimeString format="102">${eymd}</udt:DateTimeString></ram:DueDateDateTime></ram:SpecifiedTradePaymentTerms>`;
+  }
   xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
   xml+=`</ram:ApplicableHeaderTradeSettlement>\n  </rsm:SupplyChainTradeTransaction>\n</rsm:CrossIndustryInvoice>\n`;
   return xml;
@@ -6370,9 +6439,10 @@ function fxGetFacture(id,pid){
   if(!(CONFIG_DB.siren||'').trim()){ toast("Ajoute ton SIREN dans Paramètres de facturation"); openFacturationSettings(); return null; }
   return snap;
 }
-function facturXDownload(id,pid){ // repli : XML seul
+async function facturXDownload(id,pid){ // repli : XML seul (avec pièces jointes BG-24)
   const snap=fxGetFacture(id,pid); if(!snap) return;
-  const blob=new Blob([facturXXml(snap)],{type:'application/xml'}); const url=URL.createObjectURL(blob);
+  let addDocs=''; try{ addDocs=await fxAdditionalDocsXml(id,snap); }catch(_){}
+  const blob=new Blob([facturXXml(snap,addDocs)],{type:'application/xml'}); const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='factur-x_'+fxSafe(snap.num||'facture')+'.xml';
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   toast("Factur-X (XML) téléchargé ✅");
@@ -6402,8 +6472,9 @@ async function facturXPdf(id,pid){
     (snap.items||[]).forEach(it=>{ t(String(it.desc||'').slice(0,60),M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); y-=13; if(y<120){ y=800; doc.addPage([595.28,841.89]); } });
     y-=10; t('Total HT : '+fxAmt(ht)+' EUR',380,y,font,10); y-=13; t((isFranchiseTva()?'TVA non applicable':('TVA '+tvaPct()+'%'))+' : '+fxAmt(tva)+' EUR',380,y,font,10); y-=13; t('Total TTC : '+fxAmt(ttc)+' EUR',380,y,bold,11); y-=16; if(isFranchiseTva()){ t(tvaMention(),M,y,font,8,grey); y-=14; } y-=10;
     t('Facture électronique — Factur-X (profil EN 16931). Données structurées XML intégrées dans ce PDF.',M,y,font,8,grey);
+    let addDocs=''; try{ addDocs=await fxAdditionalDocsXml(id,snap); }catch(_){}
     const enc=new TextEncoder();
-    await doc.attach(enc.encode(facturXXml(snap)),'factur-x.xml',{mimeType:'text/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
+    await doc.attach(enc.encode(facturXXml(snap,addDocs)),'factur-x.xml',{mimeType:'text/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
     try{ const stream=doc.context.stream(facturXXmp(snap.num||''),{Type:'Metadata',Subtype:'XML'}); doc.catalog.set(PDFName.of('Metadata'),doc.context.register(stream)); }catch(_){}
     doc.setProducer('BatiSuivi'); doc.setCreator('BatiSuivi'); doc.setTitle('Facture '+(snap.num||''));
     try{ const _hx=PL.PDFHexString.of(Array.from({length:16},function(){return ('0'+Math.floor(Math.random()*256).toString(16)).slice(-2);}).join('').toUpperCase()); doc.context.trailerInfo.ID=doc.context.obj([_hx,_hx]); }catch(_){ }
@@ -6435,7 +6506,7 @@ function _fxTestParty(role, p){
   s+=`</ram:${role}>`;
   return s;
 }
-function facturXTestXml(em, dest, inv){
+function facturXTestXml(em, dest, inv, addDocsXml){
   const X=esc; let lines='';
   inv.items.forEach((it,i)=>{ const lt=it.qty*it.pu;
     lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc)}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
@@ -6443,9 +6514,13 @@ function facturXTestXml(em, dest, inv){
   let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
   xml+=`  <rsm:ExchangedDocumentContext><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
   xml+=`  <rsm:ExchangedDocument><ram:ID>${X(inv.num)}</ram:ID><ram:TypeCode>380</ram:TypeCode><ram:IssueDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:IssueDateTime><ram:IncludedNote><ram:Content>Penalites de retard : en cas de retard de paiement, application de penalites au taux de 3 fois le taux d'interet legal.</ram:Content><ram:SubjectCode>PMD</ram:SubjectCode></ram:IncludedNote><ram:IncludedNote><ram:Content>Indemnite forfaitaire pour frais de recouvrement en cas de retard de paiement : 40 euros (art. D441-5 du Code de commerce).</ram:Content><ram:SubjectCode>PMT</ram:SubjectCode></ram:IncludedNote><ram:IncludedNote><ram:Content>Escompte pour paiement anticipe : neant.</ram:Content><ram:SubjectCode>AAB</ram:SubjectCode></ram:IncludedNote></rsm:ExchangedDocument>\n`;
-  xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      ${_fxTestParty('SellerTradeParty', em)}\n      ${_fxTestParty('BuyerTradeParty', dest)}\n    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery><ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent></ram:ApplicableHeaderTradeDelivery>\n`;
-  xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
+  xml+=`  <rsm:SupplyChainTradeTransaction>\n${lines}    <ram:ApplicableHeaderTradeAgreement>\n      <ram:BuyerReference>${X(dest.name)}</ram:BuyerReference>\n      ${_fxTestParty('SellerTradeParty', em)}\n      ${_fxTestParty('BuyerTradeParty', dest)}\n`;
+  if(addDocsXml) xml+=addDocsXml;   // BG-24 : pièce jointe (devis de démo) dans le XML — méthode Philippe
+  xml+=`    </ram:ApplicableHeaderTradeAgreement>\n    <ram:ApplicableHeaderTradeDelivery><ram:ActualDeliverySupplyChainEvent><ram:OccurrenceDateTime><udt:DateTimeString format="102">${inv.ymd}</udt:DateTimeString></ram:OccurrenceDateTime></ram:ActualDeliverySupplyChainEvent></ram:ApplicableHeaderTradeDelivery>\n`;
+  xml+=`    <ram:ApplicableHeaderTradeSettlement><ram:PaymentReference>${X(inv.num)}</ram:PaymentReference><ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>`;
+  xml+=`<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount><ram:IBANID>FR7630006000011234567890189</ram:IBANID><ram:AccountName>${X(em.name)}</ram:AccountName></ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>`;
   xml+=`<ram:ApplicableTradeTax><ram:CalculatedAmount>${fxAmt(inv.tva)}</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode>${inv.cat==='E'?'<ram:ExemptionReason>TVA non applicable, art. 293 B du CGI</ram:ExemptionReason>':''}<ram:BasisAmount>${fxAmt(inv.ht)}</ram:BasisAmount><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  xml+=`<ram:SpecifiedTradePaymentTerms><ram:DueDateDateTime><udt:DateTimeString format="102">${inv.dueymd||inv.ymd}</udt:DateTimeString></ram:DueDateDateTime></ram:SpecifiedTradePaymentTerms>`;
   xml+=`<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:LineTotalAmount>${fxAmt(inv.ht)}</ram:LineTotalAmount><ram:TaxBasisTotalAmount>${fxAmt(inv.ht)}</ram:TaxBasisTotalAmount><ram:TaxTotalAmount currencyID="EUR">${fxAmt(inv.tva)}</ram:TaxTotalAmount><ram:GrandTotalAmount>${fxAmt(inv.ttc)}</ram:GrandTotalAmount><ram:DuePayableAmount>${fxAmt(inv.ttc)}</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>`;
   xml+=`</ram:ApplicableHeaderTradeSettlement>\n  </rsm:SupplyChainTradeTransaction>\n</rsm:CrossIndustryInvoice>\n`;
   return xml;
@@ -6458,7 +6533,9 @@ async function facturXTestPdf(){
   const d=new Date();
   const ymd=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
   const hhmm=String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
-  const inv={ num:'TEST-'+ymd+'-'+hhmm, ymd, cat:'E', rate:'0',
+  const dd=new Date(d.getTime()+30*86400000);
+  const dueymd=dd.getFullYear()+String(dd.getMonth()+1).padStart(2,'0')+String(dd.getDate()).padStart(2,'0');
+  const inv={ num:'TEST-'+ymd+'-'+hhmm, ymd, dueymd, cat:'E', rate:'0',
     items:[{desc:'Prestation de test BatiSuivi',qty:1,pu:100}], ht:100, tva:0, ttc:100 };
   let PL; try{ toast("Génération du Factur-X de test…"); PL=await loadPdfLib(); }
   catch(e){ toast("PDF indisponible (réseau). Réessaie en ligne."); return; }
@@ -6479,8 +6556,22 @@ async function facturXTestPdf(){
     inv.items.forEach(it=>{ t(it.desc,M,y,font,9); t(String(it.qty),360,y,font,9); t(fxAmt(it.pu),420,y,font,9); t(fxAmt(it.qty*it.pu),500,y,font,9); y-=13; });
     y-=10; t('Total HT : '+fxAmt(inv.ht)+' EUR',380,y,font,10); y-=13; t('TVA non applicable - art. 293 B du CGI',380,y,font,9); y-=13; t('Total TTC : '+fxAmt(inv.ttc)+' EUR',380,y,bold,11); y-=18;
     t('Facture electronique de TEST - Factur-X (profil EN 16931). Emetteur et destinataire de la Sandbox.',M,y,font,8,grey);
+    // Pièce jointe de démo (méthode Philippe) : un petit devis PDF embarqué dans le XML (BG-24)
+    let addDocs='';
+    try{
+      const dpg=await PDFDocument.create(); const dp=dpg.addPage([595.28,841.89]);
+      const df=await dpg.embedFont(StandardFonts.Helvetica), db=await dpg.embedFont(StandardFonts.HelveticaBold);
+      dp.drawText(em.name,{x:50,y:790,size:14,font:db});
+      dp.drawText('DEVIS DEMO-'+inv.num,{x:50,y:760,size:12,font:db});
+      dp.drawText('Client : '+dest.name,{x:50,y:740,size:10,font:df});
+      dp.drawText(inv.items[0].desc+' - '+fxAmt(inv.ht)+' EUR HT',{x:50,y:715,size:10,font:df});
+      dp.drawText('Piece jointe de demonstration integree a la facture electronique.',{x:50,y:690,size:8,font:df});
+      const dbytes=await dpg.save();
+      const b64=fxBytesToB64(dbytes);
+      addDocs=`      <ram:AdditionalReferencedDocument><ram:IssuerAssignedID>DEMO-${fxSafe(inv.num)}</ram:IssuerAssignedID><ram:TypeCode>916</ram:TypeCode><ram:Name>Devis de demonstration</ram:Name><ram:AttachmentBinaryObject mimeCode="application/pdf" filename="devis-demo-${fxSafe(inv.num)}.pdf">${b64}</ram:AttachmentBinaryObject></ram:AdditionalReferencedDocument>\n`;
+    }catch(_){}
     const enc=new TextEncoder();
-    await doc.attach(enc.encode(facturXTestXml(em,dest,inv)),'factur-x.xml',{mimeType:'text/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
+    await doc.attach(enc.encode(facturXTestXml(em,dest,inv,addDocs)),'factur-x.xml',{mimeType:'text/xml',description:'Factur-X',creationDate:new Date(),modificationDate:new Date(),afRelationship:AFRelationship.Data});
     try{ const stream=doc.context.stream(facturXXmp(inv.num),{Type:'Metadata',Subtype:'XML'}); doc.catalog.set(PDFName.of('Metadata'),doc.context.register(stream)); }catch(_){}
     doc.setProducer('BatiSuivi'); doc.setCreator('BatiSuivi'); doc.setTitle('Facture TEST '+inv.num);
     try{ const _hx=PL.PDFHexString.of(Array.from({length:16},function(){return ('0'+Math.floor(Math.random()*256).toString(16)).slice(-2);}).join('').toUpperCase()); doc.context.trailerInfo.ID=doc.context.obj([_hx,_hx]); }catch(_){ }
