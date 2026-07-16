@@ -436,8 +436,8 @@ body.big-text{zoom:1.18}
 .step-dot{flex:1;height:5px;border-radius:3px;background:var(--bg2)}
 .step-dot.done{background:var(--acc)}
 .ch-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:center;min-height:86px;box-sizing:border-box}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;align-items:stretch}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:center;height:92px;box-sizing:border-box;overflow:hidden}
 .kpi .big{font-family:'Sora';font-size:clamp(17px,5.4vw,26px);font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi .lbl{font-size:11px;color:var(--muted);margin-top:2px}
 .kpi.acc .big{color:var(--acc2)} .kpi.ok .big{color:var(--ok)} .kpi.warn .big{color:var(--warn)}
@@ -1032,7 +1032,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v203 · 16/07";
+const APP_VERSION="v204 · 16/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
