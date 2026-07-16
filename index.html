@@ -640,6 +640,7 @@ const ICONS={
   'shield':'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>',
   'undo':'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/>',
   'clock':'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  'sun':'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   'smartphone':'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M12 18h.01"/>',
   'timer':'<path d="M10 2h4"/><circle cx="12" cy="14" r="8"/><path d="M12 14V10"/>',
   'flag':'<path d="M4 22V3M4 4h13l-2 4 2 4H4"/>',
@@ -1029,7 +1030,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v199 · 15/07";
+const APP_VERSION="v201 · 15/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1147,9 +1148,7 @@ function renderDev(){
       <p class="note" style="font-size:11px;margin-top:4px">Premium = toute l'IA + facturation électronique (Factur-X). Basique = sans IA ni Factur-X (facturation de confort seulement). Ton choix s'applique automatiquement au patron.</p>
       <label style="margin-top:14px">Facturation électronique — suspension (démo)</label>
       <div class="row" style="gap:6px"><button class="btn ${!CONFIG_DB.facturXSuspendu?'primary':'ghost'} mini" onclick="devSetFacturXSuspend(false)">Active</button><button class="btn ${CONFIG_DB.facturXSuspendu?'primary':'ghost'} mini" onclick="devSetFacturXSuspend(true)">Suspendue</button></div>
-      <p class="note" style="font-size:11px;margin-top:4px">Suspendue = masque toute la Factur-X / e-reporting (pour la démo). Réactivation automatique le 5 août.</p>
-      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openPaTest()"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M9 8V5l3 2 3-2v3"/></svg> Tester la facturation électronique (Sandbox BCSolutions)</button>
-      <p class="note" style="font-size:11px;margin-top:4px">Génère une facture Factur-X de test (émetteur + destinataire du bac à sable), à déposer dans le validateur FNFE ou le portail BCSolutions.</p>
+      <p class="note" style="font-size:11px;margin-top:4px">Suspendue = masque toute la Factur-X / e-reporting (pour la démo). Réactivation automatique le 15 août.</p>
       <p class="note" style="font-size:11px;margin-top:4px">Désactive si le client a déjà un logiciel de facturation (évite les doublons). Le suivi de chantier et les devis restent actifs.</p>
       <div class="row" style="margin-top:10px"><div><label>Préfixe devis</label><input id="cfg_devpre" type="text" value="${devisPrefix()}" maxlength="6"></div>
         <div><label>Prochain n° devis</label><input id="cfg_devnum" type="number" min="1" value="${(CONFIG_DB.devisCounter||0)+1}"></div></div>
@@ -5138,11 +5137,24 @@ const HUBS={
   params:{title:'Paramètres',icon:'settings',tabs:[['entreprise','id','Entreprise'],['factu','receipt','Facturation'],['client','user','Client'],['equipe','shield','Équipe'],['perso','palette','Perso'],['systeme','settings','Système']]}
 };
 function openFactu(){ if(!perm('gerer_reglages')){ toast("Réservé au patron."); return; } HUB='facturation'; closeModal(); render(); toTop(); }
-function closeFactu(){ goHome(); }
+function closeFactu(){ goBack(); }
 
 /* ---- Accueil patron + coquille des hubs ---- */
 function goHub(h){ if(!isBoss()){ toast("Réservé au patron."); return; } HUB=h; HTAB=(HUBS[h]&&HUBS[h].tabs[0][0])||''; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; closeModal(); render(); toTop(); }
 function goHome(){ HUB=null; FACTU_OPEN=false; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; closeModal(); render(); toTop(); }
+/* Retour intelligent : recule d'UN seul niveau selon où on est, au lieu de sauter à l'accueil.
+   Chantier précis -> liste chantiers ; sous-vue (archives/clients) -> hub ; hub -> accueil. */
+function goBack(){
+  closeModal();
+  // 1) un chantier précis est ouvert -> revenir à la liste des chantiers
+  if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]){ CUR_CHANTIER=null; if(HUB!=='chantiers'){ HUB='chantiers'; HTAB='liste'; } render(); toTop(); return; }
+  // 2) une sous-vue est ouverte (archives / clients) -> revenir au hub
+  if(ARCH_VIEW || CLIENTS_VIEW){ ARCH_VIEW=false; CLIENTS_VIEW=false; render(); toTop(); return; }
+  // 3) on est dans un hub (niveau 1) -> revenir à l'accueil
+  if(HUB){ goHome(); return; }
+  // 4) déjà à l'accueil -> ne rien faire
+  toTop();
+}
 function setHTab(t){ HTAB=t; CUR_CHANTIER=null; render(); toTop(); }
 
 /* Geste : glisser du bord gauche vers la droite => revenir à l'Accueil (patron) */
@@ -5153,7 +5165,7 @@ function initSwipeBack(){
   if(_swipeInit) return; _swipeInit=true;
   document.addEventListener('touchstart',function(e){ if(!e.touches||e.touches.length!==1) return; const t=e.touches[0]; _swX=t.clientX; _swY=t.clientY; _swT=Date.now(); },{passive:true});
   document.addEventListener('touchend',function(e){ const t=e.changedTouches&&e.changedTouches[0]; if(!t) return; const dx=t.clientX-_swX, dy=t.clientY-_swY, dt=Date.now()-_swT;
-    if(_swX<=42 && dx>80 && Math.abs(dy)<60 && dt<700){ if(isBoss() && !EMP_PREVIEW && (CUR_CHANTIER||HUB)){ goHome(); } }
+    if(_swX<=42 && dx>80 && Math.abs(dy)<60 && dt<700){ if(isBoss() && !EMP_PREVIEW && (CUR_CHANTIER||HUB||ARCH_VIEW||CLIENTS_VIEW)){ goBack(); } }
   },{passive:true});
   document.addEventListener('touchstart',function(e){ const row=e.target.closest&&e.target.closest('.cli-row'); if(_cliOpen&&_cliOpen!==row){ _cliOpen.style.transform=''; _cliOpen=null; } if(!row||!e.touches||e.touches.length!==1) return; _cliEl=row; _cliX=e.touches[0].clientX; _cliY=e.touches[0].clientY; _cliMove=false; },{passive:true});
   document.addEventListener('touchmove',function(e){ if(!_cliEl||!e.touches||!e.touches.length) return; const dx=e.touches[0].clientX-_cliX, dy=e.touches[0].clientY-_cliY; if(!_cliMove && Math.abs(dx)<Math.abs(dy)){ _cliEl.style.transform=''; _cliEl=null; return; } if(dx>0){ _cliMove=true; _cliEl.style.transform='translateX('+Math.min(dx,120)+'px)'; } },{passive:true});
@@ -5214,7 +5226,7 @@ function renderHub(){
   const lbl=(cfg.tabs.find(t=>t[0]===HTAB)||[])[2]||cfg.title;
   app.innerHTML=`
   <div class="top"><div class="brand" style="min-width:0">
-    <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <button class="burger" onclick="goBack()" aria-label="Retour" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${icone(cfg.icon,'22px')}</div>
     <div class="bn"><b>${esc(cfg.title)}</b><small>${esc(coName())}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
@@ -5226,7 +5238,7 @@ function renderBossChantier(){
   navEl.classList.add('hidden');
   app.innerHTML=`
   <div class="top"><div class="brand" style="min-width:0">
-    <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <button class="burger" onclick="goBack()" aria-label="Retour" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${logoHTML()}</div><div class="bn"><b>Chantier</b><small>${esc(coName())}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
   ${viewChantier(CUR_CHANTIER)}`;
@@ -5789,7 +5801,7 @@ function factuParams(){
     <button class="btn ghost" style="width:100%" onclick="downloadAllDocs('facture')">${icone('download')} Télécharger toutes les factures</button>
     <button class="btn ghost" style="width:100%;margin-top:8px" onclick="downloadAllDocs('devis')">${icone('download')} Télécharger tous les devis</button>
   </div>
-  ${isPremium()?`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>${facturXOn()?`<button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button><button class="btn ghost" style="width:100%;margin-top:8px" onclick="openPaTest()">Tester la facturation électronique (Sandbox)</button>`:`<p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) sera <b>disponible le 5 août</b>.</p>`}
+  ${isPremium()?`<div class="card"><div class="section-title" style="margin-top:0"><h2 style="font-size:15px">${icone('receipt')} Déclaration & plateforme</h2></div>${facturXOn()?`<button class="btn ghost" style="width:100%" onclick="openEreportingExport()">${icone('save')} Récap & export e-reporting (HT + TVA par mois)</button><button class="btn ghost" style="width:100%;margin-top:8px" onclick="openPaTest()">Tester la facturation électronique (Sandbox)</button>`:`<p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) sera <b>disponible le 15 août</b>.</p>`}
   </div>`:`<div class="card" style="opacity:.7"><div class="section-title" style="margin-top:0;display:flex;align-items:center;gap:8px"><h2 style="font-size:15px;text-decoration:line-through;text-decoration-color:#d4af37;text-decoration-thickness:2.5px">${icone('receipt')} Déclaration & plateforme</h2><span style="flex:0 0 auto;font-size:9.5px;font-weight:800;padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00">PREMIUM</span></div><p class="note" style="margin:0">La facturation électronique (e-reporting, plateforme agréée) est réservée à l'abonnement Premium.</p></div>`}`;
 }
 /* ===== Vue « Aujourd'hui » (hub Planning) : RDV du jour + chantiers actifs à cette date ===== */
@@ -6740,7 +6752,7 @@ function renderParamsPage(){
   const lbl=(cfg.tabs.find(t=>t[0]===HTAB)||[])[2]||'Paramètres';
   app.innerHTML=`
   <div class="top"><div class="brand" style="min-width:0">
-    <button class="burger" onclick="goHome()" aria-label="Accueil" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
+    <button class="burger" onclick="goBack()" aria-label="Retour" style="border:none;background:transparent;padding:0;margin-right:4px;width:auto">${icone('arrow-left','24px')}</button>
     <div class="logo">${icone('settings','22px')}</div>
     <div class="bn"><b>Paramètres</b><small>${esc(coName())}</small></div></div>
     <button class="burger" onclick="openMenu()" aria-label="Menu"><span></span><span></span><span></span></button></div>
@@ -6757,16 +6769,59 @@ var _NOTIF_LIST=[];
 function dismissNotifIdx(i){ var n=_NOTIF_LIST[i]; if(!n) return; try{ var d=notifDismissed(); d[n.key]=Math.max(d[n.key]||0, n.ts||0); lsSet('batisuivi_notif_dismissed', d); }catch(_){ } var el=document.getElementById('ntf_'+i); if(el){ el.style.transition='opacity .18s'; el.style.opacity='0'; setTimeout(function(){ if(el&&el.parentNode) el.parentNode.removeChild(el); },180); } }
 function buildNotifs(){
   var out=[]; var seen=notifSeen(); var now=Date.now(); var myn=(ME&&ME.nom)||''; var me=(typeof myUid==='function')?myUid():'';
+  // Récap du matin : une synthèse quotidienne (patron), calculée à partir des 24 dernières heures
+  try{
+    if(isBoss()){
+      var since=now-24*3600000; var nDevis=0,nRetard=0,nEch=0,nFin=0,nFrais=0;
+      Object.values(CHANTIERS).forEach(function(c){ if(!c) return;
+        if(c.published) Object.values(c.published).forEach(function(d){
+          if(d&&d.type==='devis'&&d.signature&&((d.signedAt||d.ts||0)>=since)) nDevis++;
+          if(d&&d.type==='facture'&&!d.paye&&!d.annulee){ var rr=(typeof factureRetard==='function')?factureRetard(d):0; if(rr>0){ nRetard++; } else { var e=(typeof factureEcheance==='function')?factureEcheance(d):0; if(e){ var jj=Math.ceil((e-now)/86400000); if(jj>=0&&jj<=5) nEch++; } } }
+        });
+        if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var dd=Math.round((fin-now)/86400000); if(dd>=0&&dd<=7) nFin++; } }
+        if(c.frais) Object.values(c.frais).forEach(function(f){ if(f&&f.by&&f.by!==myn&&(f.ts||0)>=since) nFrais++; });
+      });
+      var parts=[];
+      if(nDevis) parts.push(nDevis+" devis sign\\u00e9"+(nDevis>1?'s':''));
+      if(nRetard) parts.push(nRetard+" facture"+(nRetard>1?'s':'')+" en retard");
+      if(nEch) parts.push(nEch+" \\u00e0 encaisser bient\\u00f4t");
+      if(nFin) parts.push(nFin+" chantier"+(nFin>1?'s':'')+" qui se termine"+(nFin>1?'nt':'')+" cette semaine");
+      if(nFrais) parts.push(nFrais+" note"+(nFrais>1?'s':'')+" de frais");
+      // clé par jour : n'apparaît qu'une fois par journée
+      var td=new Date(); var dayKey='digest:'+td.getFullYear()+'-'+(td.getMonth()+1)+'-'+td.getDate();
+      var dayStart=new Date(td.getFullYear(),td.getMonth(),td.getDate(),7,0,0).getTime();
+      if(parts.length){
+        out.push({key:dayKey, ts:dayStart, nw:dayStart>seen, ic:'sun', t:"Ton r\\u00e9cap du jour", s:parts.join(' \u00b7 '), go:"goHome()"});
+      }
+    }
+  }catch(_){ }
   try{ var un=totalChatUnread(); if(un>0){ var lg=chatLast('group'); var mts=(lg&&lg.ts)||now; out.push({key:'msg:group', ts:mts, ic:'message', nw:mts>seen, t:"Messages \u00e9quipe", s:un+" message"+(un>1?'s':'')+" non lu"+(un>1?'s':''), go:"goHub('equipe');setHTab('messagerie')"}); } }catch(_){ }
   Object.keys(CHANTIERS).forEach(function(id){ var c=CHANTIERS[id]; if(!c) return;
     if(c.messages){ var seenC=((typeof MSG_SEEN!=='undefined'&&MSG_SEEN)?MSG_SEEN[id]:0)||0; var arr=Object.values(c.messages).filter(function(m){ return m&&m.from!==me&&m.from!=='patron'; }).sort(function(a,b){return (a.ts||0)-(b.ts||0);}); var unc=arr.filter(function(m){ return (m.ts||0)>seenC; }).length; if(unc>0){ var lts=arr.length?(arr[arr.length-1].ts||now):now; out.push({key:'msgc:'+id, ts:lts, ic:'message', nw:lts>seen, t:"Message client", s:(c.nom||"Chantier")+" \u00b7 "+unc+" non lu"+(unc>1?'s':''), go:"goHub('chantiers')"}); } }
     if(c.published){ Object.keys(c.published).forEach(function(pid){ var d=c.published[pid];
       if(d&&d.type==='devis'&&d.signature){ var ts=d.signedAt||d.ts||0; var dj=(typeof devisConverti==='function')&&devisConverti({id:id,factureId:d.factureId}); out.push({key:'devis:'+id+':'+pid, ts:ts, ic:'check', nw:ts>seen, t:"Devis sign\u00e9", s:(c.nom||"Chantier")+" \u00b7 "+(d.num||'')+(dj?"":" \u00b7 \u00e0 transformer en facture"), go:"goHub('facturation');setFTab('devis')"}); }
-      if(d&&d.type==='facture'&&!d.paye){ var r=(typeof factureRetard==='function')?factureRetard(d):0; if(r>0){ out.push({key:'factret:'+id+':'+pid, ts:factureEcheance(d), nw:false, ic:'alert', t:"Facture en retard", s:(d.num||'')+" \u00b7 "+(c.nom||"Chantier")+" \u00b7 "+r+" j de retard", go:"setFFactSub('impayees');goHub('facturation');setFTab('factures')"}); } }
+      if(d&&d.type==='facture'&&!d.paye){ var r=(typeof factureRetard==='function')?factureRetard(d):0; if(r>0){ out.push({key:'factret:'+id+':'+pid, ts:factureEcheance(d), nw:false, ic:'alert', t:"Facture en retard", s:(d.num||'')+" \u00b7 "+(c.nom||"Chantier")+" \u00b7 "+r+" j de retard", go:"setFFactSub('impayees');goHub('facturation');setFTab('factures')"}); }
+        else if(!d.annulee){ var ech=(typeof factureEcheance==='function')?factureEcheance(d):0; if(ech){ var jav=Math.ceil((ech-now)/86400000); if(jav>=0&&jav<=5){ out.push({key:'factech:'+id+':'+pid, ts:ech, nw:ech>seen, ic:'clock', t:"Facture \\u00e0 \\u00e9ch\\u00e9ance", s:(d.num||'')+" \u00b7 "+(c.nom||"Chantier")+" \u00b7 "+(jav===0?"\\u00e9choit aujourd'hui":("dans "+jav+" j")), go:"setFFactSub('impayees');goHub('facturation');setFTab('factures')"}); } } } }
     }); }
     if(c.frais){ Object.keys(c.frais).forEach(function(k){ var f=c.frais[k]; if(f&&f.by&&f.by!==myn){ out.push({key:'frais:'+id+':'+k, ts:f.ts||0, ic:'receipt', nw:(f.ts||0)>seen, t:"Note de frais", s:(f.montant||0)+" \u20ac \u00b7 "+f.by, go:"goHub('equipe');setHTab('frais')"}); } }); }
     if(c.dateFin&&!c.archived&&c.statut!=='cloture'){ var fin=new Date(c.dateFin+'T12:00:00').getTime(); if(!isNaN(fin)){ var days=Math.round((fin-now)/86400000); if(days<=7){ out.push({key:'deadline:'+id, ts:fin, ic:'clock', nw:false, t:(days<0?"Chantier en retard":"\u00c9ch\u00e9ance proche"), s:(c.nom||"Chantier")+(days<0?(" \u00b7 en retard de "+(-days)+" j"):(days===0?" \u00b7 aujourd'hui":(" \u00b7 dans "+days+" j"))), go:"goHub('planning');setHTab('echeances')"}); } } }
   });
+  // Alerte pointage : employés sans pointage aujourd'hui (jours ouvrés, après 10h, patron/chef seulement)
+  try{
+    if(typeof pointageOn==='function' && pointageOn() && (isBoss()||(typeof isChef==='function'&&isChef()))){
+      var nowD=new Date(); var dow=nowD.getDay(); // 0=dim,6=sam
+      if(dow>=1 && dow<=5 && nowD.getHours()>=10){
+        var y0=nowD.getFullYear(), m0=nowD.getMonth(), d0=nowD.getDate();
+        var pointeToday={};
+        Object.values(CHANTIERS).forEach(function(c){ if(c&&c.pointages){ Object.keys(c.pointages).forEach(function(u){ (c.pointages[u]||[]).forEach(function(p){ if(p&&p.in){ var di=new Date(p.in); if(di.getFullYear()===y0&&di.getMonth()===m0&&di.getDate()===d0) pointeToday[u]=true; } }); }); } });
+        var manquants=[];
+        Object.keys(TEAM||{}).forEach(function(u){ var t=TEAM[u]; if(!t) return; if(t.role==='boss') return; if(t.actif===false) return; if(!pointeToday[u]) manquants.push(t.nom||'\\u00c9quipier'); });
+        if(manquants.length){ var jour0=new Date(y0,m0,d0).getTime();
+          out.push({key:'pointage:'+y0+'-'+(m0+1)+'-'+d0, ts:jour0+11*3600000, nw:true, ic:'clock', t:(manquants.length>1?"Pointages manquants":"Pointage manquant"), s:manquants.slice(0,3).join(', ')+(manquants.length>3?(' +'+(manquants.length-3)):'')+" \u00b7 pas encore point\\u00e9 aujourd'hui", go:"goHub('equipe')"});
+        }
+      }
+    }
+  }catch(_){ }
   var dis=notifDismissed();
   out=out.filter(function(n){ return !(dis[n.key] && dis[n.key]>=(n.ts||0)); });
   out.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
@@ -9206,10 +9261,10 @@ function teamResteTxt(){
 }
 function planTag(){ const p=isPremium(); return `<span style="display:inline-block;vertical-align:middle;font-size:9.5px;font-weight:800;letter-spacing:.04em;padding:2px 8px;border-radius:999px;${p?'background:linear-gradient(135deg,#f6d365,#d4af37);color:#3a2e00':'background:linear-gradient(135deg,#e9ebef,#b7bbc4);color:#2a2e35'}">${p?'PREMIUM':'BASIQUE'}</span>`; }
 function iaOn(){ return isPremium(); } // IA = abonnement Premium
-const FACTURX_DATE = '2026-08-10';
-function facturXDateFr(){ return '10 août 2026'; }
+const FACTURX_DATE = '2026-08-15';
+function facturXDateFr(){ return '15 août 2026'; }
 function facturXSuspenduMaintenant(){ return !!CONFIG_DB.facturXSuspendu && Date.now() < new Date(FACTURX_DATE+'T00:00:00').getTime(); }
-function facturXOn(){ return isPremium() && !facturXSuspenduMaintenant(); } // Factur-X : Premium + non suspendu (auto le 5 août)
+function facturXOn(){ return isPremium() && !facturXSuspenduMaintenant(); } // Factur-X : Premium + non suspendu (auto le 15 août)
 function nextFactureNum(){ const y=new Date().getFullYear(); CONFIG_DB.factCounter=(CONFIG_DB.factCounter||0)+1; saveConfigDB(); return factPrefix()+'-'+y+'-'+String(CONFIG_DB.factCounter).padStart(3,'0'); }
 function nextDevisNum(){ const y=new Date().getFullYear(); CONFIG_DB.devisCounter=(CONFIG_DB.devisCounter||0)+1; saveConfigDB(); return devisPrefix()+'-'+y+'-'+String(CONFIG_DB.devisCounter).padStart(3,'0'); }
 function publishFacture(id,mode,pct){
