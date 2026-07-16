@@ -1030,7 +1030,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v201 · 15/07";
+const APP_VERSION="v202 · 16/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -5144,17 +5144,6 @@ function goHub(h){ if(!isBoss()){ toast("Réservé au patron."); return; } HUB=h
 function goHome(){ HUB=null; FACTU_OPEN=false; CUR_CHANTIER=null; ARCH_VIEW=false; CLIENTS_VIEW=false; closeModal(); render(); toTop(); }
 /* Retour intelligent : recule d'UN seul niveau selon où on est, au lieu de sauter à l'accueil.
    Chantier précis -> liste chantiers ; sous-vue (archives/clients) -> hub ; hub -> accueil. */
-function goBack(){
-  closeModal();
-  // 1) un chantier précis est ouvert -> revenir à la liste des chantiers
-  if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]){ CUR_CHANTIER=null; if(HUB!=='chantiers'){ HUB='chantiers'; HTAB='liste'; } render(); toTop(); return; }
-  // 2) une sous-vue est ouverte (archives / clients) -> revenir au hub
-  if(ARCH_VIEW || CLIENTS_VIEW){ ARCH_VIEW=false; CLIENTS_VIEW=false; render(); toTop(); return; }
-  // 3) on est dans un hub (niveau 1) -> revenir à l'accueil
-  if(HUB){ goHome(); return; }
-  // 4) déjà à l'accueil -> ne rien faire
-  toTop();
-}
 function setHTab(t){ HTAB=t; CUR_CHANTIER=null; render(); toTop(); }
 
 /* Geste : glisser du bord gauche vers la droite => revenir à l'Accueil (patron) */
@@ -10221,19 +10210,32 @@ boot();
 setTimeout(maybeInstall,1500);
 function modalOpen(){ const m=document.getElementById('modal'); return !!(m && !m.classList.contains('hidden')); }
 function goBack(){
+  // 1) une fenêtre (modale) est ouverte -> la fermer d'abord
   if(modalOpen()){ closeModal(); return; }
+  // 2) aperçus (le patron prévisualise un client / un employé) -> en sortir
   if(BOSS_PREVIEW){ clientLogout(); return; }
   if(EMP_PREVIEW){ exitEmployeePreview(); return; }
+
   if(SCREEN==='team'){
+    // a) une conversation est ouverte -> la fermer
+    if(CHAT_OPEN){ closeConv(); return; }
+    // b) un chantier précis est ouvert -> revenir à la liste (le hub reste affiché)
     if(CUR_CHANTIER){ closeChantier(); return; }
-    if(TAB==='messagerie' && CHAT_OPEN){ closeConv(); return; }
+    // c) une sous-vue est ouverte -> revenir au hub
     if(ARCH_VIEW){ closeArchived(); return; }
     if(CLIENTS_VIEW){ closeClients(); return; }
+    // d) LE PATRON est dans un hub (Facturation, Chantiers, Équipe...) -> revenir à l'accueil
+    if(isBoss() && HUB){ HUB=null; HTAB=''; closeModal(); render(); toTop(); return; }
+    // e) sinon, sortir de la session
     if(!ME){ backToEntry(); return; }
     if(DEV_ACCESS){ backToDev(); return; }
     return;
   }
-  if(SCREEN==='client'){ if(!CLIENT){ backToEntry(); return; } if(DEV_ACCESS){ backToDev(); return; } return; }
+  if(SCREEN==='client'){
+    if(!CLIENT){ backToEntry(); return; }
+    if(DEV_ACCESS){ backToDev(); return; }
+    return;
+  }
   if(SCREEN==='dev'){ backToEntry(); return; }
 }
 let _edge=null;
