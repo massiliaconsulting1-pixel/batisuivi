@@ -237,11 +237,13 @@ body[data-theme="blanc"]:not([data-accent]) .pill.acc{color:#64748b;border-color
   transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;-webkit-backface-visibility:hidden;backface-visibility:hidden;
   border-top:1px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
 .nav.hidden{display:none}
-.nav button{background:none;border:none;color:var(--muted);font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 10px;cursor:pointer;border-radius:10px;flex:1 1 0;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.nav button .ic{font-size:20px}
+.nav button{background:none;border:none;color:var(--muted);font-size:10.5px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 6px;cursor:pointer;border-radius:10px;flex:1 1 0;min-width:0;max-width:100%;min-height:54px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav button .ic{height:26px;display:flex;align-items:center;justify-content:center;line-height:1}
+.nav button .ic svg,.nav button .ic .lic{width:24px!important;height:24px!important;vertical-align:0;flex:none}
+.nav button .lab,.nav button>span:not(.ic):not(.nav-badge){line-height:1.1;text-align:center}
 .nav button.on{color:var(--acc2)}
-.nav.compact button{font-size:9px;padding:5px 4px;gap:3px}
-.nav.compact button .ic{font-size:18px}
+.nav.compact button{font-size:9px;padding:6px 3px;gap:4px}
+.nav.compact button .ic{height:26px}
 
 /* ---- écran d'accueil / auth ---- */
 .center-wrap{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
@@ -1030,7 +1032,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v202 · 16/07";
+const APP_VERSION="v203 · 16/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -5208,7 +5210,11 @@ function renderHub(){
   const cfg=HUBS[HUB]; if(!cfg){ HUB=null; return renderAccueil(); }
   if(CUR_CHANTIER && CHANTIERS[CUR_CHANTIER]) return renderBossChantier();
   if(HUB==='params') return renderParamsPage();
-  const hideNav = (HUB==='ia' && HTAB==='assistant' && CHAT_OPEN==='ai') || (CHAT_OPEN && ((HUB==='equipe'&&HTAB==='messagerie') || (HUB==='chantiers'&&HTAB==='clients'&&(CLIENTS_SUB||'annuaire')==='messagerie')));
+  const hideNav = !!CHAT_OPEN && (
+    (HUB==='ia' && HTAB==='assistant') ||
+    (HUB==='equipe' && HTAB==='messagerie') ||
+    (HUB==='chantiers' && HTAB==='clients')
+  );
   if(hideNav){ navEl.classList.add('hidden'); }
   else { navEl.classList.remove('hidden'); navEl.classList.add('compact');
     navEl.innerHTML=cfg.tabs.map(([t,ic,lb])=>`<button class="${HTAB===t?'on':''}" onclick="setHTab('${t}')"><span class="ic">${icone(ic,'24px')}</span>${lb}</button>`).join(''); }
