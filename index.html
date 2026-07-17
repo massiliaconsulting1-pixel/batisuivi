@@ -1035,7 +1035,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v211 · 17/07";
+const APP_VERSION="v212 · 17/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -2463,6 +2463,7 @@ function unitLabel(u){ u=(u==null?'':String(u)).trim(); return u||'u'; }
 function isPriceable(it){ return !!it && !it.section && !it.text && !it.subtotal; }
 function lineHT(it){ return isPriceable(it)?((Number(it.qty)||0)*(Number(it.pu)||0)):0; }
 function itemsHT(items){ return ((items)||[]).reduce((s,it)=>s+lineHT(it),0); }
+function docSafeItem(it){ if(it&&it.section) return {section:true,desc:it.desc||''}; if(it&&it.text) return {text:true,desc:it.desc||''}; if(it&&it.subtotal) return {subtotal:true,desc:it.desc||'Sous-total'}; return {desc:(it&&it.desc)||'',qty:Number(it&&it.qty)||0,pu:Number(it&&it.pu)||0,unit:unitLabel(it&&it.unit)}; }
 function lineCout(it){ return isPriceable(it)?((Number(it.qty)||0)*(Number(it.cout)||0)):0; }
 function itemsCout(items){ return ((items)||[]).reduce((s,it)=>s+lineCout(it),0); }
 function remiseMontant(sousTotal,r){ if(!r||!r.val) return 0; var v=Number(r.val)||0; if(v<=0) return 0; sousTotal=Math.max(0,sousTotal); if(r.type==='eur') return Math.min(v,sousTotal); return Math.round(sousTotal*Math.min(v,100)/100*100)/100; }
@@ -5639,7 +5640,7 @@ function devisVersFacture(id,pid){
   const tot=docHT(dv);
   if(!confirm("Créer une facture reprenant les "+items.length+" ligne"+(items.length>1?'s':'')+" du devis "+(dv.num||'')+" ("+eurF(tot)+" HT) ?")) return;
   const snap=docSnapshot(id,'facture');
-  snap.items=items.map(it=> (it&&it.section)?{section:true,desc:it.desc||''}:{desc:it.desc,qty:Number(it.qty)||0,pu:Number(it.pu)||0,unit:unitLabel(it.unit)} ); snap.remise=dv.remise||null;
+  snap.items=items.map(docSafeItem); snap.remise=dv.remise||null;
   snap.num=nextFactureNum(); snap.ts=Date.now();
   snap.echeance=snap.ts+delaiPaiement()*86400000;
   snap.devisNum=dv.num||''; snap.devisId=pid;
@@ -9074,7 +9075,7 @@ function clearRemise(id){ const c=CHANTIERS[id]; if(c.devis) c.devis.remise=null
 function docSnapshot(id,type){
   const c=CHANTIERS[id]; const dv=c.devis||{items:[]};
   return {
-    type, items:(dv.items||[]).map(it=> (it&&it.section)?{section:true,desc:it.desc||''}:{desc:it.desc||'',qty:Number(it.qty)||0,pu:Number(it.pu)||0,unit:unitLabel(it.unit)} ), remise:dv.remise||null,
+    type, items:(dv.items||[]).map(docSafeItem), remise:dv.remise||null,
     num:(type==='facture'?'FACT':'DEVIS')+'-'+new Date().getFullYear()+'-'+id.slice(0,4).toUpperCase(),
     date:new Date().toLocaleDateString('fr-FR'),
     chantier:c.nom, client:clientFull(c)==='—'?'':clientFull(c), adresse:adresseFull(c),
