@@ -867,6 +867,9 @@ function backupCard(){
   </div>`;
 }
 const THEMES=[['bleu','Bleu','#3d8bff'],['vert','Vert','#2fd17a'],['orange','Orange','#ff8a3d'],['rouge','Rouge','#ff4d62'],['violet','Violet','#9b6bff']];
+const PALETTE_PRESETS=[['Bleu','#3b82f6'],['Turquoise','#14b8a6'],['Vert','#2fd17a'],['Vert sapin','#0f766e'],['Ambre','#f59e0b'],['Orange','#ff8a3d'],['Rouge','#ff4d62'],['Bordeaux','#9f1239'],['Rose','#ec4899'],['Violet','#9b6bff'],['Indigo','#6366f1'],['Anthracite','#475569']];
+function favColors(){ return (typeof CONFIG_DB!=='undefined'&&Array.isArray(CONFIG_DB.favColors))?CONFIG_DB.favColors:[]; }
+function favColorAdd(hex){ if(!hex||String(hex).charAt(0)!=='#') return; if(!Array.isArray(CONFIG_DB.favColors)) CONFIG_DB.favColors=[]; hex=String(hex).toLowerCase(); var i=CONFIG_DB.favColors.indexOf(hex); if(i>=0) CONFIG_DB.favColors.splice(i,1); CONFIG_DB.favColors.unshift(hex); if(CONFIG_DB.favColors.length>8) CONFIG_DB.favColors=CONFIG_DB.favColors.slice(0,8); }
 // Couleurs réellement proposées aux utilisateurs (choisies par le dev). Vide/absent = toutes.
 function defThemeBase(){ const def=(CONFIG_DB&&CONFIG_DB.couleurDefaut)||CONFIG.COULEUR_DEFAUT||'bleu'; const d=def.indexOf('.'); return d>0?def.slice(0,d):def; }
 function activeThemes(){
@@ -1032,7 +1035,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v207 · 17/07";
+const APP_VERSION="v208 · 17/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -1213,6 +1216,7 @@ function devSetPlan(p){ CONFIG_DB.plan=p; saveConfigDB(); renderDev(); }
 function devSetFacturXSuspend(v){ CONFIG_DB.facturXSuspendu=v; saveConfigDB(); renderDev(); toast(v?("Factur-X suspendu — réactivation automatique le "+facturXDateFr()):"Factur-X activé"); }
 function devOpenClient(id){ const c=CHANTIERS[id]; if(!c) return; CLIENT={code:c.clientCode||'',nom:'Aperçu client',chantierId:id}; DEV_ACCESS=true; SCREEN='client'; render(); toTop(); }
 function devSetDefaultColor(id){ CONFIG_DB.couleurDefaut=id; saveConfigDB(); if(!lsGet(LS_THEME,null)){ applyTheme(); } cfgRerender(); }
+function devSetCustomColor(hex){ if(!hex||String(hex).charAt(0)!=='#') return; favColorAdd(hex); devSetDefaultColor(hex); }
 function devColorPicker(){
   const cur=(CONFIG_DB.couleurDefaut||CONFIG.COULEUR_DEFAUT||'bleu'); const dot=cur.indexOf('.'); const base=dot>0?cur.slice(0,dot):cur; const acc=dot>0?cur.slice(dot+1):'';
   let h=`<div style="display:flex;gap:9px;flex-wrap:wrap">`;
@@ -1225,6 +1229,9 @@ function devColorPicker(){
     h+=variants.map(([aid,albl,acol])=>{ const v=aid?(base+'.'+aid):base; const on=aid?(acc===aid):(acc===''); const bg=aid?`linear-gradient(135deg, ${baseCol} 0 50%, ${acol} 50% 100%)`:baseCol; return `<div onclick="devSetDefaultColor('${v}')" style="cursor:pointer;flex:none" title="${baseLbl} ${albl}"><div style="width:38px;height:38px;border-radius:11px;background:${bg};border:3px solid ${on?'var(--txt)':'transparent'}"></div></div>`; }).join('');
     h+=`</div>`;
   }
+  h+=`<p class="tag" style="margin:12px 0 4px">Teintes prêtes à l'emploi</p><div style="display:flex;flex-wrap:wrap;gap:8px">${PALETTE_PRESETS.map(([n,hx])=>`<div title="${n}" onclick="devSetCustomColor('${hx}')" style="width:34px;height:34px;border-radius:10px;background:${hx};cursor:pointer;border:3px solid ${cur.toLowerCase()===hx?'var(--txt)':'transparent'}"></div>`).join('')}</div>`;
+  h+=`<p class="tag" style="margin:12px 0 4px">Couleur personnalisée</p><div class="row" style="align-items:center;gap:10px"><input type="color" value="${cur.charAt(0)==='#'?cur:docAccentHex()}" onchange="devSetCustomColor(this.value)" style="width:52px;height:40px;padding:2px;border-radius:10px"><input type="text" value="${cur.charAt(0)==='#'?cur:''}" placeholder="#3b82f6" maxlength="7" onchange="if(/^#[0-9a-fA-F]{6}$/.test(this.value))devSetCustomColor(this.value)" style="max-width:120px"></div>`;
+  h+=favColors().length?`<p class="tag" style="margin:12px 0 4px">Favoris</p><div style="display:flex;flex-wrap:wrap;gap:8px">${favColors().map(hx=>`<div title="${hx}" onclick="devSetCustomColor('${hx}')" style="width:30px;height:30px;border-radius:9px;background:${hx};cursor:pointer;border:3px solid ${cur.toLowerCase()===hx?'var(--txt)':'transparent'}"></div>`).join('')}</div>`:'';
   return h;
 }
 // Grille de cases à cocher : le dev choisit les couleurs proposées aux utilisateurs
@@ -2441,7 +2448,17 @@ function relanceDevis(d){ if(!d || d.type!=='devis' || d.signature) return 0; co
 function totalRelances(){ let n=0; Object.values(CHANTIERS).forEach(c=>{ if(c.published) Object.values(c.published).forEach(d=>{ if(relanceDevis(d)) n++; }); }); return n; }
 function markSignedSeen(){ let ch=false; Object.keys(CHANTIERS).forEach(id=>{ const c=CHANTIERS[id]; if(c.published) Object.keys(c.published).forEach(pid=>{ if(c.published[pid].signature && !SIGN_SEEN[pid]){ SIGN_SEEN[pid]=true; ch=true; } }); }); if(ch){ lsSet('sign_seen',SIGN_SEEN); pushSeen('sign',SIGN_SEEN); } }
 /* ===== Devis v205 : unites, cout de revient (prive), remise globale, sections, reordonner, bibliotheque ===== */
-const DEVIS_UNITES=['u','forfait','m\u00b2','ml','m\u00b3','m','h','jour','kg','L','ens.'];
+const UNITES_BTP=[['Surfaces',['m²','dm²','cm²']],['Volumes',['m³','dm³','L']],['Longueurs',['m','ml','cm','mm']],['Poids',['kg','T','g']],['Temps',['h','½ j','jour','mois']],['Quantité',['u','pce','paire','lot','ens','forfait','%']]];
+const DEVIS_UNITES=UNITES_BTP.reduce(function(a,g){ return a.concat(g[1]); },[]);
+function customUnites(){ return (typeof CONFIG_DB!=='undefined'&&Array.isArray(CONFIG_DB.unites))?CONFIG_DB.unites:[]; }
+function allUnites(){ return DEVIS_UNITES.concat(customUnites().filter(function(u){ return DEVIS_UNITES.indexOf(u)<0; })); }
+function unitCode(u){ var k=String(u==null?'':u).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\u00b2/g,'2').replace(/\u00b3/g,'3').replace(/[\s.]/g,''); var M={'m2':'MTK','metrecarre':'MTK','dm2':'DMK','cm2':'CMK','m3':'MTQ','metrecube':'MTQ','dm3':'DMQ','m':'MTR','metre':'MTR','ml':'MTR','metrelineaire':'MTR','cm':'CMT','mm':'MMT','kg':'KGM','kilogramme':'KGM','t':'TNE','tonne':'TNE','g':'GRM','gramme':'GRM','l':'LTR','litre':'LTR','h':'HUR','heure':'HUR','jour':'DAY','j':'DAY','mois':'MON','u':'C62','unite':'C62','pce':'C62','piece':'C62','paire':'PR','%':'P1','pourcentage':'P1','forfait':'C62','ens':'C62','ensemble':'C62','lot':'C62','poste':'C62'}; return M[k]||'C62'; }
+function uPick(inputId,btn){ var el=document.getElementById(inputId); if(el&&btn){ el.value=btn.textContent; } }
+function unitFamilyPicker(inputId){ var chip=function(u){ return '<button type="button" class="btn ghost mini" onclick="uPick(\''+inputId+'\',this)">'+esc(u)+'</button>'; }; var fam=UNITES_BTP.map(function(g){ return '<div style="margin-top:6px"><div class="tag" style="margin-bottom:3px">'+g[0]+'</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+g[1].map(chip).join('')+'</div></div>'; }).join(''); var cu=customUnites(); var custom=cu.length?'<div style="margin-top:6px"><div class="tag" style="margin-bottom:3px">Mes unités</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+cu.map(chip).join('')+'</div></div>':''; return '<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;color:var(--acc)">Choisir dans la liste (par famille)</summary><div style="margin-top:4px">'+fam+custom+'</div></details>'; }
+function uniteAdd(){ var el=document.getElementById('un_new'); var v=(el&&el.value||'').trim().slice(0,12); if(!v){ return; } if(!Array.isArray(CONFIG_DB.unites)) CONFIG_DB.unites=[]; if(DEVIS_UNITES.indexOf(v)<0 && CONFIG_DB.unites.indexOf(v)<0){ CONFIG_DB.unites.push(v); saveConfigDB(); } openUnitesManager(); }
+function uniteDel(i){ if(!Array.isArray(CONFIG_DB.unites)) return; CONFIG_DB.unites.splice(i,1); saveConfigDB(); openUnitesManager(); }
+function openUnitesManager(){ if(!perm('gerer_reglages')){ toast('Réservé au patron.'); return; } var cust=customUnites(); var fam=UNITES_BTP.map(function(g){ return '<div style="margin-top:6px"><div class="tag" style="margin-bottom:2px">'+g[0]+'</div><div class="note" style="font-size:12px">'+g[1].join(' · ')+'</div></div>'; }).join(''); openModal('<div class="grabber"></div><h2 style="margin-bottom:6px">Unités</h2><p class="note" style="font-size:12px;margin-top:0">Les unités intégrées (par famille) sont toujours dispo dans tes devis. Ajoute ici tes unités perso.</p>'+fam+'<div style="margin-top:14px"><div class="tag" style="margin-bottom:4px">Mes unités</div>'+(cust.length?cust.map(function(u,i){ return '<div class="task-row"><span style="flex:1"><b>'+esc(u)+'</b></span><button class="iconbtn danger" onclick="uniteDel('+i+')">✕</button></div>'; }).join(''):'<p class="note" style="font-size:12px">Aucune pour l\'instant.</p>')+'</div><div class="row" style="margin-top:8px;gap:8px"><div style="flex:1"><input id="un_new" placeholder="ex : regard, ml posé, point" maxlength="12"></div><button class="btn primary" onclick="uniteAdd()">Ajouter</button></div><button class="btn ghost mini" style="width:100%;margin-top:10px" onclick="closeModal()">Fermer</button>'); }
+const _DEVIS_UNITES_LEGACY=1;
 function unitLabel(u){ u=(u==null?'':String(u)).trim(); return u||'u'; }
 function isPriceable(it){ return !!it && !it.section && !it.text && !it.subtotal; }
 function lineHT(it){ return isPriceable(it)?((Number(it.qty)||0)*(Number(it.pu)||0)):0; }
@@ -2470,6 +2487,9 @@ function openDocPerso(){
     <div id="dp_colorwrap" style="margin-top:8px;${useApp?'opacity:.45;pointer-events:none':''}">
       <label>Couleur dédiée aux documents</label>
       <div class="row" style="align-items:center;gap:10px"><input type="color" id="dp_color" value="${dc||docAccentHex()}" style="width:58px;height:42px;padding:2px;border-radius:10px"><span class="note" style="font-size:12px">Le logo, l'en-tête du tableau et le total prendront cette couleur.</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${PALETTE_PRESETS.map(([n,hx])=>`<div title="${n}" onclick="dpSetColor('${hx}')" style="width:30px;height:30px;border-radius:8px;background:${hx};cursor:pointer;border:2px solid rgba(0,0,0,.15)"></div>`).join('')}</div>
+      <div class="row" style="align-items:center;gap:8px;margin-top:8px"><input id="dp_hex" type="text" value="${dc||docAccentHex()}" placeholder="#3b82f6" maxlength="7" oninput="dpHexInput()" style="max-width:120px"><span class="note" style="font-size:12px">Code couleur (hex)</span></div>
+      ${favColors().length?`<div style="margin-top:8px"><div class="tag" style="margin-bottom:4px">Favoris</div><div style="display:flex;flex-wrap:wrap;gap:6px">${favColors().map(hx=>`<div title="${hx}" onclick="dpSetColor('${hx}')" style="width:28px;height:28px;border-radius:8px;background:${hx};cursor:pointer;border:2px solid rgba(0,0,0,.15)"></div>`).join('')}</div></div>`:''}
     </div>
     <label style="margin-top:14px;display:flex;align-items:center;gap:8px;font-size:14px"><input type="checkbox" id="dp_numbers" ${docShowNumbers()?'checked':''} style="width:auto"> Afficher les numéros de ligne (1, 2, 3…)</label>
     <div style="margin-top:14px"><label>Pied de page personnalisé (option)</label>
@@ -2478,12 +2498,16 @@ function openDocPerso(){
     <button class="btn primary" style="width:100%;margin-top:14px" onclick="saveDocPerso()">Enregistrer</button>`);
 }
 function dpToggleColor(){ var u=document.getElementById('dp_useapp'); var w=document.getElementById('dp_colorwrap'); if(!u||!w) return; if(u.checked){ w.style.opacity='.45'; w.style.pointerEvents='none'; } else { w.style.opacity='1'; w.style.pointerEvents='auto'; } }
+function dpUncheckApp(){ var u=document.getElementById('dp_useapp'); if(u&&u.checked){ u.checked=false; dpToggleColor(); } }
+function dpSetColor(hex){ var c=document.getElementById('dp_color'); if(c) c.value=hex; var hx=document.getElementById('dp_hex'); if(hx) hx.value=hex; dpUncheckApp(); }
+function dpHexInput(){ var hx=document.getElementById('dp_hex'); var c=document.getElementById('dp_color'); if(hx&&c){ var v=(hx.value||'').trim(); if(/^#[0-9a-fA-F]{6}$/.test(v)){ c.value=v; dpUncheckApp(); } } }
 function saveDocPerso(){
   if(!perm('gerer_reglages')){ toast('Réservé au patron.'); return; }
   var useApp=document.getElementById('dp_useapp'); var col=document.getElementById('dp_color');
   CONFIG_DB.docColor=(useApp&&useApp.checked)?'':((col&&col.value)||'');
   var num=document.getElementById('dp_numbers'); CONFIG_DB.docNumbers=!!(num&&num.checked);
   var ft=document.getElementById('dp_footer'); CONFIG_DB.docFooter=((ft&&ft.value)||'').trim();
+  if(CONFIG_DB.docColor) favColorAdd(CONFIG_DB.docColor);
   saveConfigDB(); closeModal(); toast('Personnalisation enregistrée ✅'); render();
 }
 function chDevisHT(c){ var dv=(c&&c.devis)||{}; var st=itemsHT(dv.items); return Math.round((st-remiseMontant(st,dv.remise))*100)/100; }
@@ -5348,6 +5372,7 @@ function hubBody(hub,tab){
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openFactuBanque()">${icone('id','16px')} Coordonnées bancaires & conditions</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openCatalogue()">${icone('layers','16px')} Ma bibliothèque de prix</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openDocPerso()">${icone('palette','16px')} Personnalisation des documents</button>
+      <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openUnitesManager()">${icone('layers','16px')} Unités (familles + mes unités)</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="openFactuLegal()">${icone('shield','16px')} Identité légale & assurance décennale</button>
       ${facturXSuspenduMaintenant()?`<div class="card" style="box-shadow:none;padding:11px 13px;margin-top:12px;border-left:3px solid var(--acc)">
         <b style="font-size:13px;color:var(--acc)">📑 Facturation électronique — disponible le ${facturXDateFr()}</b>
@@ -6426,7 +6451,7 @@ function facturXXml(snap, addDocsXml){
   const adr=CONFIG_DB.adr||'', cp=CONFIG_DB.cp||'', ville=CONFIG_DB.ville||'';
   let lines='';
   (snap.items||[]).filter(isPriceable).forEach((it,i)=>{ const lt=lineHT(it);
-    lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc||('Ligne '+(i+1)))}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${fxCat()}</ram:CategoryCode><ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
+    lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc||('Ligne '+(i+1)))}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="${unitCode(it.unit)}">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${fxCat()}</ram:CategoryCode><ram:RateApplicablePercent>${fxRate()}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
   });
   let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
   xml+=`  <rsm:ExchangedDocumentContext><ram:BusinessProcessSpecifiedDocumentContextParameter><ram:ID>S1</ram:ID></ram:BusinessProcessSpecifiedDocumentContextParameter><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
@@ -6567,7 +6592,7 @@ function _fxTestParty(role, p){
 function facturXTestXml(em, dest, inv, addDocsXml){
   const X=esc; let lines='';
   inv.items.filter(isPriceable).forEach((it,i)=>{ const lt=lineHT(it);
-    lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc)}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="C62">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
+    lines+=`    <ram:IncludedSupplyChainTradeLineItem><ram:AssociatedDocumentLineDocument><ram:LineID>${i+1}</ram:LineID></ram:AssociatedDocumentLineDocument><ram:SpecifiedTradeProduct><ram:Name>${X(it.desc)}</ram:Name></ram:SpecifiedTradeProduct><ram:SpecifiedLineTradeAgreement><ram:NetPriceProductTradePrice><ram:ChargeAmount>${fxAmt(it.pu)}</ram:ChargeAmount></ram:NetPriceProductTradePrice></ram:SpecifiedLineTradeAgreement><ram:SpecifiedLineTradeDelivery><ram:BilledQuantity unitCode="${unitCode(it.unit)}">${fxAmt(it.qty)}</ram:BilledQuantity></ram:SpecifiedLineTradeDelivery><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${inv.cat}</ram:CategoryCode><ram:RateApplicablePercent>${inv.rate}</ram:RateApplicablePercent></ram:ApplicableTradeTax><ram:SpecifiedTradeSettlementLineMonetarySummation><ram:LineTotalAmount>${fxAmt(lt)}</ram:LineTotalAmount></ram:SpecifiedTradeSettlementLineMonetarySummation></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>\n`;
   });
   let xml=`<?xml version="1.0" encoding="UTF-8"?>\n<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">\n`;
   xml+=`  <rsm:ExchangedDocumentContext><ram:BusinessProcessSpecifiedDocumentContextParameter><ram:ID>S1</ram:ID></ram:BusinessProcessSpecifiedDocumentContextParameter><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn:cen.eu:en16931:2017</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext>\n`;
@@ -8977,13 +9002,14 @@ function ligneModal(id,idx){
   const c=CHANTIERS[id]; const it=(idx!=null && c.devis&&c.devis.items)?c.devis.items[idx]:null;
   const cat=catalogue();
   const dl=cat.length?`<datalist id="dl_cat">${cat.map(pr=>`<option value="${esc(pr.desc||'')}">`).join('')}</datalist>`:'';
-  const unitOpts=DEVIS_UNITES.map(u=>`<option value="${esc(u)}">`).join('');
+  const unitOpts=allUnites().map(u=>`<option value="${esc(u)}">`).join('');
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:10px">${it?'Modifier la ligne':'Nouvelle ligne'}</h2>
     ${cat.length?`<label style="margin-top:0">Depuis ma bibliothèque (option)</label>
     <select id="dl_pick" onchange="ligneFromCat('${id}')"><option value="">— Choisir une prestation enregistrée —</option>${cat.map((pr,i)=>`<option value="${i}">${esc((pr.desc||'').slice(0,48))} · ${(Number(pr.pu)||0).toFixed(2)} €${pr.unit?('/'+esc(pr.unit)):''}</option>`).join('')}</select>`:''}
     <label style="margin-top:10px">Désignation</label><input id="dl_desc" list="dl_cat" placeholder="ex : Pose carrelage grès cérame" value="${esc(it?it.desc:'')}">${dl}
     <div class="row" style="margin-top:10px"><div style="flex:1"><label>Quantité</label><input id="dl_qty" type="number" inputmode="decimal" value="${it?(Number(it.qty)||0):1}" min="0" step="0.01"></div>
       <div style="flex:1"><label>Unité</label><input id="dl_unit" list="dl_units" value="${esc(it?unitLabel(it.unit):'u')}" placeholder="u, m², ml, h…"><datalist id="dl_units">${unitOpts}</datalist></div></div>
+    ${unitFamilyPicker('dl_unit')}
     <div class="row" style="margin-top:10px"><div style="flex:1"><label>Prix unitaire (€ HT)</label><input id="dl_pu" type="number" inputmode="decimal" value="${it?(Number(it.pu)||0):0}" min="0" step="0.01"></div>
       <div style="flex:1"><label>Coût de revient / u (option)</label><input id="dl_cout" type="number" inputmode="decimal" value="${(it&&it.cout!=null&&it.cout!=='')?(Number(it.cout)||0):''}" min="0" step="0.01" placeholder="—"></div></div>
     <p class="note" style="font-size:11px;margin-top:4px">Le coût de revient sert à voir ta marge. Il reste <b>privé</b> : jamais montré au client ni imprimé.</p>
