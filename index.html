@@ -1035,7 +1035,7 @@ function backToEntry(){ DEV_ACCESS=false; SCREEN='entry'; render(); toTop(); }
 
 /* ====================== ESPACE DÉVELOPPEUR (privé) ====================== */
 const DEV_CODE="23112003";
-const APP_VERSION="v208 · 17/07";
+const APP_VERSION="v209 · 17/07";
 function askDevCode(){
   openModal(`<div class="grabber"></div><h2 style="margin-bottom:8px"><svg class="lic" viewBox="0 0 24 24" width="1.05em" height="1.05em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2-2 2.7-2.7Z"/></svg> Espace développeur</h2>
     <p class="note">Réservé à l'installateur de l'application.</p>
@@ -9097,10 +9097,10 @@ function buildDocHTML(doc){
   const rows=doc.items.map((it,idx)=>{
     if(it&&it.section) return `<tr><td colspan="${NC}" style="padding:16px 11px 5px"><div style="font-weight:700;color:${ACC};text-transform:uppercase;font-size:12.5px;letter-spacing:.03em;border-bottom:1px solid rgba(${AR.r},${AR.g},${AR.b},.25);padding-bottom:5px">${esc(it.desc||'')}</div></td></tr>`;
     if(it&&it.text) return `<tr><td colspan="${NC}" style="color:#555;font-size:12.5px;font-style:italic;padding:6px 11px">${esc(it.desc||'').replace(/\n/g,'<br>')}</td></tr>`;
-    if(it&&it.subtotal){ const sv=subtotalAt(doc.items,idx)*sgn; return `<tr style="background:#f7f8fa"><td colspan="${NC-1}" style="text-align:right;font-weight:600;color:#333;padding:8px 11px">Sous-total</td><td style="text-align:right;font-weight:700;padding:8px 11px">${sv.toFixed(2)} €</td></tr>`; }
+    if(it&&it.subtotal){ const sv=subtotalAt(doc.items,idx)*sgn; return `<tr style="background:#f7f8fa"><td colspan="${NC-1}" class="st-lbl" style="text-align:right;font-weight:600;color:#333;padding:8px 11px">Sous-total</td><td data-l="Sous-total" style="text-align:right;font-weight:700;padding:8px 11px">${sv.toFixed(2)} €</td></tr>`; }
     _n++;
-    const tvaCell=showTva?`<td style="text-align:right">${tvaPct()}%</td>`:'';
-    return `<tr>${showNum?`<td style="text-align:center;color:#9aa3b2">${_n}</td>`:''}<td>${esc(it.desc)}</td><td style="text-align:center">${(Number(it.qty)||0)}</td><td style="text-align:center">${esc(unitLabel(it.unit))}</td><td style="text-align:right;white-space:nowrap">${(Number(it.pu)||0).toFixed(2)} €</td>${tvaCell}<td style="text-align:right;white-space:nowrap;font-weight:600">${(lineHT(it)*sgn).toFixed(2)} €</td></tr>`;
+    const tvaCell=showTva?`<td data-l="TVA" style="text-align:right">${tvaPct()}%</td>`:'';
+    return `<tr>${showNum?`<td data-l="N°" style="text-align:center;color:#9aa3b2">${_n}</td>`:''}<td data-l="Désignation">${esc(it.desc)}</td><td data-l="Qté" style="text-align:center">${(Number(it.qty)||0)}</td><td data-l="Unité" style="text-align:center">${esc(unitLabel(it.unit))}</td><td data-l="P.U. HT" style="text-align:right;white-space:nowrap">${(Number(it.pu)||0).toFixed(2)} €</td>${tvaCell}<td data-l="Montant HT" style="text-align:right;white-space:nowrap;font-weight:600">${(lineHT(it)*sgn).toFixed(2)} €</td></tr>`;
   }).join('');
   const dec=(CONFIG_DB.assurance||CONFIG_DB.assuranceNum)?`Assurance décennale : ${esc(CONFIG_DB.assurance||'')}${CONFIG_DB.assuranceNum?(' — police n° '+esc(CONFIG_DB.assuranceNum)):''} — ${esc(CONFIG_DB.assuranceZone||'France métropolitaine')}.`:'';
   const footIdent=[esc(coName()),CONFIG_DB.adr?esc(CONFIG_DB.adr):'',[CONFIG_DB.cp,CONFIG_DB.ville].filter(Boolean).map(esc).join(' '),CONFIG_DB.siren?('SIREN '+esc(CONFIG_DB.siren)):'',CONFIG_DB.tvaIntra?('TVA '+esc(CONFIG_DB.tvaIntra)):''].filter(Boolean).join(' · ');
@@ -9136,6 +9136,27 @@ function buildDocHTML(doc){
   .toolbar button{font-family:inherit;font-size:14px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;border:none}
   .tb-close{background:#eef0f4;color:#1a2740}.tb-print{background:${ACC};color:#fff}
   @media print{body{padding:14px;max-width:none}.toolbar{display:none}.block,.parties>div,.sign{break-inside:avoid}}
+  @media screen and (max-width:700px){
+    body{padding:16px;font-size:13.5px}
+    .head{flex-direction:column;gap:10px}
+    .head .co{font-size:19px}
+    .docbox{text-align:left;min-width:0}
+    .docbox .dt{font-size:22px}
+    .accent-bar{margin:12px 0 18px}
+    .parties{flex-direction:column;gap:10px}
+    .totals{width:100%}
+    .totals div{padding:7px 2px}
+    thead{display:none}
+    table{margin-top:12px}
+    tbody tr{display:block;border:1px solid #eceef2;border-radius:12px;padding:9px 11px;margin-bottom:10px}
+    tbody td{display:block;border:none;padding:3px 0;font-size:13.5px;text-align:left}
+    tbody td[data-l]{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+    tbody td[data-l]::before{content:attr(data-l);font-weight:600;color:#6b7683;font-size:12px;white-space:nowrap}
+    tbody td[data-l="Désignation"]{display:block;font-weight:700;font-size:15px;margin-bottom:6px;border-bottom:1px solid #f0f2f5;padding-bottom:6px}
+    tbody td[data-l="Désignation"]::before{content:none}
+    tbody td[data-l="N°"]{display:none}
+    tbody td.st-lbl{display:none}
+  }
   </style></head><body>
   <div class="toolbar">
     <button class="tb-close" onclick="window.close()">✕ Fermer</button>
